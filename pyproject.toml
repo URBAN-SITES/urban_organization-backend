@@ -1,0 +1,61 @@
+[project]
+name = "sistema-autenticacao-django-rest"
+version = "0.1.0"
+description = ""
+authors = [
+  { name = "Ian Matheus Veiga", email = "ianmatheusv54@gmail.com" },
+]
+dependencies = [
+  "django>=6.1",
+  "djangorestframework>=3.17.2",
+  "drf-spectacular>=0.30.0",
+  "python-dotenv>=1.2.2",
+]
+requires-python = ">=3.14"
+readme = "README.md"
+license = { text = "MIT" }
+
+[dependency-groups]
+dev = [
+  "pre-commit>=4.6.2",
+  "pyright>=1.1.411",
+  "ruff>=0.16.2",
+]
+lint = [
+  "ruff>=0.16.2",
+]
+types = [
+  "django-stubs>=6.0.9",
+  "pyright>=1.1.411",
+]
+
+[build-system]
+requires = [
+  "pdm-backend",
+]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.scripts]
+dev = "pdm run manage.py runserver"
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__",
+  "**/.venv",
+  "**/migrations",
+]
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+
+[tool.ruff]
+exclude = [
+  "migrations",
+]
+lint.select = [
+  "F",
+  "DJ",
+  "I",
+]

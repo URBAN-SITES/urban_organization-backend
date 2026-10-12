@@ -1,0 +1,32 @@
+name: Django & Ruff CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - name: Setup PDM
+      uses: pdm-project/setup-pdm@v4
+      with:
+        python-version: "3.14"
+        enable-pep582: true
+
+    - name: Install dependencies
+      run: |
+        pdm install -G lint
+
+    - name: Run Django System Checks
+      run: |
+        pdm run python manage.py check
+
+    - name: Analysing the code with ruff
+      run: |
+        pdm run ruff check
