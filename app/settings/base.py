@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -69,6 +70,21 @@ TEMPLATES = [
     },
 ]
 TIME_ZONE = "America/Sao_Paulo"
+# Django 6.1+ mail config (EMAIL_* settings are deprecated); dev.py overrides it
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.getenv("EMAIL_HOST", "smtp.gmail.com"),
+            "port": int(os.getenv("EMAIL_PORT", "587")),
+            "username": os.getenv("EMAIL_HOST_USER", ""),
+            "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
+            "use_tls": os.getenv("EMAIL_USE_TLS", "True") == "True",
+            "timeout": 10,
+        },
+    },
+}
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@localhost")
 WSGI_APPLICATION = "app.wsgi.application"
 AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
