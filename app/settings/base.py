@@ -22,6 +22,7 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SAMESITE = "Lax"
 INSTALLED_APPS = [
+    "daphne",  # makes runserver serve HTTP + WebSocket (ASGI)
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -70,6 +71,9 @@ TEMPLATES = [
 ]
 TIME_ZONE = "America/Sao_Paulo"
 WSGI_APPLICATION = "app.wsgi.application"
+ASGI_APPLICATION = "app.asgi.application"
+# single process only; use channels_redis.core.RedisChannelLayer in production
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
