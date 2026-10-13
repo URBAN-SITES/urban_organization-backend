@@ -80,7 +80,7 @@ migrations never collide with `core`. See `payments/` in `feat/payments`.
 
 ### Adding a feature: checklist
 
-1. Branch `feat/<kebab-name>` from `main` (never commit to `main`).
+1. Branch `feat/<kebab-name>` from `dev`; open the PR into `dev` (never commit to `main`).
 2. Model in `models/<subject>.py` → `makemigrations`.
 3. Serializer(s) in `serializers/<subject>.py`.
 4. Service in `services/<subject>.py` (the only place with rules).
@@ -153,12 +153,12 @@ Rules shared by every code (`OneTimeCode`): expires in **15 minutes**, burns aft
 
 Full usage docs for each branch: [`FEATURE_BRANCHES.md`](FEATURE_BRANCHES.md).
 
-Each branch is **one commit on top of `feat/code-conventions`**, independent of the
+Each branch is **one commit on top of `dev`**, independent of the
 others. Merge only what the hackathon needs:
 
 ```bash
-git checkout -b feat/my-feature main
-git merge feat/code-conventions feat/payments feat/notifications
+git checkout dev && git pull
+git merge feat/payments feat/notifications
 pdm install && pdm run manage.py migrate
 ```
 

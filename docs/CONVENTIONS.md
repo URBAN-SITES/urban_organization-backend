@@ -13,7 +13,12 @@ Everything (code, comments, commits, branch names, docs, API messages) is writte
 | `docs/<kebab-name>` | Docs only |
 | `chore/<kebab-name>` | Tooling, deps, CI |
 
-Never commit directly to `main`. Open a PR.
+| Branch | Role |
+|--------|------|
+| `main` | Stable / release. Only receives merges from `dev` |
+| `dev` | Integration base. Every `feat/*` starts here and returns via PR |
+
+Never commit directly to `main` or `dev`. Open a PR into `dev`.
 
 ## Commits
 

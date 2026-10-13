@@ -1,7 +1,7 @@
 # Feature Branches
 
-Every `feat/*` branch is **one commit on top of `feat/code-conventions`** and is
-independent of the others. Nothing here is on `main`: you pull only what the
+Every `feat/*` branch is **one commit on top of `dev`** and is independent of
+the others. Nothing is merged into `dev` by default: you pull only what the
 hackathon project needs.
 
 - Structure, rules and auth flow: [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md)
@@ -12,8 +12,8 @@ hackathon project needs.
 ## How to use a branch
 
 ```bash
-git checkout -b feat/my-project main
-git merge feat/code-conventions feat/payments feat/notifications   # pick what you need
+git checkout dev && git pull
+git merge feat/payments feat/notifications   # pick what you need
 pdm install                       # installs the new dependencies
 cp .env.example .env              # then fill the new variables
 pdm run manage.py migrate         # creates the new tables
