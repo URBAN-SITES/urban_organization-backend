@@ -3,7 +3,8 @@
 Django REST backend template for the hackathon: e-mail/JWT authentication ready,
 plus optional feature branches you merge only when the project needs them.
 
-Read this first, then [`CONVENTIONS.md`](CONVENTIONS.md) for naming and style.
+Read this first, then [`CONVENTIONS.md`](CONVENTIONS.md) for naming and style
+and [`FEATURE_BRANCHES.md`](FEATURE_BRANCHES.md) for the optional features.
 
 ---
 
@@ -149,6 +150,8 @@ Rules shared by every code (`OneTimeCode`): expires in **15 minutes**, burns aft
 - Mail uses Django 6.1 **`MAILERS`** (`EMAIL_*` settings are deprecated).
 
 ## 7. Feature branches
+
+Full usage docs for each branch: [`FEATURE_BRANCHES.md`](FEATURE_BRANCHES.md).
 
 Each branch is **one commit on top of `feat/code-conventions`**, independent of the
 others. Merge only what the hackathon needs:
