@@ -94,6 +94,11 @@ class AuthService:
 
         if not user or not user.is_active:
             raise AuthenticationFailed()
+        return AuthService.create_session(user, user_agent_string, ip_address)
+
+    @staticmethod
+    def create_session(user, user_agent_string, ip_address):
+        """Issues JWTs and records the session. Shared by every login method."""
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         refresh_token = str(refresh)
