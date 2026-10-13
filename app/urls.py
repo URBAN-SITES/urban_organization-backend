@@ -5,6 +5,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from core.views.ai import AIAskView
 from core.views.email_change import (
     EmailChangeConfirmView,
     EmailChangeRequestView,
@@ -121,6 +122,7 @@ route_core = [
         ),
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
+    path("ai/ask/", AIAskView.as_view(), name="ai-ask"),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/list/", UserListView.as_view(), name="users-list"),
 ]
