@@ -33,15 +33,18 @@ One Django app per domain. Inside an app, split by layer, one module per subject
   services/<subject>.py      # business logic
   views/<subject>.py         # HTTP only: validate -> call service -> respond
   permissions/<subject>.py
+  middleware/<subject>.py
+  tasks/<subject>.py         # Celery tasks
   utils/<subject>.py
-  response_messages.py
+  admin.py
+  urls.py                    # feature apps only
+  response_messages.py       # every user-facing message (MSG_*)
   tests/test_<subject>.py
 ```
 
-- A self-contained feature (payments, chat...) gets its own app so its migrations
-  never collide with `core`. While small it may use flat modules
-  (`models.py`, `services.py`, `views.py`, `urls.py` with `app_name`); split into
-  folders when a file grows.
+- A self-contained feature (payments, chat...) gets its own app with the same
+  layered folders, so its migrations never collide with `core`. Its routes live
+  in `<app>/urls.py` with `app_name`.
 - Views never touch business rules; they call a service.
 - Services raise DRF exceptions (`ValidationError`, `NotFound`, ...).
 - Settings shared by all environments go in `app/settings/base.py`; env-specific in `dev.py` / `prod.py`.
