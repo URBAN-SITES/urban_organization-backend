@@ -120,6 +120,7 @@ so you create them and assign users in `/admin/` (no extra tables).
 from rest_framework.permissions import IsAuthenticated
 from core.permissions.has_role import HasRole
 
+
 class ReportView(APIView):
     permission_classes = [IsAuthenticated, HasRole]
     required_roles = ["admin", "manager"]  # any of them grants access
@@ -171,16 +172,19 @@ class Product(BaseModel):
     name = models.CharField(max_length=255)
     extra = models.JSONField(default=dict, blank=True)  # free-form fields
 
+
 # core/serializers/product.py
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ("id", "name", "extra", "created_at")
 
+
 # core/views/product.py
 class ProductViewSet(OwnedModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
 
 # urls
 router = DefaultRouter()
@@ -210,9 +214,9 @@ Paginated responses look like:
 
 Enable it on your own `ListAPIView` / `ViewSet`:
 ```python
-filterset_fields = ["status"]        # ?status=open
-search_fields = ["title", "owner__email"]   # ?search=
-ordering_fields = ["created_at"]     # ?ordering=-created_at
+filterset_fields = ["status"]  # ?status=open
+search_fields = ["title", "owner__email"]  # ?search=
+ordering_fields = ["created_at"]  # ?ordering=-created_at
 ```
 
 **Page size:** 20 (`PAGE_SIZE` in settings). Plain `APIView`s are not paginated.
@@ -271,13 +275,16 @@ to the terminal because `dev.py` overrides the mailer with the console backend.
 ### `feat/notifications`
 
 **What it does:** stores notifications per user and lets the frontend list them
-and mark them as read.
+and mark them as read. If `FIREBASE_CREDENTIALS` is set, every notification is
+also sent as a push (Firebase Cloud Messaging) to the user's registered devices.
 
 **Backend (from any service)**
 ```python
-from core.services.notification import NotificationService
+from notifications.services.notification import NotificationService
 
-NotificationService.notify(user, "Payment approved", "Your ticket is ready", data={"payment_id": str(p.id)})
+NotificationService.notify(
+    user, "Payment approved", "Your ticket is ready", data={"payment_id": str(p.id)}
+)
 ```
 
 | Endpoint | Description |
@@ -286,13 +293,27 @@ NotificationService.notify(user, "Payment approved", "Your ticket is ready", dat
 | `GET /api/notifications/?unread=true` | Only unread |
 | `POST /api/notifications/<id>/read/` | Mark one as read (204) |
 | `POST /api/notifications/read-all/` | Mark all as read (204) |
+| `POST /api/notifications/send/` | Push to one token `{"token", "title", "body"}` → `{"message_id"}` (503 if not configured, 502 if FCM fails) |
+| `POST /api/notifications/devices/` | Register this browser's FCM token `{"token": "..."}` (204) |
+| `DELETE /api/notifications/devices/` | Remove it on logout `{"token": "..."}` (204) |
+
+**Push setup**
+1. Firebase Console → Project settings → Service accounts → Generate new private key.
+2. Save the JSON in the backend folder as `firebase-credentials.json` (git-ignored) and set
+   `FIREBASE_CREDENTIALS=firebase-credentials.json` in `.env`.
+3. Frontend: `getToken(messaging, { vapidKey })` with the web config, then
+   `POST /api/notifications/devices/`. A `firebase-messaging-sw.js` service worker
+   shows pushes while the tab is closed.
+
+Push is best-effort: if FCM fails the notification is still saved, and tokens
+FCM reports as dead are deleted.
 
 **Real time:** merge `feat/websockets` and call `send_to_user(user.pk, {...})`
 inside `NotificationService.notify`.
 
-**Files:** `core/models/notification.py` (+ migration), `core/serializers/notification.py`,
-`core/services/notification.py`, `core/views/notification.py`, admin, urls
-**Env vars:** none
+**Files:** the `notifications/` app (models, serializers, services, views, admin,
+urls, migrations, tests), plus `INSTALLED_APPS` and one line in `app/urls.py`
+**Env vars:** `FIREBASE_CREDENTIALS` (optional)
 
 ---
 
@@ -341,7 +362,7 @@ in `UserConsumer` or add a new consumer in `core/websockets/`.
 ```python
 from core.tasks.email import send_email_task
 
-send_email_task.delay(email, code, "Verify your e-mail")   # retries 3x with backoff
+send_email_task.delay(email, code, "Verify your e-mail")  # retries 3x with backoff
 ```
 
 **Running in production**
@@ -417,6 +438,7 @@ AES). Your code reads and writes plain text; the database stores ciphertext.
 ```python
 from core.models.fields import EncryptedTextField
 
+
 class Profile(models.Model):
     cpf = EncryptedTextField()
 ```
@@ -483,7 +505,10 @@ POST /api/ai/ask/   {"prompt": "Summarize this text: ..."}
 ```python
 from core.services.ai import AIService
 
-answer = AIService.ask(text, system="You classify support tickets as LOW, MEDIUM or HIGH. Answer with one word.")
+answer = AIService.ask(
+    text,
+    system="You classify support tickets as LOW, MEDIUM or HIGH. Answer with one word.",
+)
 ```
 
 **Behavior**

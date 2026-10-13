@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -8,6 +9,8 @@ load_dotenv()
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Path to the Firebase service account JSON; empty disables push
+FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
 APPEND_SLASH = True
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 CSRF_TRUSTED_ORIGINS = [
@@ -34,6 +37,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "core",
+    "notifications",
 ]
 LANGUAGES = [
     ("en", "English"),

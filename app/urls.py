@@ -129,4 +129,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/docs/", include(route_docs)),
     path("api/", include(route_core)),
+    path("api/notifications/", include("notifications.urls")),
 ]
