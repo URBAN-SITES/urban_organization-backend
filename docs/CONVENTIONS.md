@@ -1,5 +1,7 @@
 # Code Conventions
 
+See [`PROJECT_GUIDE.md`](PROJECT_GUIDE.md) for structure, business rules and feature branches.
+
 Everything (code, comments, commits, branch names, docs, API messages) is written in **English**.
 
 ## Branches
