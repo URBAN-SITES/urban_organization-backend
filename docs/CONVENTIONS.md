@@ -38,6 +38,10 @@ One Django app per domain. Inside an app, split by layer, one module per subject
   tests/test_<subject>.py
 ```
 
+- A self-contained feature (payments, chat...) gets its own app so its migrations
+  never collide with `core`. While small it may use flat modules
+  (`models.py`, `services.py`, `views.py`, `urls.py` with `app_name`); split into
+  folders when a file grows.
 - Views never touch business rules; they call a service.
 - Services raise DRF exceptions (`ValidationError`, `NotFound`, ...).
 - Settings shared by all environments go in `app/settings/base.py`; env-specific in `dev.py` / `prod.py`.
