@@ -28,6 +28,7 @@ from core.spectacular_serializers import (
 class RegistrationRequestView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 1: Request registration code",
@@ -51,6 +52,7 @@ class RegistrationRequestView(APIView):
 class RegistrationVerifyView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 2: Verify registration code",
@@ -74,6 +76,7 @@ class RegistrationVerifyView(APIView):
 class RegistrationConfirmView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 3: Complete registration",
