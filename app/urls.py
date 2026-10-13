@@ -15,6 +15,7 @@ from core.views.password_reset import (
     PasswordResetRequestView,
     PasswordResetVerifyView,
 )
+from core.views.qrcode import QRCodeView
 from core.views.registration import (
     RegistrationConfirmView,
     RegistrationRequestView,
@@ -121,6 +122,7 @@ route_core = [
         ),
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
+    path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/list/", UserListView.as_view(), name="users-list"),
 ]
