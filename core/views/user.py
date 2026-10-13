@@ -332,7 +332,7 @@ class UserDetailView(APIView):
             404: UserNotFoundSerializer,
         },
     )
-    def get(self, request, user_id: int):
+    def get(self, request, user_id):
         try:
             user = UserService.get_user_by_id(
                 target_user_id=user_id, requesting_user=request.user

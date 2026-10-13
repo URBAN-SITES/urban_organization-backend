@@ -26,10 +26,12 @@ from core.views.user import (
     LoginView,
     LogoutView,
     RevokeAllSessionsView,
+    UserDetailView,
     UserListView,
     UserMeView,
     UserSessionsDeactivateView,
     UserSessionsGetView,
+    UserUpdateSelfView,
 )
 
 route_docs = [
@@ -122,7 +124,9 @@ route_core = [
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
     path("users/me/", UserMeView.as_view(), name="me"),
+    path("users/me/update/", UserUpdateSelfView.as_view(), name="me-update"),
     path("users/list/", UserListView.as_view(), name="users-list"),
+    path("users/<uuid:user_id>/", UserDetailView.as_view(), name="user-detail"),
 ]
 
 urlpatterns = [
