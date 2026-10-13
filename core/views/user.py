@@ -4,6 +4,7 @@ from django.middleware import csrf
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, NotFound
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.validators import ValidationError
@@ -303,21 +304,26 @@ class UserMeView(APIView):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
-class UserListView(APIView):
+class UserListView(ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserListRetrieveSerializer
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "email"]
+    ordering_fields = ["name", "email", "created_at"]
 
     @extend_schema(
         summary="List users",
-        description="Retrieves a list of users registered in the system based on the authorization rules evaluated in the service layer.",
+        description="Paginated list of users (`?page=`), filterable by `is_active`, searchable by name/e-mail (`?search=`) and sortable (`?ordering=-created_at`). Visibility rules are evaluated in the service layer.",
         responses={
             200: UserListRetrieveSerializer(many=True),
             401: NotAuthenticatedSerializer,
         },
     )
-    def get(self, request):
-        users = UserService.list_users(requesting_user=request.user)
-        serializer = UserListRetrieveSerializer(users, many=True)
-        return Response(serializer.data, status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return UserService.list_users(requesting_user=self.request.user)
 
 
 class UserDetailView(APIView):
