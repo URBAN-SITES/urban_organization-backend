@@ -53,3 +53,8 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+# run tasks inline and cache in memory so dev works without Redis;
+# delete both to test against a real Redis + worker
+CELERY_TASK_ALWAYS_EAGER = True
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
