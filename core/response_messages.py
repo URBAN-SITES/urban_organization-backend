@@ -29,3 +29,4 @@ MSG_CANNOT_DEACTIVATE_CURRENT_SESSION = _(
 MSG_NO_REFRESH_TOKEN_PROVIDED = _("No refresh token provided.")
 MSG_INVALID_OR_EXPIRED_REFRESH_TOKEN = _("Invalid or expired refresh token.")
 MSG_SESSION_REVOKED_OR_INACTIVE = _("Session revoked or inactive.")
+MSG_IDEMPOTENCY_IN_PROGRESS = _("A request with this Idempotency-Key is in progress.")
