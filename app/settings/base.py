@@ -15,6 +15,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:8000",
 ]
+# frontends allowed to call the API; credentials so the auth cookies are sent
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SAMESITE = "Lax"
@@ -25,6 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
@@ -42,6 +46,7 @@ MEDIA_URL = "/media/"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
