@@ -5,6 +5,9 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # .env is not committed; Django refuses to start without a key
+      SECRET_KEY: ci-only-not-a-real-secret
     steps:
     - uses: actions/checkout@v4
 
@@ -26,6 +29,10 @@ jobs:
     - name: Run Django System Checks
       run: |
         pdm run python manage.py check
+
+    - name: Run tests
+      run: |
+        pdm run python manage.py test
 
     - name: Analysing the code with ruff
       run: |
