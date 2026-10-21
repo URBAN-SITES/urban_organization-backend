@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.serializers.ai import AIAnswerSerializer, AIAskSerializer
-from core.services.ai import AIService
+from ai.serializers.ask import AIAnswerSerializer, AIAskSerializer
+from ai.services.ask import AIService
 
 
 class AIAskView(APIView):

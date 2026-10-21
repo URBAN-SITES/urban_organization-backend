@@ -4,7 +4,7 @@ from functools import cache
 import anthropic
 from rest_framework import exceptions
 
-from core.response_messages import MSG_AI_BUSY, MSG_AI_DECLINED, MSG_AI_UNAVAILABLE
+from ai.response_messages import MSG_AI_BUSY, MSG_AI_DECLINED, MSG_AI_UNAVAILABLE
 
 logger = logging.getLogger(__name__)
 

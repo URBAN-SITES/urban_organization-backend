@@ -4,7 +4,7 @@ from unittest import mock
 from django.test import SimpleTestCase
 from rest_framework.exceptions import ValidationError
 
-from core.services.ai import AIService
+from ai.services.ask import AIService
 
 
 def fake_response(stop_reason="end_turn", text="Paris"):
@@ -17,7 +17,7 @@ def fake_response(stop_reason="end_turn", text="Paris"):
     )
 
 
-@mock.patch("core.services.ai._client")
+@mock.patch("ai.services.ask._client")
 class AIServiceTests(SimpleTestCase):
     def test_returns_text_blocks_only(self, client):
         client.return_value.beta.messages.create.return_value = fake_response()
