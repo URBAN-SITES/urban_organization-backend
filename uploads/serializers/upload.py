@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.response_messages import MSG_FILE_TOO_LARGE
+from uploads.response_messages import MSG_FILE_TOO_LARGE
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 

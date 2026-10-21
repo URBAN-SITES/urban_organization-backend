@@ -1,7 +1,7 @@
 import cloudinary.uploader
 from rest_framework import exceptions
 
-from core.response_messages import MSG_UPLOAD_FAILED
+from uploads.response_messages import MSG_UPLOAD_FAILED
 
 # cloudinary reads its credentials from the CLOUDINARY_URL env var
 

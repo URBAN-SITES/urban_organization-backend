@@ -20,7 +20,6 @@ from core.views.registration import (
     RegistrationRequestView,
     RegistrationVerifyView,
 )
-from core.views.upload import FileUploadView
 from core.views.user import (
     CustomTokenRefreshView,
     DeactivateSelfView,
@@ -122,7 +121,6 @@ route_core = [
         ),
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
-    path("uploads/", FileUploadView.as_view(), name="file-upload"),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/list/", UserListView.as_view(), name="users-list"),
 ]
@@ -131,4 +129,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/docs/", include(route_docs)),
     path("api/", include(route_core)),
+    path("api/uploads/", include("uploads.urls")),
 ]

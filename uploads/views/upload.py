@@ -5,8 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.serializers.upload import FileUploadResponseSerializer, FileUploadSerializer
-from core.services.upload import UploadService
+from uploads.serializers.upload import (
+    FileUploadResponseSerializer,
+    FileUploadSerializer,
+)
+from uploads.services.upload import UploadService
 
 
 class FileUploadView(APIView):
