@@ -1,0 +1,30 @@
+name: Task
+description: Scope and coordination of a change
+body:
+  - type: textarea
+    id: goal
+    attributes: { label: Goal }
+    validations: { required: true }
+  - type: input
+    id: owner
+    attributes: { label: Owner }
+  - type: textarea
+    id: scope
+    attributes: { label: Modules and files in scope }
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes: { label: Acceptance criteria and tests }
+    validations: { required: true }
+  - type: textarea
+    id: dependencies
+    attributes: { label: Dependencies and related Issues/PRs }
+  - type: dropdown
+    id: contract
+    attributes:
+      label: Impact on shared contracts
+      options: [None, Compatible, Breaking - align first]
+    validations: { required: true }
+  - type: textarea
+    id: integration
+    attributes: { label: Integration plan and possible overlaps }

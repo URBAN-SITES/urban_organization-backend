@@ -3,8 +3,9 @@
 Django REST backend template for the hackathon: e-mail/JWT authentication ready,
 plus optional feature branches you merge only when the project needs them.
 
-Read this first, then [`CONVENTIONS.md`](CONVENTIONS.md) for naming and style
-and [`FEATURE_BRANCHES.md`](FEATURE_BRANCHES.md) for the optional features.
+Read this first, then [`CONVENTIONS.md`](CONVENTIONS.md) for naming and style,
+[`TEAM_WORKFLOW.md`](TEAM_WORKFLOW.md) for how we split work and review, and
+[`FEATURE_BRANCHES.md`](FEATURE_BRANCHES.md) for the optional features.
 
 ---
 
@@ -56,7 +57,9 @@ core/                    # users, auth and everything shared
   admin.py
   migrations/
 tests/                   # legacy root test package (keep new tests in <app>/tests/)
-docs/                    # this guide + conventions
+docs/                    # this guide, conventions, team workflow, feature branches
+.github/                 # CI (ruff.yml), PR template, issue template
+AGENTS.md / CLAUDE.md    # rules for AI agents working in the repo
 ```
 
 ### What goes where (rules)
