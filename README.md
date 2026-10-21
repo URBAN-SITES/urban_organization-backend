@@ -1,74 +1,67 @@
-# Template de Projeto Base para Django REST Framework
+# Django REST Framework Base Project Template
 
-**Objetivo:** ...
+Django 6.1 + DRF backend with e-mail/JWT authentication (HttpOnly cookies),
+session control and one-time-code flows, ready to extend.
 
-## Estado atual
+## Documentation
 
-### URLs
-- /api/users/
+| Doc | What's in it |
+|-----|--------------|
+| [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md) | Stack, running locally, folder structure, auth, business rules, known issues |
+| [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Branches, commits, naming and code style |
+| [`docs/TEAM_WORKFLOW.md`](docs/TEAM_WORKFLOW.md) | Issues, PRs, collisions, splitting large tasks |
+| [`docs/FEATURE_BRANCHES.md`](docs/FEATURE_BRANCHES.md) | Optional `feat/*` branches and how to combine them |
+| [`AGENTS.md`](AGENTS.md) | Rules for AI agents working in this repo |
 
-Requisição GET que retorna lista de todos os usuários no sistema. Apenas usuários authenticados tem permissão de fazer essa requisição. São filtrados da busca, usuários que não estão aprovados no sistema  (`is_active`), a menos que quem fez a requisição seja um *superusuário* ou um *staff* (respectivamente, `is_staff` e `is_superuser`), nesse caso nenhum filtro é aplicado na busca.
+Interactive API docs: `/api/docs/urls/` (Swagger) and `/api/docs/schema/` (OpenAPI).
 
-- /api/users/
+## Quick start
 
-Requisição POST que cria usuários, que por padrão tem `is_active = False`. Assim que é feita, um código de verificação é enviado para o e-mail da conta recém criada.
+```bash
+pdm install
+cp .env.example .env            # fill SECRET_KEY at least
+pdm run manage.py migrate
+pdm run dev
+```
 
-- /api/users/{id}/
+## Current endpoints
 
-Requisição GET que retorna um usuário pelo ID. Apenas usuários authenticados tem permissão de fazer essa requisição. São filtrados da busca, usuários que não estão aprovados no sistema  (`is_active`), a menos que quem fez a requisição seja um *superusuário* ou um *staff* (respectivamente, `is_staff` e `is_superuser`), nesse caso nenhum filtro é aplicado na busca.
+All routes are under `/api/`. Public routes need no login; the rest need the
+auth cookies (see the auth section of the project guide).
 
-- /api/users/{id}/
+### Authentication and sessions
 
-Requisição PATCH que atualiza um usuário pelo ID. A senha e o e-mail são bloqueados, tendo *endpoints* próprios.
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/login/` | Creates a session and sets the auth cookies on the client |
+| `POST /api/refresh/` | Rotates the access/refresh tokens |
+| `POST /api/me/logout/` | Ends this device's session and clears the cookies |
+| `POST /api/me/revoke-sessions/` | Logs out of every device |
+| `POST /api/me/deactivate/` | Deactivates the user's own account (`is_active = False`; never deleted) |
+| `GET /api/sessions/` | Active sessions of the user, flags the current one |
+| `DELETE /api/sessions/<id>/` | Revokes another device's session |
 
-- /api/users/{id}/
+### Users
 
-Requisição DELETE que desativa um usuário pelo ID. O usuário não é apagado do banco, o campo `is_active` é atualizado para `False`.
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/users/me/` | The logged user's data |
+| `GET /api/users/list/` | Lists users. Non-staff users only see active ones (`is_active`); staff and superusers (`is_staff`, `is_superuser`) see everyone |
 
-- /api/users/email_change_request/
+### One-time code flows
 
-Requisição POST que envia um código de mudança de e-mail para o novo e-mail do usuário.
+Each flow has three steps: **request** (sends a code by e-mail), **verify**
+(only checks the code, changes nothing) and **confirm** (applies the change).
 
-- /api/users/email_change_confirm/
+| Flow | Endpoints | Notes |
+|------|-----------|-------|
+| Registration | `POST /api/registration/request/`, `verify/`, `confirm/` | Creates the user inactive (`is_active = False`) and e-mails a code; confirm sets name and password and activates it |
+| Password reset | `POST /api/password-reset/request/`, `verify/`, `confirm/` | Always answers "code sent", even if the e-mail does not exist |
+| E-mail change | `POST /api/email-change/request/`, `verify/`, `confirm/` | Logged users only; the code goes to the new address; confirm needs the current password |
 
-Requisição POST que confirma a mudança de email.
+## To do
 
-- /api/users/email_change_verify/
-
-Requisição POST que apenas verifica o código de verificação sem alterar dados no banco.
-
-- /api/users/login/
-
-Requisição POST que cria uma sessão no Django e atualiza o cliente com *cookies*.
-
-- /api/users/logout/
-
-Requisição POST que apaga a sessão do usuário e apaga os *cookies* no cliente.
-
-- /api/users/password_reset_request/
-
-Requisição POST que envia um código de redefinição de senha para o e-mail do usuário.
-
-- /api/users/password_reset_confirm/
-
-Requisição POST que confirma a troca de senha.
-
-- /api/users/password_reset_verify/
-
-Requisição POST que apenas verifica o código de verificação sem alterar dados no banco.
-
-- /api/users/email_verification_verify/
-
-Requisição POST que apenas verifica o código de verificação de email.
-
-- /api/users/email_verification_confirm/
-
-Requisição POST que confirma a existência do e-mail do usuário.
-
-## Lista de Tarefas
-
-- [ ] Logout assim que e-mail ou senha são alterados.
-- [ ] Template visual para os códigos enviados por e-mail. Bem como adição de perfil de envio de códigos por e-mail, na configuração  MAILERS.
-- [ ] Adicionar *docstrings* nas classes e funções.
-- [ ] Melhorar uso do drf-spectacular.
-- [ ] Melhorar caminho das *urls*  (usar *kebab-case* ou outro, invés de *snake_case*).
+- [ ] Log the user out as soon as the e-mail or password changes.
+- [ ] Visual template for the e-mailed codes, plus a mail sending profile in the `MAILERS` setting.
+- [ ] Add docstrings to classes and functions.
+- [ ] Improve the use of drf-spectacular.

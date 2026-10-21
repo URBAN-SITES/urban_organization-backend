@@ -18,7 +18,8 @@ Everything (code, comments, commits, branch names, docs, API messages) is writte
 | `main` | Stable / release. Only receives merges from `dev` |
 | `dev` | Integration base. Every `feat/*` starts here and returns via PR |
 
-Never commit directly to `main` or `dev`. Open a PR into `dev`.
+Never commit directly to `main` or `dev`. Open a PR into `dev`, referencing
+the Issue (`Refs #12`). Process details: [`TEAM_WORKFLOW.md`](TEAM_WORKFLOW.md).
 
 ## Commits
 
