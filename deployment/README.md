@@ -16,7 +16,7 @@ manual investigation; database changes are not automatically rolled back.
 
 The implementation PRs target `dev`. Merge them before merging the release PRs
 from `dev` into `main`. Automation waits until backend `main` contains this
-infrastructure. A push to `dev` or a PR branch does not trigger production.
+infrastructure and frontend `main` contains its Dockerfile. A push to `dev` or a PR branch does not trigger production.
 The scheduler deploys main directly; required CI checks should protect main.
 
 Initial installation (as the server user):

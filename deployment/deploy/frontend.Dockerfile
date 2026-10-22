@@ -13,6 +13,6 @@ ARG VITE_MESSAGING_SENDER_ID
 ARG VITE_APP_ID
 ARG VITE_MEASUREMENT_ID
 ARG VITE_VAPID_KEY
-RUN VITE_API_BASE_URL=https://4000.michalski.app/api/v1 npm run build
+RUN VITE_API_BASE_URL=https://4000.michalski.app/api/v1 VITE_BASE_URL=https://4000.michalski.app/api npm run build
 FROM nginx:stable-alpine
 COPY --from=build /app/dist /usr/share/nginx/html

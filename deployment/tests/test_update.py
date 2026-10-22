@@ -20,6 +20,7 @@ class DeploymentTests(unittest.TestCase):
                 self.git(repo, "init", "-b", "main")
                 self.git(repo, "remote", "add", "origin", ".")
                 (repo / "README").write_text("fixture")
+                (repo / "Dockerfile").write_text("FROM fixture\n")
                 self.commit(repo)
             backend = root / "backend-resenha"
             infrastructure = backend / "deployment"

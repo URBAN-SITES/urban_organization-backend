@@ -14,8 +14,9 @@ backend_sha=$(git -C backend-resenha rev-parse origin/main)
 frontend_sha=$(git -C frontend-resenha rev-parse origin/main)
 revision="$backend_sha-$frontend_sha"
 
-if ! git -C backend-resenha cat-file -e "$backend_sha:deployment/compose.prod.yml" 2>/dev/null; then
-    echo 'Waiting for the deployment PR to reach backend main; production unchanged.'
+if ! git -C backend-resenha cat-file -e "$backend_sha:deployment/compose.prod.yml" 2>/dev/null ||
+   ! git -C frontend-resenha cat-file -e "$frontend_sha:Dockerfile" 2>/dev/null; then
+    echo 'Waiting for deployment PRs to reach both main branches; production unchanged.'
     exit 0
 fi
 if [[ ${1:-} == --check ]]; then
