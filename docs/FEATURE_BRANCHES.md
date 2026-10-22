@@ -280,7 +280,7 @@ also sent as a push (Firebase Cloud Messaging) to the user's registered devices.
 
 **Backend (from any service)**
 ```python
-from notifications.services.notification import NotificationService
+from core.modules.notifications.services.notification import NotificationService
 
 NotificationService.notify(
     user, "Payment approved", "Your ticket is ready", data={"payment_id": str(p.id)}
@@ -311,8 +311,8 @@ FCM reports as dead are deleted.
 **Real time:** merge `feat/websockets` and call `send_to_user(user.pk, {...})`
 inside `NotificationService.notify`.
 
-**Files:** the `notifications/` app (models, serializers, services, views, admin,
-urls, migrations, tests), plus `INSTALLED_APPS` and one line in `app/urls.py`
+**Files:** the `core/modules/notifications/` module (models, serializers, services, views, admin,
+urls, tests), plus a migration in `core/migrations/` and one line in `app/urls.py`
 **Env vars:** `FIREBASE_CREDENTIALS` (optional)
 
 ---
@@ -394,7 +394,7 @@ POST /api/v1/uploads/       multipart/form-data, field "file" (max 10 MB)
 
 **Backend reuse**
 ```python
-from uploads.services.upload import UploadService
+from core.modules.uploads.services.upload import UploadService
 
 result = UploadService.upload(file, folder="products")
 UploadService.delete(result["public_id"])
@@ -402,7 +402,7 @@ UploadService.delete(result["public_id"])
 
 Store `url` (and `public_id` if you need to delete) in your model.
 
-**Files:** self-contained `uploads/` app (`services/upload.py`, `serializers/upload.py`, `views/upload.py`, `urls.py`, `response_messages.py`); registered in `INSTALLED_APPS` and `app/urls.py`
+**Files:** self-contained `core/modules/uploads/` module (`services/upload.py`, `serializers/upload.py`, `views/upload.py`, `urls.py`, `response_messages.py`); registered in `app/urls.py`
 **Env vars:** `CLOUDINARY_URL` (copy it from the Cloudinary dashboard)
 
 ---
@@ -459,7 +459,7 @@ unrecoverable — store it safely.
 
 ### `feat/payments`
 
-**What it does:** Mercado Pago **Checkout Pro** in its own `payments` app.
+**What it does:** Mercado Pago **Checkout Pro** in its own `core/modules/payments` module.
 
 **Flow**
 1. Frontend calls `POST /api/v1/payments/` with `{"title": "Ticket", "amount": "10.00"}`.
@@ -484,8 +484,8 @@ unrecoverable — store it safely.
 - Use test credentials from the Mercado Pago developer panel during the hackathon.
 - Currency is BRL. Users with payments cannot be deleted (`PROTECT`).
 
-**Files:** `payments/{models,serializers,services,views}/payment.py`,
-`payments/{urls,admin,response_messages}.py`, migration, `payments/tests/test_payment.py`
+**Files:** `core/modules/payments/{models,serializers,services,views}/payment.py`,
+`core/modules/payments/{urls,admin,response_messages}.py`, migration, `core/modules/payments/tests/test_payment.py`
 **Env vars:** `MP_ACCESS_TOKEN`, `FRONTEND_URL`
 
 ---
@@ -501,7 +501,7 @@ POST /api/v1/ai/ask/   {"prompt": "Summarize this text: ..."}
 
 **Backend reuse** (summaries, classification, extraction, chat replies...)
 ```python
-from ai.services.ask import AIService
+from core.modules.ai.services.ask import AIService
 
 answer = AIService.ask(
     text,
@@ -514,7 +514,7 @@ answer = AIService.ask(
 - Empty or blocked responses return 400; provider rate limits return 429.
 - Rate limit from the provider → 429; other provider errors → 500 (logged).
 
-**Files:** self-contained `ai/` app (`services/ask.py`, `serializers/ask.py`, `views/ask.py`, `urls.py`, `response_messages.py`, `tests/test_ask.py`); registered in `INSTALLED_APPS` and `app/urls.py`
+**Files:** self-contained `core/modules/ai/` module (`services/ask.py`, `serializers/ask.py`, `views/ask.py`, `urls.py`, `response_messages.py`, `tests/test_ask.py`); registered in `app/urls.py`
 **Env vars:** `GEMINI_API_KEY`
 
 ---

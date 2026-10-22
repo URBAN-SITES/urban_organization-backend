@@ -19,7 +19,7 @@ class UserConsumerTests(TransactionTestCase):
     def setUp(self):
         self.user = User.objects.create_user("a@a.com", "S3cure-pass!", name="A")
         self.client.post(
-            "/api/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
+            "/api/v1/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
         )
         self.access = self.client.cookies[get_auth_cookie_name()].value
 

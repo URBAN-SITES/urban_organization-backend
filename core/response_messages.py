@@ -1,7 +1,9 @@
 from django.utils.translation import gettext_lazy as _
 
-# ==============================# Success messages, used in views/ and inline_serializers of response_serializers.py
-# ==============================MSG_CODE_SENT = _("If the e-mail exists, a code was sent.")
+# ==============================
+# Success messages, used in views/ and inline_serializers of response_serializers.py
+# ==============================
+MSG_CODE_SENT = _("If the e-mail exists, a code was sent.")
 MSG_CODE_VALID = _("Code is valid.")
 MSG_USER_CREATED = _("User successfully created.")
 MSG_PASWORD_RESET = _("Password has been reset successfully.")
@@ -13,8 +15,10 @@ MSG_LOGOUT_SUCCESSFUL = _("Logout successful.")
 MSG_USER_SESSION_DEACTIVATED = _("The session has been deactivated.")
 MSG_REFRESH_TOKENS_SUCCESSFUL = _("Refresh tokens successful.")
 
-# ==============================# Fail messages, used in services/ and inline_serializers of response_serializers.py
-# ==============================MSG_SERVICE_UNAVAILABLE = _("Service temporarily unavailable.")
+# ==============================
+# Fail messages, used in services/ and inline_serializers of response_serializers.py
+# ==============================
+MSG_SERVICE_UNAVAILABLE = _("Service temporarily unavailable.")
 MSG_CODE_INVALID = _("Invalid or expired verification code.")
 MSG_EMAIL_ALREADY_EXIST = _("This account is already active.")
 MSG_USER_SESSION_NOT_FOUND = _("Session not found.")

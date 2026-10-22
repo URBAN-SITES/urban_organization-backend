@@ -45,6 +45,7 @@ app/                     # project config (not an app)
   urls.py                # root routes: /admin/, /api/docs/, /api/v1/
   asgi.py / wsgi.py      # default to app.settings.prod
 core/                    # users, auth and everything shared
+  modules/               # feature modules: ai/ notifications/ payments/ uploads/ (own models/services/views/urls/tests)
   models/                # one model (or family) per file
   serializers/           # input validation + output shape
   services/              # business rules
@@ -56,7 +57,7 @@ core/                    # users, auth and everything shared
   spectacular_serializers.py  # response schemas used only by the API docs
   admin.py
   migrations/
-tests/                   # legacy root test package (keep new tests in <app>/tests/)
+tests/                   # legacy root test package (keep new tests in core/modules/<module>/tests/)
 docs/                    # this guide, conventions, team workflow, feature branches
 .github/                 # CI (ruff.yml), PR template, issue template
 AGENTS.md / CLAUDE.md    # rules for AI agents working in the repo
@@ -75,11 +76,12 @@ AGENTS.md / CLAUDE.md    # rules for AI agents working in the repo
 | `middleware/` | Cross-cutting request/response behavior (idempotency, audit) | Feature logic |
 | `tasks/` | Celery tasks, thin wrappers that call services/utils | Business rules (keep them in services) |
 | `response_messages.py` | `MSG_<MEANING> = _("...")` for every message the client sees | Hard-coded strings in views/services |
-| `<app>/tests/` | `test_<subject>.py`, one file per subject | — |
+| `core/modules/<module>/tests/` | `test_<subject>.py`, one file per subject | — |
 
-**Self-contained features** (payments, chat, marketplace...) get their **own app**
-with the same layered folders and an `urls.py` with `app_name`, so their
-migrations never collide with `core`. See `payments/` in `feat/payments`.
+**Self-contained features** (payments, chat, marketplace...) are a **module inside
+`core`** (`core/modules/<module>/`) with the same layered folders and an `urls.py` with
+`app_name`. No new Django app: import its models in `core/models/__init__.py`, its
+admin in `core/admin.py`, and include its urls in `app/urls.py`. See `core/modules/payments/`.
 
 ### Adding a feature: checklist
 
@@ -184,7 +186,7 @@ pdm install && pdm run manage.py migrate
 | `feat/notifications` | In-app notifications, `NotificationService.notify()` | — |
 | `feat/websockets` | Channels at `/ws/`, JWT cookie auth, `send_to_user()` | — |
 | `feat/google-auth` | `POST /api/v1/login/google/` (Google ID token) | `GOOGLE_CLIENT_ID` |
-| `feat/payments` | `payments` app: Mercado Pago checkout + webhook | `MP_ACCESS_TOKEN`, `FRONTEND_URL` |
+| `feat/payments` | `core/modules/payments` module: Mercado Pago checkout + webhook | `MP_ACCESS_TOKEN`, `FRONTEND_URL` |
 | `feat/ai` | `POST /api/v1/ai/ask/` with Gemini, `AIService.ask()` | `GEMINI_API_KEY` |
 | `feat/data-libs` | pandas, scikit-learn, opencv-headless | — |
 | `feat/docker` | Dockerfile and Compose (Postgres, Redis, web, worker), ASGI server, production settings | `POSTGRES_*`, `ALLOWED_HOSTS`, `USE_HTTPS` |
