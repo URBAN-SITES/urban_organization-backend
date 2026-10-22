@@ -16,6 +16,9 @@ dependencies = [
   "django-auditlog>=3.4.1",
   "google-genai>=2.32.0",
   "cloudinary>=1.46.3",
+  "pandas>=3.0.6",
+  "scikit-learn>=1.9.1",
+  "opencv-python-headless>=5.0.0.93",
 ]
 requires-python = ">=3.14"
 readme = "README.md"
