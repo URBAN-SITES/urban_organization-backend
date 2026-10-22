@@ -1,4 +1,5 @@
 import os
+import re
 from decimal import Decimal
 
 import mercadopago
@@ -8,7 +9,6 @@ from payments.models.payment import Payment
 from payments.response_messages import MSG_PAYMENT_PROVIDER_UNAVAILABLE
 
 MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
 
 def _sdk() -> mercadopago.SDK:
@@ -17,43 +17,74 @@ def _sdk() -> mercadopago.SDK:
 
 class PaymentService:
     @staticmethod
-    def create_checkout(
-        user, title: str, amount: Decimal, notification_url: str
+    def create_pix_payment(
+        user, title: str, amount: Decimal, cpf: str, name: str, notification_url: str
     ) -> dict:
-        """Creates a local Payment and a Mercado Pago Checkout Pro link to pay it."""
-        payment = Payment.objects.create(user=user, title=title, amount=amount)
-        preference = {
-            "items": [
-                {
-                    "title": title,
-                    "quantity": 1,
-                    "unit_price": float(amount),
-                    "currency_id": "BRL",
-                }
-            ],
-            "payer": {"email": user.email},
+        """Creates a local Payment and generates a Mercado Pago PIX QR Code & Copia e Cola."""
+        clean_cpf = re.sub(r"\D", "", cpf)
+        parts = name.strip().split(" ", 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else first_name
+
+        payment = Payment.objects.create(
+            user=user,
+            title=title,
+            amount=amount,
+            payer_cpf=clean_cpf,
+            payer_name=name.strip(),
+        )
+
+        payload = {
+            "transaction_amount": float(amount),
+            "description": title,
+            "payment_method_id": "pix",
+            "payer": {
+                "email": user.email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "identification": {
+                    "type": "CPF",
+                    "number": clean_cpf,
+                },
+            },
             "external_reference": str(payment.id),
             "notification_url": notification_url,
         }
-        if FRONTEND_URL:
-            preference["back_urls"] = {
-                "success": f"{FRONTEND_URL}/payments/success",
-                "failure": f"{FRONTEND_URL}/payments/failure",
-                "pending": f"{FRONTEND_URL}/payments/pending",
-            }
-            preference["auto_return"] = "approved"
 
-        result = _sdk().preference().create(preference)
-        if result["status"] != 201:
+        result = _sdk().payment().create(payload)
+        if result["status"] not in (200, 201):
             payment.delete()
             raise exceptions.APIException(MSG_PAYMENT_PROVIDER_UNAVAILABLE)
 
-        payment.preference_id = result["response"]["id"]
-        payment.save(update_fields=["preference_id", "updated_at"])
+        data = result["response"]
+        tx_data = data.get("point_of_interaction", {}).get("transaction_data", {})
+
+        payment.provider_payment_id = str(data.get("id", ""))
+        payment.status = data.get("status", Payment.Status.PENDING)
+        payment.qr_code = tx_data.get("qr_code", "")
+        payment.qr_code_base64 = tx_data.get("qr_code_base64", "")
+        payment.ticket_url = tx_data.get("ticket_url", "")
+        payment.save(
+            update_fields=[
+                "provider_payment_id",
+                "status",
+                "qr_code",
+                "qr_code_base64",
+                "ticket_url",
+                "updated_at",
+            ]
+        )
+
         return {
             "payment_id": payment.id,
-            "checkout_url": result["response"]["init_point"],
+            "status": payment.status,
+            "qr_code": payment.qr_code,
+            "qr_code_base64": payment.qr_code_base64,
+            "ticket_url": payment.ticket_url,
         }
+
+    # Backward compatibility alias
+    create_checkout = create_pix_payment
 
     @staticmethod
     def sync_from_provider(provider_payment_id: str) -> None:

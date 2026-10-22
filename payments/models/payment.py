@@ -27,10 +27,15 @@ class Payment(models.Model):
     status = models.CharField(
         _("status"), max_length=20, choices=Status, default=Status.PENDING
     )
+    payer_cpf = models.CharField(_("payer CPF"), max_length=14, blank=True)
+    payer_name = models.CharField(_("payer name"), max_length=255, blank=True)
     preference_id = models.CharField(_("preference id"), max_length=255, blank=True)
     provider_payment_id = models.CharField(
         _("provider payment id"), max_length=255, blank=True
     )
+    qr_code = models.TextField(_("PIX copy and paste"), blank=True)
+    qr_code_base64 = models.TextField(_("PIX QR code base64"), blank=True)
+    ticket_url = models.URLField(_("ticket url"), blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 

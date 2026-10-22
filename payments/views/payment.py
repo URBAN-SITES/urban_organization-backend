@@ -8,9 +8,9 @@ from rest_framework.views import APIView
 
 from payments.models.payment import Payment
 from payments.serializers.payment import (
-    CheckoutCreateSerializer,
-    CheckoutResponseSerializer,
+    PaymentCreateSerializer,
     PaymentSerializer,
+    PixPaymentResponseSerializer,
 )
 from payments.services.payment import PaymentService
 
@@ -27,19 +27,21 @@ class PaymentListCreateView(ListAPIView):
         return super().get(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Create a Mercado Pago checkout",
-        description="Returns `checkout_url`; redirect the user there. In a real flow compute `amount` server-side from your product instead of trusting the client.",
-        request=CheckoutCreateSerializer,
-        responses={201: CheckoutResponseSerializer},
+        summary="Create a Mercado Pago PIX payment",
+        description="Generates a PIX QR Code & Copia e Cola with payer CPF and full name.",
+        request=PaymentCreateSerializer,
+        responses={201: PixPaymentResponseSerializer},
     )
     def post(self, request):
-        serializer = CheckoutCreateSerializer(data=request.data)
+        serializer = PaymentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        result = PaymentService.create_checkout(
+        result = PaymentService.create_pix_payment(
             user=request.user,
             title=serializer.validated_data["title"],
             amount=serializer.validated_data["amount"],
+            cpf=serializer.validated_data["cpf"],
+            name=serializer.validated_data["name"],
             notification_url=request.build_absolute_uri(reverse("payments:webhook")),
         )
         return Response(result, status.HTTP_201_CREATED)
