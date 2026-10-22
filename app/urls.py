@@ -126,6 +126,7 @@ route_core = [
     path("ai/", include("ai.urls")),
     path("uploads/", include("uploads.urls")),
     path("notifications/", include("notifications.urls")),
+    path("payments/", include("payments.urls")),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/list/", UserListView.as_view(), name="users-list"),
 ]

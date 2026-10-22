@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "ai",
     "uploads",
     "notifications",
+    "payments",
 ]
 LANGUAGES = [
     ("en", "English"),
