@@ -10,7 +10,7 @@ GOOGLE_PAYLOAD = {"email": "g@gmail.com", "email_verified": True, "name": "G Use
 
 class GoogleLoginTests(TestCase):
     def login(self):
-        return self.client.post("/api/login/google/", {"credential": "token"})
+        return self.client.post("/api/v1/login/google/", {"credential": "token"})
 
     @mock.patch(VERIFY, return_value=GOOGLE_PAYLOAD)
     def test_first_login_creates_user_and_sets_cookies(self, _):
@@ -38,7 +38,7 @@ class GoogleLoginTests(TestCase):
     def test_email_login_still_works(self):
         User.objects.create_user("a@a.com", "S3cure-pass!", name="A")
         response = self.client.post(
-            "/api/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
+            "/api/v1/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("refresh_token", response.cookies)

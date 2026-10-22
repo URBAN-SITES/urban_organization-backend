@@ -32,10 +32,11 @@ fix(core): drop missing updated_at from session update
 
 ## Project layout
 
-One Django app per domain. Inside an app, split by layer, one module per subject:
+There is a single Django app: `core`. Every feature is a module (a folder) inside it.
+Inside a module, split by layer, one file per subject:
 
 ```
-<app>/
+core/<module>/            # e.g. core/payments/, core/notifications/
   models/<subject>.py
   serializers/<subject>.py
   services/<subject>.py      # business logic
@@ -45,14 +46,17 @@ One Django app per domain. Inside an app, split by layer, one module per subject
   tasks/<subject>.py         # Celery tasks
   utils/<subject>.py
   admin.py
-  urls.py                    # feature apps only
+  urls.py                    # feature modules only
   response_messages.py       # every user-facing message (MSG_*)
   tests/test_<subject>.py
 ```
 
-- A self-contained feature (payments, chat...) gets its own app with the same
-  layered folders, so its migrations never collide with `core`. Its routes live
-  in `<app>/urls.py` with `app_name`.
+- A self-contained feature (payments, chat...) gets its own **module inside `core`**
+  (`core/<module>/`) with the same layered folders. Never run `startapp` and never
+  add to `INSTALLED_APPS`. Its models are imported in `core/models/__init__.py`,
+  its admin in `core/admin.py`, its migrations go in `core/migrations/`, and its
+  routes live in `core/<module>/urls.py` with `app_name`, included from `app/urls.py`
+  as `include("core.<module>.urls")`.
 - Views never touch business rules; they call a service.
 - Services raise DRF exceptions (`ValidationError`, `NotFound`, ...).
 - Settings shared by all environments go in `app/settings/base.py`; env-specific in `dev.py` / `prod.py`.
