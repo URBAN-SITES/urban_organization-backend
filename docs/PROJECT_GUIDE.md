@@ -100,7 +100,7 @@ admin in `core/admin.py`, and include its urls in `app/urls.py`. See `core/modul
 ## 4. Authentication (how it works)
 
 - **Login** (`POST /api/v1/login/`) sets two HttpOnly cookies: `access_token`
-  (15 min) and `refresh_token` (1 day), plus the `csrftoken` cookie.
+  (30 min) and `refresh_token` (1 day), plus the `csrftoken` cookie.
 - Every login creates/updates a **`UserSession`** row (device, IP, JTIs).
   `CustomAuthentication` accepts a token **only if its session is active**, so
   logout / revoking a session invalidates it immediately, not only at expiry.
