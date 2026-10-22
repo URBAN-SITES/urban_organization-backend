@@ -32,7 +32,9 @@ pdm run dev                     # runserver with app.settings.dev
 pdm run manage.py test          # run the test suite
 ```
 
-E-mails are printed to the terminal in dev (`MAILERS` console backend in `dev.py`).
+In dev, e-mails are sent through SMTP when `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` are set in
+`.env` (Gmail needs an **App password**, see `FEATURE_BRANCHES.md`); otherwise they are printed to
+the terminal (console backend in `dev.py`).
 
 ## 3. Folder structure
 
@@ -40,7 +42,7 @@ E-mails are printed to the terminal in dev (`MAILERS` console backend in `dev.py
 app/                     # project config (not an app)
   settings/
     base.py              # shared by every environment
-    dev.py               # DEBUG, SQLite, console e-mail
+    dev.py               # DEBUG, SQLite, SMTP or console e-mail
     prod.py              # production overrides (env vars only)
   urls.py                # root routes: /admin/, /api/docs/, /api/v1/
   asgi.py / wsgi.py      # default to app.settings.prod

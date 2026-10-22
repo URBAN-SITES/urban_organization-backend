@@ -260,8 +260,8 @@ at `/admin/` and `/api/docs/`.
 ### `feat/emails`
 
 **What it does:** configures real SMTP sending via Django 6.1 `MAILERS`
-(the old `EMAIL_*` settings are deprecated). In dev, e-mails are still printed
-to the terminal because `dev.py` overrides the mailer with the console backend.
+(the old `EMAIL_*` settings are deprecated). In dev, `dev.py` uses this SMTP mailer when
+`EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` are set; without them e-mails are printed to the terminal.
 
 **Gmail:** enable 2FA and create an **App password**; use it as
 `EMAIL_HOST_PASSWORD`.

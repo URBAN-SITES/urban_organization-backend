@@ -48,11 +48,14 @@ DATABASES = {
         # DATAFILE_TMP_EXTSIZE
     }
 }
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}
+# Real SMTP (from base.py) when EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are set in .env;
+# otherwise e-mails are printed to the terminal.
+if not (os.getenv("EMAIL_HOST_USER") and os.getenv("EMAIL_HOST_PASSWORD")):
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        },
+    }
 
 # run tasks inline and cache in memory so dev works without Redis;
 # delete both to test against a real Redis + worker
