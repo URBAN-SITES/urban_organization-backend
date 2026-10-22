@@ -48,7 +48,11 @@ from core.spectacular_serializers import (
     UserSessionDeactivatedSerializer,
     UserSessionNotFoundSerializer,
 )
-from core.utils.cookies import get_auth_cookie_kwargs, get_auth_cookie_name
+from core.utils.cookies import (
+    get_auth_cookie_kwargs,
+    get_auth_cookie_name,
+    set_auth_cookies,
+)
 
 # TODO: add description and summary to all of views
 
@@ -90,15 +94,7 @@ class LoginView(APIView):
         response = Response(
             {"detail": MSG_LOGIN_SUCCESSFUL, "data": token_data}, status.HTTP_200_OK
         )
-        access_cookie_kwargs = get_auth_cookie_kwargs(is_refresh=False)
-        refresh_cookie_kwargs = get_auth_cookie_kwargs(is_refresh=True)
-
-        response.set_cookie(
-            get_auth_cookie_name(), token_data["access"], **access_cookie_kwargs
-        )
-        response.set_cookie(
-            "refresh_token", token_data["refresh"], **refresh_cookie_kwargs
-        )
+        set_auth_cookies(response, token_data)
         csrf.get_token(request)
 
         return response
