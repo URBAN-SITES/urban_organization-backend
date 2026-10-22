@@ -76,6 +76,5 @@ See the workspace `README.md` for environment variables, checks and persistent v
 ## Production and automatic deployment
 
 [deployment/README.md](deployment/README.md) contains the versioned workspace
-Compose files, Nginx configuration and main-branch deployment timer. Production
-uses separate volumes and secrets. Merge the deployment changes into `dev`, then
-promote `dev` into `main` to activate automatic updates on the server.
+Compose files, Nginx configuration and dev-branch deployment timer. Production
+uses separate volumes and secrets. Merge the deployment changes into `dev` to activate automatic updates on the server.

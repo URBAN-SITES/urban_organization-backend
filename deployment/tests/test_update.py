@@ -17,7 +17,7 @@ class DeploymentTests(unittest.TestCase):
             for name in ("backend-resenha", "frontend-resenha"):
                 repo = root / name
                 repo.mkdir()
-                self.git(repo, "init", "-b", "main")
+                self.git(repo, "init", "-b", "dev")
                 self.git(repo, "remote", "add", "origin", ".")
                 (repo / "README").write_text("fixture")
                 (repo / "Dockerfile").write_text("FROM fixture\n")
@@ -49,7 +49,7 @@ class DeploymentTests(unittest.TestCase):
             self.assertIn(" up -d --wait", calls)
             self.run_update(environment)
             self.assertEqual((root / "calls").read_text(), calls)
-            (root / "frontend-resenha/README").write_text("new main")
+            (root / "frontend-resenha/README").write_text("new dev")
             self.commit(root / "frontend-resenha")
             result = self.run_update(dict(environment, FAIL_BUILD="1"), check=False)
             self.assertNotEqual(result.returncode, 0)

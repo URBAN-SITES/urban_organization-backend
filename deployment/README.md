@@ -8,16 +8,17 @@ Secrets remain only on the server and are never committed.
 ## Automatic production updates
 
 The user systemd timer runs `deploy/update.sh` every two minutes. It fetches the
-`main` branch of both repositories, exports exact commits under `releases/`, builds
+`dev` branch of both repositories, exports exact commits under `releases/`, builds
 both images, starts Compose with health checks and verifies both HTTPS endpoints.
 Development checkouts and their uncommitted changes are preserved. Builds that
 fail do not replace running containers. Failures after migrations/startup require
 manual investigation; database changes are not automatically rolled back.
 
-The implementation PRs target `dev`. Merge them before merging the release PRs
-from `dev` into `main`. Automation waits until backend `main` contains this
-infrastructure and frontend `main` contains its Dockerfile. A push to `dev` or a PR branch does not trigger production.
-The scheduler deploys main directly; required CI checks should protect main.
+Merge both deployment implementation PRs into `dev`. Automation waits until
+backend `dev` contains this infrastructure and frontend `dev` contains its
+Dockerfile, then deploys exact commits from both `dev` branches. Updates to `main`
+or feature branches do not trigger production. The scheduler deploys dev directly;
+required CI checks should protect dev.
 
 Initial installation (as the server user):
 

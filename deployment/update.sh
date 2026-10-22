@@ -8,19 +8,19 @@ exec 9>deploy/update.lock
 flock -n 9 || exit 0
 
 for repo in backend-resenha frontend-resenha; do
-    git -C "$repo" fetch --quiet origin refs/heads/main:refs/remotes/origin/main
+    git -C "$repo" fetch --quiet origin refs/heads/dev:refs/remotes/origin/dev
 done
-backend_sha=$(git -C backend-resenha rev-parse origin/main)
-frontend_sha=$(git -C frontend-resenha rev-parse origin/main)
+backend_sha=$(git -C backend-resenha rev-parse origin/dev)
+frontend_sha=$(git -C frontend-resenha rev-parse origin/dev)
 revision="$backend_sha-$frontend_sha"
 
 if ! git -C backend-resenha cat-file -e "$backend_sha:deployment/compose.prod.yml" 2>/dev/null ||
    ! git -C frontend-resenha cat-file -e "$frontend_sha:Dockerfile" 2>/dev/null; then
-    echo 'Waiting for deployment PRs to reach both main branches; production unchanged.'
+    echo 'Waiting for deployment PRs to reach both dev branches; production unchanged.'
     exit 0
 fi
 if [[ ${1:-} == --check ]]; then
-    echo "Available main revisions: $revision"
+    echo "Available dev revisions: $revision"
     exit 0
 fi
 if [[ -f deploy/current-revision ]] && [[ $(cat deploy/current-revision) == "$revision" ]]; then
@@ -41,7 +41,7 @@ ln -sfn "$workspace/frontend-resenha/.env.local" "$release/frontend-resenha/.env
 compose=(docker compose --project-directory "$release"
     --env-file "$release/frontend-resenha/.env.local"
     --env-file "$release/.env.prod" -f "$release/compose.prod.yml")
-echo "Building main revisions: $revision"
+echo "Building dev revisions: $revision"
 "${compose[@]}" config -q
 # Build both images before replacing any running application containers.
 "${compose[@]}" build
@@ -55,4 +55,4 @@ ln -sfn "$release" deploy/current-release
 cp "$release/backend-resenha/deployment/update.sh" deploy/update.sh.next
 chmod 755 deploy/update.sh.next
 mv deploy/update.sh.next deploy/update.sh
-echo "Deployed main revisions: $revision"
+echo "Deployed dev revisions: $revision"

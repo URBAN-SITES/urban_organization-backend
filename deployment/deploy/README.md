@@ -51,8 +51,9 @@ Both public HTTPS hosts respond. Browser verification passed email/password logi
 secure HttpOnly JWT cookies, authenticated profile reads, CSRF-protected updates and
 refresh-token rotation. A regression test covers session rotation and activity.
 
-Firebase configuration is absent, so the current Firebase-backed service worker
-cannot initialize; offline/PWA and push are not operational. Mapbox needs a public
-key. Google login also requires its backend endpoint and authorized OAuth origin.
+Firebase public configuration is installed on the server and service worker
+activation was verified. Real push delivery was not tested and requires backend
+service-account configuration. Mapbox needs a public key. Google OAuth requires
+the production origin to be authorized in Google Cloud Console.
 These integrations were not validated by deployment. Dependency installation reports
 10 existing high-severity audit findings; no automatic dependency upgrades were applied.

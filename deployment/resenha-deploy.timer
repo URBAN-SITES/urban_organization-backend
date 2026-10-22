@@ -1,5 +1,5 @@
 [Unit]
-Description=Check Resenha main branches every two minutes
+Description=Check Resenha dev branches every two minutes
 
 [Timer]
 OnBootSec=2min
