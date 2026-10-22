@@ -26,6 +26,14 @@ class UserAdmin(UserAdminFromDjango):
         "created_at",
     )
 
+    list_filter = (
+        "is_active",
+        "is_staff",
+        "is_superuser",
+        "groups",
+        "created_at",
+    )
+
     search_fields = (
         "name",
         "email",
@@ -151,6 +159,12 @@ class OneTimeCodeAdmin(NoAddModelAdmin):
         ),
     )
 
+    list_filter = (
+        "used",
+        "created_at",
+        "expires_at",
+    )
+
     search_fields = (
         "user__email",
         "user__name",
@@ -215,5 +229,36 @@ class EmailChangeAdmin(OneTimeCodeAdmin):
 
 
 @admin.register(UserSession)
-class UserSessionAdmin(admin.ModelAdmin):
-    pass
+class UserSessionAdmin(NoAddModelAdmin):
+    list_display = (
+        "user",
+        "device_name",
+        "ip_address",
+        "is_active",
+        "created_at",
+        "last_activity",
+    )
+
+    list_filter = (
+        "is_active",
+        "created_at",
+        "last_activity",
+    )
+
+    search_fields = (
+        "user__email",
+        "user__name",
+        "device_name",
+        "ip_address",
+    )
+
+    readonly_fields = (
+        "user",
+        "access_jti",
+        "refresh_jti",
+        "device_name",
+        "ip_address",
+        "location",
+        "created_at",
+        "last_activity",
+    )
