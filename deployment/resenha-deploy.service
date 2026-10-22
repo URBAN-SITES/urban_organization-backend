@@ -1,0 +1,8 @@
+[Unit]
+Description=Deploy Resenha dev branches
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/apps/hackathon-2026
+ExecStart=/bin/bash /srv/apps/hackathon-2026/deploy/update.sh
+TimeoutStartSec=45min
