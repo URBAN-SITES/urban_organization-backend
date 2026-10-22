@@ -24,6 +24,7 @@ from core.spectacular_serializers import (
 
 class EmailChangeRequestView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 1: Request e-mail change",
@@ -47,6 +48,7 @@ class EmailChangeRequestView(APIView):
 
 class EmailChangeVerifyView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 2: Verify e-mail change code",
@@ -68,6 +70,7 @@ class EmailChangeVerifyView(APIView):
 
 class EmailChangeConfirmView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 3: Confirm e-mail change",

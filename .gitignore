@@ -5,3 +5,6 @@ db.sqlite3
 .venv
 .vscode/
 .ruff_cache/
+staticfiles/
+*firebase-adminsdk*.json
+firebase-credentials.json

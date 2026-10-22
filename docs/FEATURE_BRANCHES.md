@@ -50,7 +50,7 @@ pdm run manage.py test            # every branch ships green
 | | [`feat/qrcode`](#featqrcode) | QR code PNG |
 | | [`feat/encryption`](#featencryption) | Encrypted model field |
 | Payments & AI | [`feat/payments`](#featpayments) | Mercado Pago checkout |
-| | [`feat/ai`](#featai) | Claude-powered endpoint |
+| | [`feat/ai`](#featai) | Gemini-powered endpoint |
 | | [`feat/data-libs`](#featdata-libs) | pandas, scikit-learn, OpenCV |
 | Safety & infra | [`feat/idempotency`](#featidempotency) | Safe retries / no double charge |
 | | [`feat/audit-logs`](#feataudit-logs) | Who changed what |
@@ -68,8 +68,8 @@ fixes the id type (users have UUID primary keys).
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `GET /api/users/<uuid>/` | logged | One user. Non-staff only see active users |
-| `PATCH /api/users/me/update/` | logged | Update own `name` (e-mail/password are rejected) |
+| `GET /api/v1/users/<uuid>/` | logged | One user. Non-staff only see active users |
+| `PATCH /api/v1/users/me/update/` | logged | Update own `name` (e-mail/password are rejected) |
 
 **Files:** `app/urls.py`, `core/views/user.py`, `core/services/user.py`
 **Env vars:** none
@@ -92,7 +92,7 @@ and logs the user in with the **same cookies** as the e-mail login.
 **Frontend**
 ```js
 // callback of the Google button (Google Identity Services)
-await fetch("/api/login/google/", {
+await fetch("/api/v1/login/google/", {
   method: "POST",
   credentials: "include",
   headers: { "Content-Type": "application/json" },
@@ -119,6 +119,7 @@ so you create them and assign users in `/admin/` (no extra tables).
 ```python
 from rest_framework.permissions import IsAuthenticated
 from core.permissions.has_role import HasRole
+
 
 class ReportView(APIView):
     permission_classes = [IsAuthenticated, HasRole]
@@ -171,16 +172,19 @@ class Product(BaseModel):
     name = models.CharField(max_length=255)
     extra = models.JSONField(default=dict, blank=True)  # free-form fields
 
+
 # core/serializers/product.py
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ("id", "name", "extra", "created_at")
 
+
 # core/views/product.py
 class ProductViewSet(OwnedModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
 
 # urls
 router = DefaultRouter()
@@ -199,8 +203,8 @@ urlpatterns += router.urls
 `UserListView` already uses them as the example.
 
 ```
-GET /api/users/list/?page=2
-GET /api/users/list/?search=maria&ordering=-created_at&is_active=true
+GET /api/v1/users/list/?page=2
+GET /api/v1/users/list/?search=maria&ordering=-created_at&is_active=true
 ```
 
 Paginated responses look like:
@@ -210,9 +214,9 @@ Paginated responses look like:
 
 Enable it on your own `ListAPIView` / `ViewSet`:
 ```python
-filterset_fields = ["status"]        # ?status=open
-search_fields = ["title", "owner__email"]   # ?search=
-ordering_fields = ["created_at"]     # ?ordering=-created_at
+filterset_fields = ["status"]  # ?status=open
+search_fields = ["title", "owner__email"]  # ?search=
+ordering_fields = ["created_at"]  # ?ordering=-created_at
 ```
 
 **Page size:** 20 (`PAGE_SIZE` in settings). Plain `APIView`s are not paginated.
@@ -224,7 +228,7 @@ ordering_fields = ["created_at"]     # ?ordering=-created_at
 
 ### `feat/api-versioning`
 
-**What it does:** every API route moves from `/api/...` to `/api/v1/...`
+**What it does:** every API route moves from `/api/v1/...` to `/api/v1/...`
 (`NamespaceVersioning`). `request.version` is `"v1"` inside views.
 
 To add a v2 later: include the new routes with `namespace="v2"` in `app/urls.py`
@@ -271,28 +275,45 @@ to the terminal because `dev.py` overrides the mailer with the console backend.
 ### `feat/notifications`
 
 **What it does:** stores notifications per user and lets the frontend list them
-and mark them as read.
+and mark them as read. If `FIREBASE_CREDENTIALS` is set, every notification is
+also sent as a push (Firebase Cloud Messaging) to the user's registered devices.
 
 **Backend (from any service)**
 ```python
-from core.services.notification import NotificationService
+from notifications.services.notification import NotificationService
 
-NotificationService.notify(user, "Payment approved", "Your ticket is ready", data={"payment_id": str(p.id)})
+NotificationService.notify(
+    user, "Payment approved", "Your ticket is ready", data={"payment_id": str(p.id)}
+)
 ```
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/notifications/` | My notifications (paginated if `feat/pagination-filters` is merged) |
-| `GET /api/notifications/?unread=true` | Only unread |
-| `POST /api/notifications/<id>/read/` | Mark one as read (204) |
-| `POST /api/notifications/read-all/` | Mark all as read (204) |
+| `GET /api/v1/notifications/` | My notifications (paginated if `feat/pagination-filters` is merged) |
+| `GET /api/v1/notifications/?unread=true` | Only unread |
+| `POST /api/v1/notifications/<id>/read/` | Mark one as read (204) |
+| `POST /api/v1/notifications/read-all/` | Mark all as read (204) |
+| `POST /api/v1/notifications/send/` | Push to one token `{"token", "title", "body"}` → `{"message_id"}` (503 if not configured, 502 if FCM fails) |
+| `POST /api/v1/notifications/devices/` | Register this browser's FCM token `{"token": "..."}` (204) |
+| `DELETE /api/v1/notifications/devices/` | Remove it on logout `{"token": "..."}` (204) |
+
+**Push setup**
+1. Firebase Console → Project settings → Service accounts → Generate new private key.
+2. Save the JSON in the backend folder as `firebase-credentials.json` (git-ignored) and set
+   `FIREBASE_CREDENTIALS=firebase-credentials.json` in `.env`.
+3. Frontend: `getToken(messaging, { vapidKey })` with the web config, then
+   `POST /api/v1/notifications/devices/`. A `firebase-messaging-sw.js` service worker
+   shows pushes while the tab is closed.
+
+Push is best-effort: if FCM fails the notification is still saved, and tokens
+FCM reports as dead are deleted.
 
 **Real time:** merge `feat/websockets` and call `send_to_user(user.pk, {...})`
 inside `NotificationService.notify`.
 
-**Files:** `core/models/notification.py` (+ migration), `core/serializers/notification.py`,
-`core/services/notification.py`, `core/views/notification.py`, admin, urls
-**Env vars:** none
+**Files:** the `notifications/` app (models, serializers, services, views, admin,
+urls, migrations, tests), plus `INSTALLED_APPS` and one line in `app/urls.py`
+**Env vars:** `FIREBASE_CREDENTIALS` (optional)
 
 ---
 
@@ -323,10 +344,8 @@ in `UserConsumer` or add a new consumer in `core/websockets/`.
 
 **Notes**
 - `daphne` is first in `INSTALLED_APPS`, so `runserver` serves HTTP + WebSocket.
-- `CHANNEL_LAYERS` is in-memory (single process). In production use
-  `channels_redis` (`pdm add channels-redis`) with `REDIS_URL`.
-- `feat/docker` runs gunicorn (WSGI); to serve WebSockets in the container,
-  run `daphne app.asgi:application -b 0.0.0.0 -p 8000` instead.
+- `CHANNEL_LAYERS` is in-memory and the Compose web service runs one Daphne
+  process. For multiple web processes, use `channels_redis` with `REDIS_URL`.
 
 **Files:** `core/websockets/{auth,consumers,routing}.py`, `app/asgi.py`,
 `core/authenticate.py` (`is_session_active` extracted), `core/tests/test_websockets.py`
@@ -341,7 +360,7 @@ in `UserConsumer` or add a new consumer in `core/websockets/`.
 ```python
 from core.tasks.email import send_email_task
 
-send_email_task.delay(email, code, "Verify your e-mail")   # retries 3x with backoff
+send_email_task.delay(email, code, "Verify your e-mail")  # retries 3x with backoff
 ```
 
 **Running in production**
@@ -369,13 +388,13 @@ rules in services; tasks only call them.
 returns its public URL. Files are stored in the folder `users/<user_id>/`.
 
 ```
-POST /api/uploads/       multipart/form-data, field "file" (max 10 MB)
+POST /api/v1/uploads/       multipart/form-data, field "file" (max 10 MB)
 → 201 {"url": "https://res.cloudinary.com/...", "public_id": "users/<id>/abc"}
 ```
 
 **Backend reuse**
 ```python
-from core.services.upload import UploadService
+from uploads.services.upload import UploadService
 
 result = UploadService.upload(file, folder="products")
 UploadService.delete(result["public_id"])
@@ -383,7 +402,7 @@ UploadService.delete(result["public_id"])
 
 Store `url` (and `public_id` if you need to delete) in your model.
 
-**Files:** `core/services/upload.py`, `core/serializers/upload.py`, `core/views/upload.py`
+**Files:** self-contained `uploads/` app (`services/upload.py`, `serializers/upload.py`, `views/upload.py`, `urls.py`, `response_messages.py`); registered in `INSTALLED_APPS` and `app/urls.py`
 **Env vars:** `CLOUDINARY_URL` (copy it from the Cloudinary dashboard)
 
 ---
@@ -393,7 +412,7 @@ Store `url` (and `public_id` if you need to delete) in your model.
 **What it does:** generates QR codes as PNG.
 
 ```html
-<img src="/api/qrcode/?data=TICKET-123" />  <!-- logged users, data up to 1000 chars -->
+<img src="/api/v1/qrcode/?data=TICKET-123" />  <!-- logged users, data up to 1000 chars -->
 ```
 
 **Backend reuse** (e-mail attachment, upload to Cloudinary...)
@@ -416,6 +435,7 @@ AES). Your code reads and writes plain text; the database stores ciphertext.
 
 ```python
 from core.models.fields import EncryptedTextField
+
 
 class Profile(models.Model):
     cpf = EncryptedTextField()
@@ -442,10 +462,10 @@ unrecoverable — store it safely.
 **What it does:** Mercado Pago **Checkout Pro** in its own `payments` app.
 
 **Flow**
-1. Frontend calls `POST /api/payments/` with `{"title": "Ticket", "amount": "10.00"}`.
+1. Frontend calls `POST /api/v1/payments/` with `{"title": "Ticket", "amount": "10.00"}`.
 2. API creates a local `Payment` (status `pending`) and returns `checkout_url`.
 3. Frontend redirects the user to `checkout_url` and the user pays.
-4. Mercado Pago calls `POST /api/payments/webhook/`; the API fetches the payment
+4. Mercado Pago calls `POST /api/v1/payments/webhook/`; the API fetches the payment
    **from the Mercado Pago API** (never trusts the request body) and updates
    the status (`approved`, `rejected`, `refunded`...).
 5. If `FRONTEND_URL` is set, the user comes back to
@@ -453,9 +473,9 @@ unrecoverable — store it safely.
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/payments/` | logged | Create checkout → `{payment_id, checkout_url}` |
-| `GET /api/payments/` | logged | My payments |
-| `POST /api/payments/webhook/` | public | Mercado Pago notifications |
+| `POST /api/v1/payments/` | logged | Create checkout → `{payment_id, checkout_url}` |
+| `GET /api/v1/payments/` | logged | My payments |
+| `POST /api/v1/payments/webhook/` | public | Mercado Pago notifications |
 
 **Important**
 - In a real flow, compute `amount` on the server (from your product/order),
@@ -472,28 +492,30 @@ unrecoverable — store it safely.
 
 ### `feat/ai`
 
-**What it does:** calls Claude (`claude-opus-5-5`) through the official Anthropic SDK.
+**What it does:** sends prompts to Gemini through the official `google-genai` SDK.
 
 ```
-POST /api/ai/ask/   {"prompt": "Summarize this text: ..."}
+POST /api/v1/ai/ask/   {"prompt": "Summarize this text: ..."}
 → 200 {"answer": "..."}
 ```
 
 **Backend reuse** (summaries, classification, extraction, chat replies...)
 ```python
-from core.services.ai import AIService
+from ai.services.ask import AIService
 
-answer = AIService.ask(text, system="You classify support tickets as LOW, MEDIUM or HIGH. Answer with one word.")
+answer = AIService.ask(
+    text,
+    system="You classify support tickets as LOW, MEDIUM or HIGH. Answer with one word.",
+)
 ```
 
 **Behavior**
-- Effort is `low` (fast and cheap); raise it in `core/services/ai.py` for harder tasks.
-- If Claude declines, the API retries on a fallback model in the same call;
-  if everything declines the endpoint returns 400.
+- Uses `gemini-flash-lite-latest` for concise, low-latency responses.
+- Empty or blocked responses return 400; provider rate limits return 429.
 - Rate limit from the provider → 429; other provider errors → 500 (logged).
 
-**Files:** `core/services/ai.py`, `core/serializers/ai.py`, `core/views/ai.py`, `core/tests/test_ai.py`
-**Env vars:** `ANTHROPIC_API_KEY`
+**Files:** self-contained `ai/` app (`services/ask.py`, `serializers/ask.py`, `views/ask.py`, `urls.py`, `response_messages.py`, `tests/test_ask.py`); registered in `INSTALLED_APPS` and `app/urls.py`
+**Env vars:** `GEMINI_API_KEY`
 
 ---
 
@@ -523,7 +545,7 @@ Put the code that uses them in a service (e.g. `core/services/report.py`).
 
 ```js
 const key = crypto.randomUUID();     // one key per user action, reused on retries
-await fetch("/api/payments/", {
+await fetch("/api/v1/payments/", {
   method: "POST",
   credentials: "include",
   headers: { "Idempotency-Key": key, "X-CSRFToken": csrf, "Content-Type": "application/json" },
@@ -575,14 +597,15 @@ Django middlewares run, so the stock auditlog middleware would record no actor.
 
 ```bash
 cp .env.example .env      # set SECRET_KEY
-docker compose up --build # API on http://localhost:8000 + Postgres
+docker compose up --build # API on http://localhost:8000
 docker compose exec web python manage.py createsuperuser
 ```
 
 **What's inside**
-- `Dockerfile`: Python 3.14 slim, PDM install from the lock, `collectstatic`,
-  non-root user, runs `migrate` then gunicorn (3 workers).
-- `docker-compose.yml`: `web` + `db` (Postgres 17 with healthcheck and volume).
+- `Dockerfile`: Python 3.14 slim, PDM resolves and installs the project lock,
+  runs `collectstatic` as a non-root user, and serves HTTP/WebSockets with Daphne.
+- `docker-compose.yml`: `migrate`, `web`, `worker`, Postgres 17, and Redis 7;
+  the database and Redis have health checks, and Postgres uses a persistent volume.
 - `prod.py`: Postgres from env, `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` from env,
   whitenoise for static files, HTTPS security settings (HSTS, secure cookies,
   SSL redirect). `SECRET_KEY` is required (fails fast if missing).
@@ -590,11 +613,10 @@ docker compose exec web python manage.py createsuperuser
 **`USE_HTTPS`:** `True` in real deploys. Compose sets it to `False` so login
 cookies work over plain `http://localhost`.
 
-**Not verified yet:** the image was never built in this environment (Docker was
-not installed). `python manage.py check --deploy` passes with these settings.
+**Not verified here:** the Docker image and Compose stack were not started.
 
 **Files:** `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `app/settings/prod.py`
-**Dependencies:** `psycopg[binary]`, `gunicorn`, `whitenoise`
+**Dependencies:** `psycopg[binary]`, `channels[daphne]`, `whitenoise`, `celery[redis]`
 **Env vars:** `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `USE_HTTPS`,
 `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`
 
@@ -607,6 +629,6 @@ not installed). `python manage.py check --deploy` passes with these settings.
 | Real-time notifications | `notifications` + `websockets` | In `NotificationService.notify`, call `send_to_user(user.pk, NotificationSerializer(n).data)` |
 | Notify when paid | `payments` + `notifications` | In `PaymentService.sync_from_provider`, notify the user when status becomes `approved` |
 | Ticket with QR code | `payments` + `qrcode` (+ `cloudinary-upload`) | After approval, `make_qrcode_png(str(payment.id))` and upload or e-mail it |
-| Async e-mails | `redis-celery` (+ `emails`) | Replace `send_email_token(...)` with `send_email_task.delay(...)` in the services |
+| Async e-mails | `redis-celery` (+ `emails`) | `send_email_token(...)` queues delivery after the token transaction commits |
 | AI over your data | `ai` + `data-libs` | Summarize a pandas DataFrame with `AIService.ask(df.describe().to_string())` |
 | Production-ready | `docker` + `redis-celery` + `rate-limiting` + `idempotency` | Point `REDIS_URL` to a Redis service in compose |

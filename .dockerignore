@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+.ruff_cache/
+.vscode/
+staticfiles/
+*firebase-adminsdk*.json
+firebase-credentials.json

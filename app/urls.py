@@ -10,11 +10,13 @@ from core.views.email_change import (
     EmailChangeRequestView,
     EmailChangeVerifyView,
 )
+from core.views.google_auth import GoogleLoginView
 from core.views.password_reset import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     PasswordResetVerifyView,
 )
+from core.views.qrcode import QRCodeView
 from core.views.registration import (
     RegistrationConfirmView,
     RegistrationRequestView,
@@ -26,10 +28,12 @@ from core.views.user import (
     LoginView,
     LogoutView,
     RevokeAllSessionsView,
+    UserDetailView,
     UserListView,
     UserMeView,
     UserSessionsDeactivateView,
     UserSessionsGetView,
+    UserUpdateSelfView,
 )
 
 route_docs = [
@@ -43,6 +47,7 @@ route_docs = [
 
 route_core = [
     path("login/", LoginView.as_view(), name="login"),
+    path("login/google/", GoogleLoginView.as_view(), name="login-google"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
     path("me/deactivate/", DeactivateSelfView.as_view(), name="deactivate-self"),
     path(
@@ -121,12 +126,19 @@ route_core = [
         ),
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
+    path("ai/", include("ai.urls")),
+    path("uploads/", include("uploads.urls")),
+    path("notifications/", include("notifications.urls")),
+    path("payments/", include("payments.urls")),
+    path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
+    path("users/me/update/", UserUpdateSelfView.as_view(), name="me-update"),
     path("users/list/", UserListView.as_view(), name="users-list"),
+    path("users/<uuid:user_id>/", UserDetailView.as_view(), name="user-detail"),
 ]
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/docs/", include(route_docs)),
-    path("api/", include(route_core)),
+    path("api/v1/", include((route_core, "v1"), namespace="v1")),
 ]

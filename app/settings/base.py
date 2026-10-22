@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -8,6 +9,8 @@ load_dotenv()
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Path to the Firebase service account JSON; empty disables push
+FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
 APPEND_SLASH = True
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 CSRF_TRUSTED_ORIGINS = [
@@ -22,6 +25,7 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SAMESITE = "Lax"
 INSTALLED_APPS = [
+    "daphne",  # makes runserver serve HTTP + WebSocket (ASGI)
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -29,17 +33,38 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
+    "django_filters",
     "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "core",
+    "auditlog",
+    "ai",
+    "uploads",
+    "notifications",
+    "payments",
 ]
 LANGUAGES = [
     ("en", "English"),
 ]
 LANGUAGES_BIDI = []
-LOGGING = {}
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "default"},
+    },
+    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+}
+# who changed what and when, visible in the admin under "Log entries"
+AUDITLOG_INCLUDE_TRACKING_MODELS = (
+    {"model": "core.User", "exclude_fields": ["password", "last_login"]},
+    "core.UserSession",
+)
 STATIC_URL = "static/"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
@@ -52,6 +77,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.idempotency.IdempotencyMiddleware",
+    "core.middleware.audit.AuditlogMiddleware",
 ]
 ROOT_URLCONF = "app.urls"
 TEMPLATES = [
@@ -69,7 +96,36 @@ TEMPLATES = [
     },
 ]
 TIME_ZONE = "America/Sao_Paulo"
+# Django 6.1+ mail config (EMAIL_* settings are deprecated); dev.py overrides it
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.getenv("EMAIL_HOST", "smtp.gmail.com"),
+            "port": int(os.getenv("EMAIL_PORT", "587")),
+            "username": os.getenv("EMAIL_HOST_USER", ""),
+            "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
+            "use_tls": os.getenv("EMAIL_USE_TLS", "True") == "True",
+            "timeout": 10,
+        },
+    },
+}
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@localhost")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TIME_LIMIT = 5 * 60
 WSGI_APPLICATION = "app.wsgi.application"
+ASGI_APPLICATION = "app.asgi.application"
+# single process only; use channels_redis.core.RedisChannelLayer in production
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -93,6 +149,28 @@ REST_FRAMEWORK = {
         "core.authenticate.CustomAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # request.version comes from the URL namespace ("v1"); add "v2" when needed
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        # login and one-time-code endpoints (brute-force protection)
+        "auth": "10/minute",
+    },
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),

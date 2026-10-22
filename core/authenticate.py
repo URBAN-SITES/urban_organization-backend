@@ -58,11 +58,7 @@ class CustomAuthentication(JWTAuthentication):
         # =======================================================
 
         validated_token = self.get_validated_token(raw_token)
-        jti = str(validated_token.get("jti", ""))
-        session_is_active = UserSession.objects.filter(
-            access_jti=jti, is_active=True
-        ).exists()
-        if not session_is_active:
+        if not self.is_session_active(validated_token):
             raise exceptions.AuthenticationFailed()
         if is_cookie_auth and request.method not in (
             "GET",
@@ -71,6 +67,11 @@ class CustomAuthentication(JWTAuthentication):
         ):
             enforce_csrf(request)
         return self.get_user(validated_token), validated_token
+
+    @staticmethod
+    def is_session_active(validated_token):
+        jti = str(validated_token.get("jti", ""))
+        return UserSession.objects.filter(access_jti=jti, is_active=True).exists()
 
 
 class CustomAuthenticationScheme(OpenApiAuthenticationExtension):

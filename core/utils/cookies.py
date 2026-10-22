@@ -21,3 +21,12 @@ def get_auth_cookie_kwargs(is_refresh=False):
 
 def get_auth_cookie_name():
     return settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
+
+
+def set_auth_cookies(response, tokens):
+    response.set_cookie(
+        get_auth_cookie_name(), tokens["access"], **get_auth_cookie_kwargs()
+    )
+    response.set_cookie(
+        "refresh_token", tokens["refresh"], **get_auth_cookie_kwargs(is_refresh=True)
+    )

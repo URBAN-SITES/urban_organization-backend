@@ -23,6 +23,7 @@ from core.spectacular_serializers import (
 class PasswordResetRequestView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 1: Request password reset code",
@@ -47,6 +48,7 @@ class PasswordResetRequestView(APIView):
 class PasswordResetVerifyView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 2: Verify password reset code",
@@ -71,6 +73,7 @@ class PasswordResetVerifyView(APIView):
 class PasswordResetConfirmView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Step 3: Confirm password reset",

@@ -4,6 +4,7 @@ from django.middleware import csrf
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, NotFound
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.validators import ValidationError
@@ -48,7 +49,11 @@ from core.spectacular_serializers import (
     UserSessionDeactivatedSerializer,
     UserSessionNotFoundSerializer,
 )
-from core.utils.cookies import get_auth_cookie_kwargs, get_auth_cookie_name
+from core.utils.cookies import (
+    get_auth_cookie_kwargs,
+    get_auth_cookie_name,
+    set_auth_cookies,
+)
 
 # TODO: add description and summary to all of views
 
@@ -66,6 +71,7 @@ def get_tokens_for_user(user):
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Authenticate user and set JWT tokens in the browser cookies",
@@ -90,15 +96,7 @@ class LoginView(APIView):
         response = Response(
             {"detail": MSG_LOGIN_SUCCESSFUL, "data": token_data}, status.HTTP_200_OK
         )
-        access_cookie_kwargs = get_auth_cookie_kwargs(is_refresh=False)
-        refresh_cookie_kwargs = get_auth_cookie_kwargs(is_refresh=True)
-
-        response.set_cookie(
-            get_auth_cookie_name(), token_data["access"], **access_cookie_kwargs
-        )
-        response.set_cookie(
-            "refresh_token", token_data["refresh"], **refresh_cookie_kwargs
-        )
+        set_auth_cookies(response, token_data)
         csrf.get_token(request)
 
         return response
@@ -303,21 +301,26 @@ class UserMeView(APIView):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
-class UserListView(APIView):
+class UserListView(ListAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserListRetrieveSerializer
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "email"]
+    ordering_fields = ["name", "email", "created_at"]
 
     @extend_schema(
         summary="List users",
-        description="Retrieves a list of users registered in the system based on the authorization rules evaluated in the service layer.",
+        description="Paginated list of users (`?page=`), filterable by `is_active`, searchable by name/e-mail (`?search=`) and sortable (`?ordering=-created_at`). Visibility rules are evaluated in the service layer.",
         responses={
             200: UserListRetrieveSerializer(many=True),
             401: NotAuthenticatedSerializer,
         },
     )
-    def get(self, request):
-        users = UserService.list_users(requesting_user=request.user)
-        serializer = UserListRetrieveSerializer(users, many=True)
-        return Response(serializer.data, status.HTTP_200_OK)
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return UserService.list_users(requesting_user=self.request.user)
 
 
 class UserDetailView(APIView):
@@ -332,7 +335,7 @@ class UserDetailView(APIView):
             404: UserNotFoundSerializer,
         },
     )
-    def get(self, request, user_id: int):
+    def get(self, request, user_id):
         try:
             user = UserService.get_user_by_id(
                 target_user_id=user_id, requesting_user=request.user

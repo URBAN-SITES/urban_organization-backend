@@ -13,6 +13,22 @@ dependencies = [
   "djangorestframework-simplejwt>=5.5.1",
   "django-user-agents>=0.4.0",
   "django-cors-headers>=4.9.0",
+  "django-auditlog>=3.4.1",
+  "google-genai>=2.32.0",
+  "cloudinary>=1.46.3",
+  "pandas>=3.0.6",
+  "scikit-learn>=1.9.1",
+  "opencv-python-headless>=5.0.0.93",
+  "psycopg[binary]>=3.3.6",
+  "whitenoise>=6.12.0",
+  "cryptography>=50.0.2",
+  "google-auth[requests]>=2.62.0",
+  "firebase-admin>=7.7.0",
+  "django-filter>=26.2",
+  "mercadopago>=3.6.0",
+  "qrcode[pil]>=8.2",
+  "celery[redis]>=5.6.3",
+  "channels[daphne]>=4.3.2",
 ]
 requires-python = ">=3.14"
 readme = "README.md"
