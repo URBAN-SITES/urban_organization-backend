@@ -12,7 +12,7 @@ class AIAskView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Ask the AI (Claude)",
+        summary="Ask the AI (Gemini)",
         request=AIAskSerializer,
         responses={200: AIAnswerSerializer},
     )
