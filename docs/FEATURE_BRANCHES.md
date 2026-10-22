@@ -481,18 +481,18 @@ POST /api/ai/ask/   {"prompt": "Summarize this text: ..."}
 
 **Backend reuse** (summaries, classification, extraction, chat replies...)
 ```python
-from core.services.ai import AIService
+from ai.services.ask import AIService
 
 answer = AIService.ask(text, system="You classify support tickets as LOW, MEDIUM or HIGH. Answer with one word.")
 ```
 
 **Behavior**
-- Effort is `low` (fast and cheap); raise it in `core/services/ai.py` for harder tasks.
+- Effort is `low` (fast and cheap); raise it in `ai/services/ask.py` for harder tasks.
 - If Claude declines, the API retries on a fallback model in the same call;
   if everything declines the endpoint returns 400.
 - Rate limit from the provider → 429; other provider errors → 500 (logged).
 
-**Files:** `core/services/ai.py`, `core/serializers/ai.py`, `core/views/ai.py`, `core/tests/test_ai.py`
+**Files:** self-contained `ai/` app (`services/ask.py`, `serializers/ask.py`, `views/ask.py`, `urls.py`, `response_messages.py`, `tests/test_ask.py`); registered in `INSTALLED_APPS` and `app/urls.py`
 **Env vars:** `ANTHROPIC_API_KEY`
 
 ---
