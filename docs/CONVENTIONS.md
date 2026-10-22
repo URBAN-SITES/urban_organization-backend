@@ -74,7 +74,7 @@ One Django app per domain. Inside an app, split by layer, one module per subject
 | Permission | `Is<Rule>` / `Has<Rule>` | `IsUserOwner`, `HasRole` |
 | Celery task | verb phrase, `_task` suffix | `send_email_task` |
 | Response message | `MSG_<MEANING>` wrapped in `gettext_lazy` | `MSG_CODE_SENT` |
-| URL path | `kebab-case`, plural nouns, trailing slash | `/api/password-reset/request/` |
+| URL path | `kebab-case`, plural nouns, trailing slash | `/api/v1/password-reset/request/` |
 | URL name | `kebab-case` | `password-reset-request` |
 | Env var | `UPPER_SNAKE_CASE`, prefixed by service | `CLOUDINARY_URL`, `MP_ACCESS_TOKEN` |
 | Test | `test_<behavior>` | `test_login_with_wrong_password_fails` |

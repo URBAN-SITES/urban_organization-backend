@@ -26,27 +26,27 @@ pdm run dev
 
 ## Current endpoints
 
-All routes are under `/api/`. Public routes need no login; the rest need the
+All routes are under `/api/v1/`. Public routes need no login; the rest need the
 auth cookies (see the auth section of the project guide).
 
 ### Authentication and sessions
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/login/` | Creates a session and sets the auth cookies on the client |
-| `POST /api/refresh/` | Rotates the access/refresh tokens |
-| `POST /api/me/logout/` | Ends this device's session and clears the cookies |
-| `POST /api/me/revoke-sessions/` | Logs out of every device |
-| `POST /api/me/deactivate/` | Deactivates the user's own account (`is_active = False`; never deleted) |
-| `GET /api/sessions/` | Active sessions of the user, flags the current one |
-| `DELETE /api/sessions/<id>/` | Revokes another device's session |
+| `POST /api/v1/login/` | Creates a session and sets the auth cookies on the client |
+| `POST /api/v1/refresh/` | Rotates the access/refresh tokens |
+| `POST /api/v1/me/logout/` | Ends this device's session and clears the cookies |
+| `POST /api/v1/me/revoke-sessions/` | Logs out of every device |
+| `POST /api/v1/me/deactivate/` | Deactivates the user's own account (`is_active = False`; never deleted) |
+| `GET /api/v1/sessions/` | Active sessions of the user, flags the current one |
+| `DELETE /api/v1/sessions/<id>/` | Revokes another device's session |
 
 ### Users
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/users/me/` | The logged user's data |
-| `GET /api/users/list/` | Lists users. Non-staff users only see active ones (`is_active`); staff and superusers (`is_staff`, `is_superuser`) see everyone |
+| `GET /api/v1/users/me/` | The logged user's data |
+| `GET /api/v1/users/list/` | Lists users. Non-staff users only see active ones (`is_active`); staff and superusers (`is_staff`, `is_superuser`) see everyone |
 
 ### One-time code flows
 
@@ -55,9 +55,9 @@ Each flow has three steps: **request** (sends a code by e-mail), **verify**
 
 | Flow | Endpoints | Notes |
 |------|-----------|-------|
-| Registration | `POST /api/registration/request/`, `verify/`, `confirm/` | Creates the user inactive (`is_active = False`) and e-mails a code; confirm sets name and password and activates it |
-| Password reset | `POST /api/password-reset/request/`, `verify/`, `confirm/` | Always answers "code sent", even if the e-mail does not exist |
-| E-mail change | `POST /api/email-change/request/`, `verify/`, `confirm/` | Logged users only; the code goes to the new address; confirm needs the current password |
+| Registration | `POST /api/v1/registration/request/`, `verify/`, `confirm/` | Creates the user inactive (`is_active = False`) and e-mails a code; confirm sets name and password and activates it |
+| Password reset | `POST /api/v1/password-reset/request/`, `verify/`, `confirm/` | Always answers "code sent", even if the e-mail does not exist |
+| E-mail change | `POST /api/v1/email-change/request/`, `verify/`, `confirm/` | Logged users only; the code goes to the new address; confirm needs the current password |
 
 ## To do
 

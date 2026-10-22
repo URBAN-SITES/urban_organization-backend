@@ -131,7 +131,6 @@ route_core = [
     path("notifications/", include("notifications.urls")),
     path("payments/", include("payments.urls")),
     path("qrcode/", QRCodeView.as_view(), name="qrcode"),
-    path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/me/update/", UserUpdateSelfView.as_view(), name="me-update"),
     path("users/list/", UserListView.as_view(), name="users-list"),

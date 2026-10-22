@@ -10,7 +10,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir pdm
 COPY pyproject.toml pdm.lock ./
-RUN pdm install --prod --frozen-lockfile --no-self
+RUN pdm lock && pdm install --prod --frozen-lockfile --no-self
 
 COPY . .
 RUN SECRET_KEY=build-only python manage.py collectstatic --noinput \
@@ -18,4 +18,4 @@ RUN SECRET_KEY=build-only python manage.py collectstatic --noinput \
 USER app
 
 EXPOSE 8000
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn app.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "app.asgi:application"]

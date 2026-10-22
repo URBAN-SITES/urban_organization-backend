@@ -42,7 +42,7 @@ app/                     # project config (not an app)
     base.py              # shared by every environment
     dev.py               # DEBUG, SQLite, console e-mail
     prod.py              # production overrides (env vars only)
-  urls.py                # root routes: /admin/, /api/docs/, /api/
+  urls.py                # root routes: /admin/, /api/docs/, /api/v1/
   asgi.py / wsgi.py      # default to app.settings.prod
 core/                    # users, auth and everything shared
   models/                # one model (or family) per file
@@ -95,12 +95,12 @@ migrations never collide with `core`. See `payments/` in `feat/payments`.
 
 ## 4. Authentication (how it works)
 
-- **Login** (`POST /api/login/`) sets two HttpOnly cookies: `access_token`
+- **Login** (`POST /api/v1/login/`) sets two HttpOnly cookies: `access_token`
   (15 min) and `refresh_token` (1 day), plus the `csrftoken` cookie.
 - Every login creates/updates a **`UserSession`** row (device, IP, JTIs).
   `CustomAuthentication` accepts a token **only if its session is active**, so
   logout / revoking a session invalidates it immediately, not only at expiry.
-- **Refresh** (`POST /api/refresh/`) rotates both tokens and blacklists the old
+- **Refresh** (`POST /api/v1/refresh/`) rotates both tokens and blacklists the old
   refresh token.
 - **CSRF**: cookie-authenticated writes (`POST/PUT/PATCH/DELETE`) must send the
   `X-CSRFToken` header with the `csrftoken` cookie value.
@@ -112,10 +112,10 @@ migrations never collide with `core`. See `payments/` in `feat/payments`.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/sessions/` | Active sessions, flags the current one |
-| `DELETE /api/sessions/<id>/` | Revoke another device (not the current one) |
-| `POST /api/me/revoke-sessions/` | Log out everywhere |
-| `POST /api/me/logout/` | Log out this device |
+| `GET /api/v1/sessions/` | Active sessions, flags the current one |
+| `DELETE /api/v1/sessions/<id>/` | Revoke another device (not the current one) |
+| `POST /api/v1/me/revoke-sessions/` | Log out everywhere |
+| `POST /api/v1/me/logout/` | Log out this device |
 
 ## 5. Business rules
 
@@ -175,19 +175,19 @@ pdm install && pdm run manage.py migrate
 | `feat/emails` | SMTP mailer from env | `EMAIL_*`, `DEFAULT_FROM_EMAIL` |
 | `feat/rbac` | `HasRole` permission (roles = Django Groups) | — |
 | `feat/generic-model` | `BaseModel` (UUID, timestamps, soft delete, owner) + `OwnedModelViewSet` | — |
-| `feat/qrcode` | `GET /api/qrcode/?data=` → PNG, `make_qrcode_png()` | — |
-| `feat/cloudinary-upload` | `POST /api/uploads/`, `UploadService` | `CLOUDINARY_URL` |
+| `feat/qrcode` | `GET /api/v1/qrcode/?data=` → PNG, `make_qrcode_png()` | — |
+| `feat/cloudinary-upload` | `POST /api/v1/uploads/`, `UploadService` | `CLOUDINARY_URL` |
 | `feat/redis-celery` | Celery + Redis cache/broker, `send_email_task` | `REDIS_URL` |
 | `feat/encryption` | `EncryptedTextField` (Fernet) | `FIELD_ENCRYPTION_KEY` |
 | `feat/idempotency` | `Idempotency-Key` header replays the first response | — |
 | `feat/audit-logs` | `django-auditlog` (who changed what) + console `LOGGING` | `LOG_LEVEL` |
 | `feat/notifications` | In-app notifications, `NotificationService.notify()` | — |
 | `feat/websockets` | Channels at `/ws/`, JWT cookie auth, `send_to_user()` | — |
-| `feat/google-auth` | `POST /api/login/google/` (Google ID token) | `GOOGLE_CLIENT_ID` |
+| `feat/google-auth` | `POST /api/v1/login/google/` (Google ID token) | `GOOGLE_CLIENT_ID` |
 | `feat/payments` | `payments` app: Mercado Pago checkout + webhook | `MP_ACCESS_TOKEN`, `FRONTEND_URL` |
-| `feat/ai` | `POST /api/ai/ask/` with Claude, `AIService.ask()` | `ANTHROPIC_API_KEY` |
+| `feat/ai` | `POST /api/v1/ai/ask/` with Gemini, `AIService.ask()` | `GEMINI_API_KEY` |
 | `feat/data-libs` | pandas, scikit-learn, opencv-headless | — |
-| `feat/docker` | Dockerfile, compose (Postgres), real `prod.py`, whitenoise | `POSTGRES_*`, `ALLOWED_HOSTS`, `USE_HTTPS` |
+| `feat/docker` | Dockerfile and Compose (Postgres, Redis, web, worker), ASGI server, production settings | `POSTGRES_*`, `ALLOWED_HOSTS`, `USE_HTTPS` |
 
 ### Merging several branches
 
@@ -201,10 +201,11 @@ For `pdm.lock` conflicts, keep either side and run `pdm lock` again.
   `send_to_user(user.pk, {...})` inside `NotificationService.notify`.
 - **Payments that notify**: `feat/payments` + `feat/notifications` → notify in
   `PaymentService.sync_from_provider` when status becomes `approved`.
-- **Production**: `feat/docker` + `feat/redis-celery` (switch `CHANNEL_LAYERS`
-  to `channels_redis` if `feat/websockets` is used) + `feat/rate-limiting`.
-- **Async e-mails**: `feat/redis-celery` → replace `send_email_token(...)` with
-  `send_email_task.delay(...)` in the services.
+- **Production**: Docker Compose starts Postgres, Redis, migrations, the ASGI web
+  process, and a Celery worker. The in-memory channel layer supports the single
+  web process; use `channels_redis` when scaling to multiple web processes.
+- **Async e-mails**: `send_email_token(...)` queues Celery delivery after its
+  database transaction commits; dev runs the task eagerly.
 
 ## 8. Known issues (fix before the demo)
 

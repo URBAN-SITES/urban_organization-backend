@@ -12,18 +12,58 @@ services:
       interval: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    env_file: .env
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD: app
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      USE_HTTPS: "False"
+    depends_on:
+      db:
+        condition: service_healthy
+
   web:
     build: .
     env_file: .env
     environment:
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: app
+      REDIS_URL: redis://redis:6379/0
       ALLOWED_HOSTS: localhost,127.0.0.1
       USE_HTTPS: "False"
     ports:
       - "8000:8000"
     depends_on:
-      db:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    env_file: .env
+    command: ["celery", "-A", "app", "worker", "-l", "info"]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD: app
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      USE_HTTPS: "False"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
         condition: service_healthy
 
 volumes:
