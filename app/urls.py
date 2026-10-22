@@ -128,5 +128,5 @@ route_core = [
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/docs/", include(route_docs)),
-    path("api/", include(route_core)),
+    path("api/v1/", include((route_core, "v1"), namespace="v1")),
 ]
