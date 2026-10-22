@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -34,12 +35,28 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "core",
+    "auditlog",
 ]
 LANGUAGES = [
     ("en", "English"),
 ]
 LANGUAGES_BIDI = []
-LOGGING = {}
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "default"},
+    },
+    "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
+}
+# who changed what and when, visible in the admin under "Log entries"
+AUDITLOG_INCLUDE_TRACKING_MODELS = (
+    {"model": "core.User", "exclude_fields": ["password", "last_login"]},
+    "core.UserSession",
+)
 STATIC_URL = "static/"
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
@@ -52,6 +69,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.audit.AuditlogMiddleware",
 ]
 ROOT_URLCONF = "app.urls"
 TEMPLATES = [
