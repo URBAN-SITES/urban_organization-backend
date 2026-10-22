@@ -71,6 +71,7 @@ def get_tokens_for_user(user):
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Authenticate user and set JWT tokens in the browser cookies",
