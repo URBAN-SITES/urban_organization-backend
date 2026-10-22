@@ -65,3 +65,17 @@ Each flow has three steps: **request** (sends a code by e-mail), **verify**
 - [ ] Visual template for the e-mailed codes, plus a mail sending profile in the `MAILERS` setting.
 - [ ] Add docstrings to classes and functions.
 - [ ] Improve the use of drf-spectacular.
+
+## Integrated Docker development
+
+Use the workspace-level `docker-compose.yml` with both repositories side by side.
+From the parent directory, run `docker compose up --build -d`. The frontend is at
+http://localhost:5173 and the API at http://localhost:8000/api/v1/.
+See the workspace `README.md` for environment variables, checks and persistent volumes.
+
+## Production and automatic deployment
+
+[deployment/README.md](deployment/README.md) contains the versioned workspace
+Compose files, Nginx configuration and main-branch deployment timer. Production
+uses separate volumes and secrets. Merge the deployment changes into `dev`, then
+promote `dev` into `main` to activate automatic updates on the server.

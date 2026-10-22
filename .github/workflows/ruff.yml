@@ -34,6 +34,11 @@ jobs:
       run: |
         pdm run python manage.py test
 
+    - name: Check deployment automation
+      run: |
+        bash -n deployment/update.sh
+        python deployment/tests/test_update.py
+
     - name: Analysing the code with ruff
       run: |
         pdm run ruff check

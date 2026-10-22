@@ -9,3 +9,7 @@ db.sqlite3
 staticfiles/
 *firebase-adminsdk*.json
 firebase-credentials.json
+
+.env.*
+!.env.example
+media/

@@ -81,7 +81,7 @@ class SessionService:
         if session:
             session.access_jti = new_access_jti
             session.refresh_jti = new_refresh_jti
-            session.save(update_fields=["access_jti", "refresh_jti", "updated_at"])
+            session.save(update_fields=["access_jti", "refresh_jti", "last_activity"])
             return session
 
         return None

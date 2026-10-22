@@ -1,0 +1,64 @@
+name: resenha-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: local-dev-only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend-resenha
+      dockerfile: Dockerfile.dev
+    env_file:
+      - path: ./backend-resenha/.env
+        required: false
+    environment:
+      DJANGO_SETTINGS_MODULE: app.settings.dev
+      SECRET_KEY: ${DJANGO_DEV_SECRET_KEY:-local-development-only-change-before-deploy}
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend,testserver
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: local-dev-only
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend-resenha:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/docs/urls/', timeout=5)"]
+      interval: 5s
+      timeout: 6s
+      start_period: 30s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend-resenha
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend-resenha:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
