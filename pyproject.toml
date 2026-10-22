@@ -29,6 +29,7 @@ dependencies = [
   "mercadopago>=3.6.0",
   "qrcode[pil]>=8.2",
   "celery[redis]>=5.6.3",
+  "channels[daphne]>=4.3.2",
 ]
 requires-python = ">=3.14"
 readme = "README.md"
