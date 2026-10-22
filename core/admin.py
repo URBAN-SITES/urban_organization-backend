@@ -6,8 +6,8 @@ from core.models.email_change import EmailChange
 from core.models.email_verification import EmailVerification
 from core.models.password_reset import PasswordReset
 from core.models.user import User, UserSession
-from core.notifications import admin as _notifications_admin  # noqa: F401
-from core.payments import admin as _payments_admin  # noqa: F401
+from core.modules.notifications import admin as _notifications_admin  # noqa: F401
+from core.modules.payments import admin as _payments_admin  # noqa: F401
 
 
 class NoAddModelAdmin(admin.ModelAdmin):

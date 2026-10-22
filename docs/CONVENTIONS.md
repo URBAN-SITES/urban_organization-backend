@@ -36,7 +36,7 @@ There is a single Django app: `core`. Every feature is a module (a folder) insid
 Inside a module, split by layer, one file per subject:
 
 ```
-core/<module>/            # e.g. core/payments/, core/notifications/
+core/modules/<module>/            # e.g. core/modules/payments/
   models/<subject>.py
   serializers/<subject>.py
   services/<subject>.py      # business logic
@@ -52,10 +52,10 @@ core/<module>/            # e.g. core/payments/, core/notifications/
 ```
 
 - A self-contained feature (payments, chat...) gets its own **module inside `core`**
-  (`core/<module>/`) with the same layered folders. Never run `startapp` and never
+  (`core/modules/<module>/`) with the same layered folders. Never run `startapp` and never
   add to `INSTALLED_APPS`. Its models are imported in `core/models/__init__.py`,
   its admin in `core/admin.py`, its migrations go in `core/migrations/`, and its
-  routes live in `core/<module>/urls.py` with `app_name`, included from `app/urls.py`
+  routes live in `core/modules/<module>/urls.py` with `app_name`, included from `app/urls.py`
   as `include("core.<module>.urls")`.
 - Views never touch business rules; they call a service.
 - Services raise DRF exceptions (`ValidationError`, `NotFound`, ...).
