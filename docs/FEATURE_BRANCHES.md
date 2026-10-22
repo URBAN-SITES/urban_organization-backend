@@ -375,7 +375,7 @@ POST /api/uploads/       multipart/form-data, field "file" (max 10 MB)
 
 **Backend reuse**
 ```python
-from core.services.upload import UploadService
+from uploads.services.upload import UploadService
 
 result = UploadService.upload(file, folder="products")
 UploadService.delete(result["public_id"])
@@ -383,7 +383,7 @@ UploadService.delete(result["public_id"])
 
 Store `url` (and `public_id` if you need to delete) in your model.
 
-**Files:** `core/services/upload.py`, `core/serializers/upload.py`, `core/views/upload.py`
+**Files:** self-contained `uploads/` app (`services/upload.py`, `serializers/upload.py`, `views/upload.py`, `urls.py`, `response_messages.py`); registered in `INSTALLED_APPS` and `app/urls.py`
 **Env vars:** `CLOUDINARY_URL` (copy it from the Cloudinary dashboard)
 
 ---

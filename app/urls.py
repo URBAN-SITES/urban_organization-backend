@@ -121,6 +121,8 @@ route_core = [
         ),
     ),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
+    path("ai/", include("ai.urls")),
+    path("uploads/", include("uploads.urls")),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/list/", UserListView.as_view(), name="users-list"),
 ]
