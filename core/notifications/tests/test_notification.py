@@ -21,18 +21,25 @@ class NotificationApiTests(TestCase):
         NotificationService.notify(self.user, "Two")
         other = NotificationService.notify(self.other, "Not mine")
 
-        self.assertEqual(len(self.client.get("/api/v1/notifications/").json()["results"]), 2)
+        self.assertEqual(
+            len(self.client.get("/api/v1/notifications/").json()["results"]), 2
+        )
         self.assertEqual(
             self.client.post(f"/api/v1/notifications/{n1.id}/read/").status_code, 204
         )
         self.assertEqual(
-            len(self.client.get("/api/v1/notifications/?unread=true").json()["results"]), 1
+            len(
+                self.client.get("/api/v1/notifications/?unread=true").json()["results"]
+            ),
+            1,
         )
         self.assertEqual(
             self.client.post(f"/api/v1/notifications/{other.id}/read/").status_code, 404
         )
         self.client.post("/api/v1/notifications/read-all/")
-        self.assertEqual(self.client.get("/api/v1/notifications/?unread=true").json()["results"], [])
+        self.assertEqual(
+            self.client.get("/api/v1/notifications/?unread=true").json()["results"], []
+        )
 
     def test_register_and_unregister_device(self):
         url = "/api/v1/notifications/devices/"
@@ -104,7 +111,9 @@ class SendPushApiTests(TestCase):
 
     @override_settings(FIREBASE_CREDENTIALS="fake.json")
     @patch("core.notifications.services.notification._firebase_app")
-    @patch("core.notifications.services.notification.messaging.send", return_value="msg-1")
+    @patch(
+        "core.notifications.services.notification.messaging.send", return_value="msg-1"
+    )
     def test_sends(self, send, _app):
         res = self.client.post("/api/v1/notifications/send/", self.payload)
         self.assertEqual(res.json(), {"message_id": "msg-1"})

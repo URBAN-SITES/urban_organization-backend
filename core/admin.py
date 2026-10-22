@@ -2,12 +2,12 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as UserAdminFromDjango
 from django.utils.translation import gettext_lazy as _
 
-from core.notifications import admin as _notifications_admin  # noqa: F401
-from core.payments import admin as _payments_admin  # noqa: F401
 from core.models.email_change import EmailChange
 from core.models.email_verification import EmailVerification
 from core.models.password_reset import PasswordReset
 from core.models.user import User, UserSession
+from core.notifications import admin as _notifications_admin  # noqa: F401
+from core.payments import admin as _payments_admin  # noqa: F401
 
 
 class NoAddModelAdmin(admin.ModelAdmin):

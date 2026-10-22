@@ -12,7 +12,9 @@ class PaymentFlowTests(TestCase):
         self.client.post(
             "/api/v1/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
         )
-        self.sdk = mock.patch("core.payments.services.payment._sdk").start().return_value
+        self.sdk = (
+            mock.patch("core.payments.services.payment._sdk").start().return_value
+        )
         self.addCleanup(mock.patch.stopall)
 
     def test_pix_creation_then_webhook_approves(self):
