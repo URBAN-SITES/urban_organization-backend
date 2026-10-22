@@ -32,7 +32,9 @@ pdm run dev                     # runserver with app.settings.dev
 pdm run manage.py test          # run the test suite
 ```
 
-E-mails are printed to the terminal in dev (`MAILERS` console backend in `dev.py`).
+In dev, e-mails are sent through SMTP when `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` are set in
+`.env` (Gmail needs an **App password**, see `FEATURE_BRANCHES.md`); otherwise they are printed to
+the terminal (console backend in `dev.py`).
 
 ## 3. Folder structure
 
@@ -40,7 +42,7 @@ E-mails are printed to the terminal in dev (`MAILERS` console backend in `dev.py
 app/                     # project config (not an app)
   settings/
     base.py              # shared by every environment
-    dev.py               # DEBUG, SQLite, console e-mail
+    dev.py               # DEBUG, SQLite, SMTP or console e-mail
     prod.py              # production overrides (env vars only)
   urls.py                # root routes: /admin/, /api/docs/, /api/v1/
   asgi.py / wsgi.py      # default to app.settings.prod
@@ -98,7 +100,7 @@ admin in `core/admin.py`, and include its urls in `app/urls.py`. See `core/modul
 ## 4. Authentication (how it works)
 
 - **Login** (`POST /api/v1/login/`) sets two HttpOnly cookies: `access_token`
-  (15 min) and `refresh_token` (1 day), plus the `csrftoken` cookie.
+  (30 min) and `refresh_token` (1 day), plus the `csrftoken` cookie.
 - Every login creates/updates a **`UserSession`** row (device, IP, JTIs).
   `CustomAuthentication` accepts a token **only if its session is active**, so
   logout / revoking a session invalidates it immediately, not only at expiry.
