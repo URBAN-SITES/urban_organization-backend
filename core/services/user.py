@@ -125,7 +125,7 @@ class AuthService:
 
 class UserService:
     @staticmethod
-    def get_user_by_id(target_user_id: int, requesting_user: User) -> User:
+    def get_user_by_id(target_user_id, requesting_user: User) -> User:
         if requesting_user.is_staff or requesting_user.is_superuser:
             return User.objects.get(pk=target_user_id)
         return User.objects.get(
