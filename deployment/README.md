@@ -43,3 +43,11 @@ bash deploy/update.sh --check
 Old release source directories and images are retained for investigation. Monitor
 disk usage and remove obsolete build artifacts deliberately. Production volumes
 are shared across releases and must never be deleted by cleanup.
+
+## Firebase Admin credentials
+
+Keep the private service-account JSON at `backend-resenha/firebase-credentials.json`
+(ignored by Git and Docker). Set `FIREBASE_CREDENTIALS_FILE` in the server
+`.env.prod` to its absolute path so release snapshots can mount it read-only in
+backend and worker at `/run/secrets/firebase_admin`. Do not place private keys,
+OAuth client secrets or payment access tokens in any `VITE_*` variable.
