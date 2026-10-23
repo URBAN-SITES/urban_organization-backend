@@ -18,6 +18,7 @@ from core.modules.notifications.serializers.notification import (
 from core.modules.notifications.services.notification import NotificationService
 
 
+@extend_schema(tags=["Notificações"])
 class NotificationListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = NotificationSerializer
@@ -34,6 +35,7 @@ class NotificationListView(ListAPIView):
         return NotificationService.list_for(self.request.user, unread_only)
 
 
+@extend_schema(tags=["Notificações"])
 class NotificationReadView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -48,6 +50,7 @@ class NotificationReadView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Notificações"])
 class NotificationReadAllView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -59,6 +62,7 @@ class NotificationReadAllView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Notificações"])
 class DeviceTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -89,6 +93,7 @@ class DeviceTokenView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Notificações"])
 class SendPushView(APIView):
     permission_classes = [IsAuthenticated]
 

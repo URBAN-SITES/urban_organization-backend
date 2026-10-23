@@ -14,6 +14,7 @@ from core.modules.teams.serializers.team import (
 from core.modules.teams.services.team import TeamService
 
 
+@extend_schema(tags=["Times"])
 class TeamListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TeamSerializer
@@ -39,6 +40,7 @@ class TeamListCreateView(ListAPIView):
         return Response(TeamSerializer(team).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Times"])
 class TeamDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -68,6 +70,7 @@ class TeamDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Times"])
 class TeamMemberListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TeamMemberSerializer
@@ -97,6 +100,7 @@ class TeamMemberListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Times"])
 class TeamMemberDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

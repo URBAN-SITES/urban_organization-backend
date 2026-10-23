@@ -18,6 +18,7 @@ from core.modules.kanban.services.item import (
 )
 
 
+@extend_schema(tags=["Tarefas"])
 class ChecklistListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChecklistItemSerializer
@@ -45,6 +46,7 @@ class ChecklistListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Tarefas"])
 class ChecklistDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -67,6 +69,7 @@ class ChecklistDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Tarefas"])
 class CommentListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CommentSerializer
@@ -92,6 +95,7 @@ class CommentListCreateView(ListAPIView):
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Tarefas"])
 class CommentDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -122,6 +126,7 @@ def _link_views(target: str, label: str):
     creator = getattr(LinkService, f"create_for_{target}")
     key = f"{target}_id"
 
+    @extend_schema(tags=["Links"])
     class LinkListCreateView(ListAPIView):
         permission_classes = [IsAuthenticated]
         serializer_class = ResourceLinkSerializer
@@ -155,6 +160,7 @@ SectorLinkListCreateView = _link_views("sector", "sector")
 OrganizationLinkListCreateView = _link_views("organization", "organization")
 
 
+@extend_schema(tags=["Links"])
 class LinkDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

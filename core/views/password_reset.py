@@ -20,6 +20,7 @@ from core.spectacular_serializers import (
 )
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class PasswordResetRequestView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -45,6 +46,7 @@ class PasswordResetRequestView(APIView):
         )
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class PasswordResetVerifyView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -70,6 +72,7 @@ class PasswordResetVerifyView(APIView):
         return Response({"detail": MSG_CODE_VALID}, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class PasswordResetConfirmView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]

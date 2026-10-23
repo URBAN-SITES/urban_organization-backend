@@ -8,6 +8,7 @@ from core.modules.ai.serializers.ask import AIAnswerSerializer, AIAskSerializer
 from core.modules.ai.services.ask import AIService
 
 
+@extend_schema(tags=["IA"])
 class AIAskView(APIView):
     permission_classes = [IsAuthenticated]
 

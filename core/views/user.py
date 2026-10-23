@@ -68,6 +68,7 @@ def get_tokens_for_user(user):
     }
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -102,6 +103,7 @@ class LoginView(APIView):
         return response
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class CustomTokenRefreshView(TokenRefreshView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -170,6 +172,7 @@ class CustomTokenRefreshView(TokenRefreshView):
         return response
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -202,6 +205,7 @@ class LogoutView(APIView):
         return response
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class UserSessionsDeactivateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -247,6 +251,7 @@ class UserSessionsDeactivateView(APIView):
             raise NotFound(MSG_USER_SESSION_NOT_FOUND)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class UserSessionsGetView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -268,6 +273,7 @@ class UserSessionsGetView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class RevokeAllSessionsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -285,6 +291,7 @@ class RevokeAllSessionsView(APIView):
         return Response({"detail": MSG_USER_REVOKED_ALL_SESSIONS}, status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Perfil"])
 class UserMeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -301,6 +308,7 @@ class UserMeView(APIView):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Perfil"])
 class UserListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserListRetrieveSerializer
@@ -323,6 +331,7 @@ class UserListView(ListAPIView):
         return UserService.list_users(requesting_user=self.request.user)
 
 
+@extend_schema(tags=["Perfil"])
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -347,6 +356,7 @@ class UserDetailView(APIView):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class DeactivateSelfView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -364,6 +374,7 @@ class DeactivateSelfView(APIView):
         return Response({"detail": MSG_USER_DEACTIVATED}, status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Perfil"])
 class UserUpdateSelfView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -1,0 +1,347 @@
+[
+  {
+    "model": "core.user",
+    "pk": "10000000-0000-4000-8000-000000000001",
+    "fields": {
+      "password": "pbkdf2_sha256$1500000$whkRTUO6uib8K7K2KEzX5S$DcdFfyIfhpZIgwEomib39lRkB29a5AppSERXv+dW0gU=",
+      "last_login": null,
+      "is_superuser": false,
+      "name": "Ana Souza",
+      "email": "ana.kanban@example.com",
+      "bio": "Organization owner and sector manager for Kanban API testing.",
+      "avatar_url": "",
+      "is_active": true,
+      "is_staff": false,
+      "created_at": "2026-10-23T09:00:00Z",
+      "updated_at": "2026-10-23T09:00:00Z"
+    }
+  },
+  {
+    "model": "core.user",
+    "pk": "10000000-0000-4000-8000-000000000002",
+    "fields": {
+      "password": "pbkdf2_sha256$1500000$whkRTUO6uib8K7K2KEzX5S$DcdFfyIfhpZIgwEomib39lRkB29a5AppSERXv+dW0gU=",
+      "last_login": null,
+      "is_superuser": false,
+      "name": "Bruno Lima",
+      "email": "bruno.kanban@example.com",
+      "bio": "Editor for Kanban API testing.",
+      "avatar_url": "",
+      "is_active": true,
+      "is_staff": false,
+      "created_at": "2026-10-23T09:05:00Z",
+      "updated_at": "2026-10-23T09:05:00Z"
+    }
+  },
+  {
+    "model": "core.user",
+    "pk": "10000000-0000-4000-8000-000000000003",
+    "fields": {
+      "password": "pbkdf2_sha256$1500000$whkRTUO6uib8K7K2KEzX5S$DcdFfyIfhpZIgwEomib39lRkB29a5AppSERXv+dW0gU=",
+      "last_login": null,
+      "is_superuser": false,
+      "name": "Camila Rocha",
+      "email": "camila.kanban@example.com",
+      "bio": "Viewer for Kanban API testing.",
+      "avatar_url": "",
+      "is_active": true,
+      "is_staff": false,
+      "created_at": "2026-10-23T09:10:00Z",
+      "updated_at": "2026-10-23T09:10:00Z"
+    }
+  },
+  {
+    "model": "core.organization",
+    "pk": "20000000-0000-4000-8000-000000000001",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000001",
+      "is_active": true,
+      "created_at": "2026-10-23T09:15:00Z",
+      "updated_at": "2026-10-23T09:15:00Z",
+      "name": "Kanban Test Organization",
+      "description": "Fixture organization for exercising Kanban endpoints.",
+      "logo_url": "",
+      "is_personal": false
+    }
+  },
+  {
+    "model": "core.organizationmember",
+    "pk": 1,
+    "fields": {
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000001",
+      "role": "owner",
+      "joined_at": "2026-10-23T09:15:00Z"
+    }
+  },
+  {
+    "model": "core.organizationmember",
+    "pk": 2,
+    "fields": {
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000002",
+      "role": "member",
+      "joined_at": "2026-10-23T09:16:00Z"
+    }
+  },
+  {
+    "model": "core.organizationmember",
+    "pk": 3,
+    "fields": {
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000003",
+      "role": "member",
+      "joined_at": "2026-10-23T09:17:00Z"
+    }
+  },
+  {
+    "model": "core.sector",
+    "pk": "30000000-0000-4000-8000-000000000001",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000001",
+      "is_active": true,
+      "created_at": "2026-10-23T09:20:00Z",
+      "updated_at": "2026-10-23T09:20:00Z",
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "name": "Product Launch",
+      "description": "Sample sector with tasks in multiple workflow states.",
+      "icon": "rocket",
+      "color": "#2563EB",
+      "is_private": true
+    }
+  },
+  {
+    "model": "core.sectormember",
+    "pk": 1,
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000001",
+      "role": "manager"
+    }
+  },
+  {
+    "model": "core.sectormember",
+    "pk": 2,
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000002",
+      "role": "editor"
+    }
+  },
+  {
+    "model": "core.sectormember",
+    "pk": 3,
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000003",
+      "role": "viewer"
+    }
+  },
+  {
+    "model": "core.status",
+    "pk": "40000000-0000-4000-8000-000000000001",
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "name": "To do",
+      "color": "#64748B",
+      "category": "todo",
+      "position": 0,
+      "wip_limit": null
+    }
+  },
+  {
+    "model": "core.status",
+    "pk": "40000000-0000-4000-8000-000000000002",
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "name": "In progress",
+      "color": "#F59E0B",
+      "category": "in_progress",
+      "position": 1,
+      "wip_limit": 5
+    }
+  },
+  {
+    "model": "core.status",
+    "pk": "40000000-0000-4000-8000-000000000003",
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "name": "Done",
+      "color": "#16A34A",
+      "category": "done",
+      "position": 2,
+      "wip_limit": null
+    }
+  },
+  {
+    "model": "core.task",
+    "pk": "50000000-0000-4000-8000-000000000001",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000001",
+      "is_active": true,
+      "created_at": "2026-10-23T09:30:00Z",
+      "updated_at": "2026-10-23T09:30:00Z",
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "status": "40000000-0000-4000-8000-000000000001",
+      "parent": null,
+      "title": "Prepare launch checklist",
+      "description": "Coordinate the launch preparation work.",
+      "priority": "high",
+      "due_date": "2026-10-30",
+      "completed_at": null,
+      "assignee": "10000000-0000-4000-8000-000000000002",
+      "position": 0
+    }
+  },
+  {
+    "model": "core.task",
+    "pk": "50000000-0000-4000-8000-000000000002",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000002",
+      "is_active": true,
+      "created_at": "2026-10-22T10:00:00Z",
+      "updated_at": "2026-10-22T10:00:00Z",
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "status": "40000000-0000-4000-8000-000000000002",
+      "parent": null,
+      "title": "Confirm venue booking",
+      "description": "This task is overdue and useful for filter testing.",
+      "priority": "urgent",
+      "due_date": "2026-10-20",
+      "completed_at": null,
+      "assignee": "10000000-0000-4000-8000-000000000002",
+      "position": 0
+    }
+  },
+  {
+    "model": "core.task",
+    "pk": "50000000-0000-4000-8000-000000000003",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000001",
+      "is_active": true,
+      "created_at": "2026-10-21T11:00:00Z",
+      "updated_at": "2026-10-23T09:35:00Z",
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "status": "40000000-0000-4000-8000-000000000003",
+      "parent": "50000000-0000-4000-8000-000000000001",
+      "title": "Draft launch announcement",
+      "description": "Completed child task for progress and hierarchy testing.",
+      "priority": "medium",
+      "due_date": "2026-10-22",
+      "completed_at": "2026-10-23T09:35:00Z",
+      "assignee": "10000000-0000-4000-8000-000000000001",
+      "position": 0
+    }
+  },
+  {
+    "model": "core.checklistitem",
+    "pk": "60000000-0000-4000-8000-000000000001",
+    "fields": {
+      "task": "50000000-0000-4000-8000-000000000001",
+      "content": "Confirm launch date",
+      "is_done": true,
+      "position": 0
+    }
+  },
+  {
+    "model": "core.checklistitem",
+    "pk": "60000000-0000-4000-8000-000000000002",
+    "fields": {
+      "task": "50000000-0000-4000-8000-000000000001",
+      "content": "Prepare announcement materials",
+      "is_done": false,
+      "position": 1
+    }
+  },
+  {
+    "model": "core.comment",
+    "pk": "70000000-0000-4000-8000-000000000001",
+    "fields": {
+      "task": "50000000-0000-4000-8000-000000000001",
+      "author": "10000000-0000-4000-8000-000000000002",
+      "content": "I will prepare the first draft today.",
+      "created_at": "2026-10-23T09:40:00Z"
+    }
+  },
+  {
+    "model": "core.resourcelink",
+    "pk": "80000000-0000-4000-8000-000000000001",
+    "fields": {
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "sector": null,
+      "task": null,
+      "title": "Organization brief",
+      "url": "https://example.com/organization-brief",
+      "created_by": "10000000-0000-4000-8000-000000000001",
+      "created_at": "2026-10-23T09:45:00Z"
+    }
+  },
+  {
+    "model": "core.resourcelink",
+    "pk": "80000000-0000-4000-8000-000000000002",
+    "fields": {
+      "organization": null,
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "task": null,
+      "title": "Sector roadmap",
+      "url": "https://example.com/sector-roadmap",
+      "created_by": "10000000-0000-4000-8000-000000000001",
+      "created_at": "2026-10-23T09:46:00Z"
+    }
+  },
+  {
+    "model": "core.resourcelink",
+    "pk": "80000000-0000-4000-8000-000000000003",
+    "fields": {
+      "organization": null,
+      "sector": null,
+      "task": "50000000-0000-4000-8000-000000000001",
+      "title": "Launch requirements",
+      "url": "https://example.com/launch-requirements",
+      "created_by": "10000000-0000-4000-8000-000000000002",
+      "created_at": "2026-10-23T09:47:00Z"
+    }
+  },
+  {
+    "model": "core.team",
+    "pk": "90000000-0000-4000-8000-000000000001",
+    "fields": {
+      "owner": "10000000-0000-4000-8000-000000000001",
+      "is_active": true,
+      "created_at": "2026-10-23T09:50:00Z",
+      "updated_at": "2026-10-23T09:50:00Z",
+      "organization": "20000000-0000-4000-8000-000000000001",
+      "name": "Launch Team",
+      "description": "Team fixture for sector-team access endpoints."
+    }
+  },
+  {
+    "model": "core.teammember",
+    "pk": 1,
+    "fields": {
+      "team": "90000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000001",
+      "role": "lead",
+      "joined_at": "2026-10-23T09:50:00Z"
+    }
+  },
+  {
+    "model": "core.teammember",
+    "pk": 2,
+    "fields": {
+      "team": "90000000-0000-4000-8000-000000000001",
+      "user": "10000000-0000-4000-8000-000000000002",
+      "role": "member",
+      "joined_at": "2026-10-23T09:51:00Z"
+    }
+  },
+  {
+    "model": "core.sectorteam",
+    "pk": 1,
+    "fields": {
+      "sector": "30000000-0000-4000-8000-000000000001",
+      "team": "90000000-0000-4000-8000-000000000001",
+      "role": "editor"
+    }
+  }
+]

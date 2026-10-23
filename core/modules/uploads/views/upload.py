@@ -12,6 +12,7 @@ from core.modules.uploads.serializers.upload import (
 from core.modules.uploads.services.upload import UploadService
 
 
+@extend_schema(tags=["Arquivos"])
 class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]

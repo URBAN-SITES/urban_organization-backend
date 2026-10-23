@@ -20,6 +20,7 @@ from core.modules.chat.serializers.chat import (
 from core.modules.chat.services.chat import ChatService
 
 
+@extend_schema(tags=["Chat"])
 class ChatChannelListView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -32,6 +33,7 @@ class ChatChannelListView(APIView):
         return Response(ChatChannelSerializer(channels, many=True).data)
 
 
+@extend_schema(tags=["Chat"])
 class ChatDirectView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -49,6 +51,7 @@ class ChatDirectView(APIView):
         return Response(ChatChannelSerializer(channel).data)
 
 
+@extend_schema(tags=["Chat"])
 class ChatTeamsChannelView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -68,6 +71,7 @@ class ChatTeamsChannelView(APIView):
         )
 
 
+@extend_schema(tags=["Chat"])
 class ChatMessageListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChatMessageSerializer
@@ -116,6 +120,7 @@ class ChatMessageListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Chat"])
 class ChatPresenceView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -129,6 +134,7 @@ class ChatPresenceView(APIView):
         )
 
 
+@extend_schema(tags=["Chat"])
 class ChatMeetView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -148,6 +154,7 @@ class ChatMeetView(APIView):
         )
 
 
+@extend_schema(tags=["Chat"])
 class ChatChannelReadView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -159,6 +166,7 @@ class ChatChannelReadView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Chat"])
 class ChatMessageDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

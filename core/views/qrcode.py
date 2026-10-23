@@ -11,6 +11,7 @@ from core.utils.qrcode import make_qrcode_png
 MAX_QRCODE_DATA_LENGTH = 1000
 
 
+@extend_schema(tags=["Utilitários"])
 class QRCodeView(APIView):
     permission_classes = [IsAuthenticated]
 

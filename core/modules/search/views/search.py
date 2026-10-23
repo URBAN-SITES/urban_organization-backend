@@ -7,6 +7,7 @@ from core.modules.search.serializers.search import SearchResultSerializer
 from core.modules.search.services.search import SearchService
 
 
+@extend_schema(tags=["Busca"])
 class SearchView(APIView):
     permission_classes = [IsAuthenticated]
 

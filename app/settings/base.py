@@ -194,4 +194,25 @@ SPECTACULAR_SETTINGS = {
     "AUTHENTICATION_WHITELIST": [
         "core.authenticate.CustomAuthentication",
     ],
+    "TAGS": [
+        {"name": "Organizações", "description": "Organizações e seus membros"},
+        {
+            "name": "Ingressar Em Uma Organização",
+            "description": "Convites para ingressar em organizações",
+        },
+        {"name": "Setores", "description": "Setores e seus quadros Kanban"},
+        {"name": "Times", "description": "Gerenciamento de times de uma organização"},
+        {"name": "Tarefas", "description": "Tarefas dos quadros"},
+        {"name": "Links", "description": "Links de organizações, setores e tarefas"},
+        {"name": "Chat", "description": "Mensagens e conversas"},
+        {"name": "Notificações", "description": "Notificações e dispositivos"},
+        {"name": "Pagamentos", "description": "Pagamentos e webhooks"},
+        {"name": "Arquivos", "description": "Uploads e arquivos"},
+        {"name": "IA", "description": "Recursos de inteligência artificial"},
+        {"name": "Busca", "description": "Busca global"},
+        {"name": "Integrações", "description": "Integrações com serviços externos"},
+        {"name": "Conta e Sessões", "description": "Gerenciamento de contas e sessões"},
+        {"name": "Perfil", "description": "Gerenciamento de perfil"},
+        {"name": "Utilitários", "description": "Ferramentas auxiliares"},
+    ],
 }

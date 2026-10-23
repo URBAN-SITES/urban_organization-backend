@@ -19,6 +19,7 @@ from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 
 
+@extend_schema(tags=["Setores"])
 class SectorListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SectorSerializer
@@ -44,6 +45,7 @@ class SectorListCreateView(ListAPIView):
         return Response(SectorSerializer(sector).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Setores"])
 class SectorDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -73,6 +75,7 @@ class SectorDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Setores"])
 class SectorProgressView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -84,6 +87,7 @@ class SectorProgressView(APIView):
         return Response(SectorService.progress(request.user, sector_id))
 
 
+@extend_schema(tags=["Setores"])
 class SectorMemberListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SectorMemberSerializer
@@ -111,6 +115,7 @@ class SectorMemberListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Setores"])
 class SectorMemberDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -135,6 +140,7 @@ class SectorMemberDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Times"])
 class SectorTeamListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SectorTeamSerializer
@@ -160,6 +166,7 @@ class SectorTeamListCreateView(ListAPIView):
         return Response(SectorTeamSerializer(link).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Times"])
 class SectorTeamDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -171,6 +178,7 @@ class SectorTeamDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Setores"])
 class StatusListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = StatusSerializer
@@ -196,6 +204,7 @@ class StatusListCreateView(ListAPIView):
         return Response(StatusSerializer(created).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Setores"])
 class StatusDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -14,6 +14,7 @@ from core.modules.organizations.serializers.organization import (
 from core.modules.organizations.services.organization import OrganizationService
 
 
+@extend_schema(tags=["Organizações"])
 class OrganizationListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrganizationSerializer
@@ -41,6 +42,7 @@ class OrganizationListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Organizações"])
 class OrganizationDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -73,6 +75,7 @@ class OrganizationDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Organizações"])
 class OrganizationMemberListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrganizationMemberSerializer
@@ -102,6 +105,7 @@ class OrganizationMemberListCreateView(ListAPIView):
         )
 
 
+@extend_schema(tags=["Organizações"])
 class OrganizationMemberDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

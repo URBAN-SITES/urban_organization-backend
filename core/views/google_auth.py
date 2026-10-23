@@ -15,6 +15,7 @@ from core.spectacular_serializers import (
 from core.utils.cookies import set_auth_cookies
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class GoogleLoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]

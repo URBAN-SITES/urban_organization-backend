@@ -25,6 +25,7 @@ from core.spectacular_serializers import (
 )
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class RegistrationRequestView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -49,6 +50,7 @@ class RegistrationRequestView(APIView):
         return Response({"detail": MSG_CODE_SENT}, status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class RegistrationVerifyView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -73,6 +75,7 @@ class RegistrationVerifyView(APIView):
         return Response({"detail": MSG_CODE_VALID}, status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Conta e Sessões"])
 class RegistrationConfirmView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]

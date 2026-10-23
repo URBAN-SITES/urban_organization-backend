@@ -14,6 +14,7 @@ from core.modules.invitations.serializers.invite import (
 from core.modules.invitations.services.invite import InviteService
 
 
+@extend_schema(tags=["Ingressar Em Uma Organização"])
 class OrganizationInviteListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InviteSerializer
@@ -41,6 +42,7 @@ class OrganizationInviteListCreateView(ListAPIView):
         return Response(InviteSerializer(invite).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Ingressar Em Uma Organização"])
 class OrganizationInviteDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -52,6 +54,7 @@ class OrganizationInviteDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Ingressar Em Uma Organização"])
 class MyInviteListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InviteSerializer
@@ -64,6 +67,7 @@ class MyInviteListView(ListAPIView):
         return InviteService.list_mine(self.request.user)
 
 
+@extend_schema(tags=["Ingressar Em Uma Organização"])
 class InviteAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 

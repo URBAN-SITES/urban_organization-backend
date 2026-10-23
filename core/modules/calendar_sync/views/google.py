@@ -13,6 +13,7 @@ from core.modules.calendar_sync.serializers.google import (
 from core.modules.calendar_sync.services.google import GoogleCalendarService
 
 
+@extend_schema(tags=["Integrações"])
 class GoogleStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -34,6 +35,7 @@ class GoogleStatusView(APIView):
         return Response({"detail": MSG_GOOGLE_DISCONNECTED})
 
 
+@extend_schema(tags=["Integrações"])
 class GoogleAuthorizeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -45,6 +47,7 @@ class GoogleAuthorizeView(APIView):
         return Response({"url": GoogleCalendarService.authorize_url(request.user)})
 
 
+@extend_schema(tags=["Integrações"])
 class GoogleConnectView(APIView):
     permission_classes = [IsAuthenticated]
 

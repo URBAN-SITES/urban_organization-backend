@@ -41,6 +41,7 @@ class TaskFilter(django_filters.FilterSet):
         return queryset.filter(completed_at__isnull=not value)
 
 
+@extend_schema(tags=["Tarefas"])
 class TaskListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = TaskSerializer
@@ -80,6 +81,7 @@ class TaskListCreateView(ListAPIView):
         return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["Tarefas"])
 class TaskDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -107,6 +109,7 @@ class TaskDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["Tarefas"])
 class TaskMoveView(APIView):
     permission_classes = [IsAuthenticated]
 
