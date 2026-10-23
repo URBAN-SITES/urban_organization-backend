@@ -8,6 +8,8 @@ jobs:
     env:
       # .env is not committed; Django refuses to start without a key
       SECRET_KEY: ci-only-not-a-real-secret
+      # Non-secret fixture key for the isolated test database.
+      FIELD_ENCRYPTION_KEY: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
     steps:
     - uses: actions/checkout@v4
 

@@ -276,7 +276,8 @@ at `/admin/` and `/api/docs/`.
 
 **What it does:** stores notifications per user and lets the frontend list them
 and mark them as read. If `FIREBASE_CREDENTIALS` is set, every notification is
-also sent as a push (Firebase Cloud Messaging) to the user's registered devices.
+also sent as a push (Firebase Cloud Messaging) to the user's registered devices,
+unless their global push preference is disabled. Delivery runs after commit.
 
 **Backend (from any service)**
 ```python
@@ -293,7 +294,7 @@ NotificationService.notify(
 | `GET /api/v1/notifications/?unread=true` | Only unread |
 | `POST /api/v1/notifications/<id>/read/` | Mark one as read (204) |
 | `POST /api/v1/notifications/read-all/` | Mark all as read (204) |
-| `POST /api/v1/notifications/send/` | Push to one token `{"token", "title", "body"}` → `{"message_id"}` (503 if not configured, 502 if FCM fails) |
+| `POST /api/v1/notifications/send/` | Test push to my registered token `{"token", "title", "body"}` → `{"message_id"}` (403 if not owned or opted out, 503 if not configured, 502 if FCM fails) |
 | `POST /api/v1/notifications/devices/` | Register this browser's FCM token `{"token": "..."}` (204) |
 | `DELETE /api/v1/notifications/devices/` | Remove it on logout `{"token": "..."}` (204) |
 
@@ -302,18 +303,19 @@ NotificationService.notify(
 2. Save the JSON in the backend folder as `firebase-credentials.json` (git-ignored) and set
    `FIREBASE_CREDENTIALS=firebase-credentials.json` in `.env`.
 3. Frontend: `getToken(messaging, { vapidKey })` with the web config, then
-   `POST /api/v1/notifications/devices/`. A `firebase-messaging-sw.js` service worker
-   shows pushes while the tab is closed.
+   `POST /api/v1/notifications/devices/`. The frontend PWA worker (`/sw.js`)
+   receives pushes while the tab is closed.
 
 Push is best-effort: if FCM fails the notification is still saved, and tokens
 FCM reports as dead are deleted.
 
-**Real time:** merge `feat/websockets` and call `send_to_user(user.pk, {...})`
-inside `NotificationService.notify`.
+**Real time:** the shared service emits `notification.created` to the user's `/ws/`
+connections after commit. See [the integration assessment](NOTIFICATIONS_INTEGRATION.md)
+for the current frontend flow, infrastructure requirements and remaining work.
 
 **Files:** the `core/modules/notifications/` module (models, serializers, services, views, admin,
 urls, tests), plus a migration in `core/migrations/` and one line in `app/urls.py`
-**Env vars:** `FIREBASE_CREDENTIALS` (optional)
+**Env vars:** `FIREBASE_CREDENTIALS` (optional), `FRONTEND_URL` (HTTPS push click destination)
 
 ---
 
