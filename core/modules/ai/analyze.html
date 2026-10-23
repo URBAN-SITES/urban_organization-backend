@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test AI analysis</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 750px; margin: 40px auto; padding: 0 20px; }
+    button, input { margin: 12px 0; }
+    pre { background: #f3f3f3; padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    [hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Test AI analysis</h1>
+  <form id="login-form">
+    <label for="email">Email</label><br>
+    <input id="email" type="email" autocomplete="username" required><br>
+    <label for="password">Password</label><br>
+    <input id="password" type="password" autocomplete="current-password" required><br>
+    <button id="login" type="submit">Log in</button>
+  </form>
+  <p id="login-status" role="status"></p>
+  <hr>
+  <form id="upload-form">
+    <label for="files">Images or PDF documents</label><br>
+    <input id="files" type="file" name="files" multiple required><br>
+    <button id="send" type="submit">Send files</button>
+  </form>
+  <p id="status" role="status"></p>
+  <a id="download" download="analysis-report.pdf" hidden>Download returned PDF</a>
+  <pre id="response" hidden></pre>
+  <script>
+    const form = document.getElementById("upload-form");
+    const status = document.getElementById("status");
+    const responseBody = document.getElementById("response");
+    const download = document.getElementById("download");
+    const send = document.getElementById("send");
+    const login = document.getElementById("login");
+    const loginStatus = document.getElementById("login-status");
+    let pdfUrl;
+
+    document.getElementById("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (login.disabled || send.disabled) return;
+      login.disabled = true;
+      send.disabled = true;
+      loginStatus.textContent = "Logging in…";
+      try {
+        const response = await fetch("/api/v1/login/", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+          }),
+        });
+        loginStatus.textContent = response.ok
+          ? "Logged in. You can now send files."
+          : `HTTP ${response.status} — ${await response.text()}`;
+      } catch (error) {
+        loginStatus.textContent = error.message;
+      } finally {
+        document.getElementById("password").value = "";
+        login.disabled = false;
+        send.disabled = false;
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (send.disabled) return;
+      send.disabled = true;
+      login.disabled = true;
+      download.hidden = true;
+      download.removeAttribute("href");
+      responseBody.hidden = true;
+      responseBody.textContent = "";
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      pdfUrl = null;
+      status.textContent = "Sending files…";
+      try {
+        const csrfCookie = document.cookie.split(";").find((part) => part.trim().startsWith("csrftoken="));
+        const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.trim().slice("csrftoken=".length)) : "";
+        const response = await fetch("/api/v1/ai/analyze/", {
+          method: "POST",
+          credentials: "include",
+          headers: { "X-CSRFToken": csrfToken },
+          body: new FormData(form),
+        });
+        status.textContent = `HTTP ${response.status} — ${response.headers.get("Content-Type") || "unknown content type"}`;
+        if (response.ok && (response.headers.get("Content-Type") || "").includes("application/pdf")) {
+          pdfUrl = URL.createObjectURL(await response.blob());
+          download.href = pdfUrl;
+          download.hidden = false;
+        } else {
+          const text = await response.text();
+          try { responseBody.textContent = JSON.stringify(JSON.parse(text), null, 2); }
+          catch { responseBody.textContent = text; }
+          responseBody.hidden = false;
+        }
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        send.disabled = false;
+        login.disabled = false;
+      }
+    });
+    window.addEventListener("beforeunload", () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); });
+  </script>
+</body>
+</html>

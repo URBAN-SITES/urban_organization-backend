@@ -12,11 +12,14 @@ from core.modules.ai.services.ask import AIService
 class AIAskView(APIView):
     permission_classes = [IsAuthenticated]
 
+    # Documentation
     @extend_schema(
         summary="Ask the AI (Gemini)",
         request=AIAskSerializer,
         responses={200: AIAnswerSerializer},
     )
+
+    # Chat
     def post(self, request):
         serializer = AIAskSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -5,6 +5,8 @@ from google import genai
 from google.genai.errors import APIError
 from rest_framework import exceptions
 
+from core.modules.ai.prompts.system import INCEPTUM_INSTRUCTIONS
+
 from core.modules.ai.response_messages import (
     MSG_AI_BUSY,
     MSG_AI_DECLINED,
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # gemini-flash-lite-latest is fast, free tier supported and responsive
 AI_MODEL = "gemini-flash-lite-latest"
-DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant. Answer concisely."
+DEFAULT_SYSTEM_PROMPT = INCEPTUM_INSTRUCTIONS
 
 
 @cache
