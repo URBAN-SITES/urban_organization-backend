@@ -8,6 +8,7 @@ session control and one-time-code flows, ready to extend.
 | Doc | What's in it |
 |-----|--------------|
 | [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md) | Stack, running locally, folder structure, auth, business rules, known issues |
+| [`docs/PRODUCT_SCOPE.md`](docs/PRODUCT_SCOPE.md) | Hackathon goal, priorities (P1/P2/P3), modules and data rules |
 | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) | Branches, commits, naming and code style |
 | [`docs/TEAM_WORKFLOW.md`](docs/TEAM_WORKFLOW.md) | Issues, PRs, collisions, splitting large tasks |
 | [`docs/FEATURE_BRANCHES.md`](docs/FEATURE_BRANCHES.md) | Optional `feat/*` branches and how to combine them |

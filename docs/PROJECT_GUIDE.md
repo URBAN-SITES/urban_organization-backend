@@ -1,7 +1,12 @@
 # Project Guide
 
-Django REST backend template for the hackathon: e-mail/JWT authentication ready,
+Django REST backend for the Hackathon 3INFO project (collaborative Kanban:
+Organization > Sector > Task), built on a template with e-mail/JWT authentication ready,
 plus optional feature branches you merge only when the project needs them.
+
+**Product goal, priorities (P1/P2/P3) and the data model mapping:
+[`PRODUCT_SCOPE.md`](PRODUCT_SCOPE.md).** Domain features live in
+`core/modules/organizations/` and `core/modules/kanban/`.
 
 Read this first, then [`CONVENTIONS.md`](CONVENTIONS.md) for naming and style,
 [`TEAM_WORKFLOW.md`](TEAM_WORKFLOW.md) for how we split work and review, and
@@ -47,7 +52,7 @@ app/                     # project config (not an app)
   urls.py                # root routes: /admin/, /api/docs/, /api/v1/
   asgi.py / wsgi.py      # default to app.settings.prod
 core/                    # users, auth and everything shared
-  modules/               # feature modules: ai/ notifications/ payments/ uploads/ (own models/services/views/urls/tests)
+  modules/               # feature modules: ai/ notifications/ payments/ uploads/ organizations/ kanban/ (own models/services/views/urls/tests)
   models/                # one model (or family) per file
   serializers/           # input validation + output shape
   services/              # business rules

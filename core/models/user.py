@@ -58,6 +58,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=False,
     )
 
+    bio = models.TextField(_("bio"), blank=True)
+
+    avatar_url = models.URLField(_("avatar url"), blank=True)
+
     is_active = models.BooleanField(
         _("active"),
         default=True,

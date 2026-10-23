@@ -1,0 +1,733 @@
+// MODELAGEM FINAL - Hackathon 3INFO
+// Organizacao > Setores (Kanban) > Tarefas
+//
+// LEGENDA DE PRIORIDADE (cor do cabecalho da tabela + TableGroup)
+//   [P1]   verde  FUNDAMENTAL: requisito obrigatorio do desafio. Implementar primeiro.
+//   [P2-x] roxo   SECUNDARIO: diferencial, so depois do P1 estavel. Blocos A..I independentes
+//                 (P2-H chat depende de P2-A times; P2-I anexos usa message_id do P2-H).
+//   [P3]   cinza  SCHEMA-ONLY: modelo pronto, sem implementacao prevista.
+//
+// Indices parciais, CHECKs, triggers e views estao em modelagem-final.sql
+
+Enum org_role {
+  owner
+  admin
+  member
+  viewer
+}
+
+Enum sector_role {
+  manager
+  editor
+  viewer
+}
+
+Enum team_role {
+  lead
+  member
+}
+
+Enum status_category {
+  todo
+  in_progress
+  done
+}
+
+Enum field_type {
+  text
+  number
+  date
+  select
+  checkbox
+  url
+}
+
+Enum view_layout {
+  board
+  table
+  calendar
+}
+
+Enum task_priority {
+  low
+  medium
+  high
+  urgent
+}
+
+Enum invite_status {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+Enum channel_kind {
+  organization
+  team
+  direct
+}
+
+Enum notification_type {
+  task_assigned
+  task_comment
+  task_due_soon
+  task_overdue
+  org_invite
+  member_joined
+  chat_message
+  subscription
+  system
+}
+
+Enum email_kind {
+  org_invite
+  notification
+  digest
+  security
+  billing
+  other
+}
+
+Enum email_status {
+  queued
+  sent
+  failed
+  bounced
+}
+
+Enum billing_interval {
+  month
+  year
+}
+
+Enum subscription_status {
+  incomplete
+  trialing
+  active
+  past_due
+  canceled
+  expired
+}
+
+Enum payment_status {
+  pending
+  paid
+  failed
+  refunded
+}
+
+Enum integration_status {
+  active
+  revoked
+  error
+}
+
+// ======================= USUÁRIOS E CONTA =======================
+
+// [P1] FUNDAMENTAL
+Table users [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  first_name varchar [not null]
+  last_name varchar
+  email varchar [not null]
+  email_verified_at timestamptz
+  password_hash varchar [note: 'null para quem entra só com Google']
+  avatar_url varchar
+  bio text
+  deleted_at timestamptz [note: 'excluir conta: backend anonimiza e preenche']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    `lower(email)` [unique]
+  }
+}
+
+// [P2-B] SECUNDARIO: login Google
+Table user_identities [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  provider varchar [not null, note: "'google'"]
+  provider_user_id varchar [not null, note: 'campo sub devolvido pelo Google']
+  email varchar
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (provider, provider_user_id) [unique]
+    (user_id, provider) [unique]
+  }
+
+  Note: 'Login social (OAuth)'
+}
+
+// [P2-C] SECUNDARIO: preferencias do usuario
+Table user_settings [headercolor: #534AB7] {
+  user_id uuid [pk, ref: - users.id]
+  theme varchar [not null, default: 'system', note: 'light | dark | system']
+  locale varchar [not null, default: 'pt-BR']
+  timezone varchar [not null, default: 'America/Sao_Paulo']
+  push_enabled boolean [not null, default: true]
+  email_product boolean [not null, default: true]
+  email_weekly_digest boolean [not null, default: false]
+  email_security boolean [not null, default: true]
+}
+
+// [P2-F] SECUNDARIO: Google Agenda
+Table user_integrations [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  provider varchar [not null, note: "'google_calendar'"]
+  scopes text[]
+  access_token_enc text [note: 'guardar criptografado']
+  refresh_token_enc text [note: 'guardar criptografado']
+  expires_at timestamptz
+  calendar_id varchar [not null, default: 'primary']
+  sync_enabled boolean [not null, default: true]
+  status integration_status [not null, default: 'active']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, provider) [unique]
+  }
+
+  Note: 'Acesso às APIs do Google (Agenda). Diferente de login.'
+}
+
+// [P2-E] SECUNDARIO: notificacoes e push
+Table push_subscriptions [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  endpoint text [unique, not null]
+  p256dh text [not null]
+  auth_key text [not null]
+  user_agent varchar
+  created_at timestamptz [not null, default: `now()`]
+  last_used_at timestamptz
+
+  Note: 'Web Push: um usuário pode ter vários dispositivos'
+}
+
+// ======================= ORGANIZAÇÕES =======================
+
+// [P1] FUNDAMENTAL
+Table organizations [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar [not null]
+  description text
+  logo_url varchar
+  is_personal boolean [not null, default: false, note: 'criada por trigger no cadastro do usuário']
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// [P1] FUNDAMENTAL
+Table organization_members [headercolor: #0F6E56] {
+  organization_id uuid [not null, ref: > organizations.id]
+  user_id uuid [not null, ref: > users.id]
+  role org_role [not null, default: 'member']
+  joined_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (organization_id, user_id) [pk]
+    user_id
+  }
+}
+
+// [P2-D] SECUNDARIO: convites e e-mails
+Table organization_invites [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [not null, ref: > organizations.id]
+  email varchar [not null]
+  role org_role [not null, default: 'member', note: 'não pode ser owner']
+  token_hash varchar [unique, not null, note: 'hash do token enviado por e-mail']
+  status invite_status [not null, default: 'pending']
+  invited_by uuid [not null, ref: > users.id]
+  accepted_by uuid [ref: > users.id]
+  expires_at timestamptz [not null, note: 'padrão: agora + 7 dias']
+  accepted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Um convite pendente por e-mail em cada organização (índice parcial no SQL)'
+}
+
+// [P2-D] SECUNDARIO: convites e e-mails
+Table email_log [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  kind email_kind [not null]
+  to_email varchar [not null]
+  user_id uuid [ref: > users.id, note: 'destinatário, se for usuário']
+  sent_by uuid [ref: > users.id, note: 'quem disparou']
+  organization_id uuid [ref: > organizations.id]
+  invite_id uuid [ref: > organization_invites.id]
+  provider_message_id varchar
+  status email_status [not null, default: 'queued']
+  error text
+  created_at timestamptz [not null, default: `now()`]
+  sent_at timestamptz
+
+  indexes {
+    created_at
+    (organization_id, created_at)
+  }
+
+  Note: 'Contabiliza e-mails enviados (view email_usage_daily no SQL)'
+}
+
+// ======================= SETORES E TIMES =======================
+
+// [P1] FUNDAMENTAL
+Table sectors [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [not null, ref: > organizations.id]
+  name varchar [not null]
+  description text
+  icon varchar
+  color varchar
+  is_private boolean [not null, default: true, note: 'true = só participantes; false = membros da organização veem (viewer)']
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    organization_id
+  }
+
+  Note: 'O setor é o "projeto" do desafio: contém o quadro Kanban'
+}
+
+// [P1] FUNDAMENTAL
+Table sector_members [headercolor: #0F6E56] {
+  sector_id uuid [not null, ref: > sectors.id]
+  user_id uuid [not null, ref: > users.id]
+  role sector_role [not null, default: 'editor']
+
+  indexes {
+    (sector_id, user_id) [pk]
+    user_id
+  }
+}
+
+// [P2-A] SECUNDARIO: times
+Table teams [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [not null, ref: > organizations.id]
+  name varchar [not null]
+  description text
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (organization_id, name) [unique]
+    (id, organization_id) [unique]
+  }
+
+  Note: 'Um nível só, sem sub-times'
+}
+
+// [P2-A] SECUNDARIO: times
+Table team_members [headercolor: #534AB7] {
+  team_id uuid [not null, ref: > teams.id]
+  user_id uuid [not null, ref: > users.id]
+  role team_role [not null, default: 'member']
+  joined_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (team_id, user_id) [pk]
+    user_id
+  }
+}
+
+// [P2-A] SECUNDARIO: times
+Table sector_teams [headercolor: #534AB7] {
+  sector_id uuid [not null, ref: > sectors.id]
+  team_id uuid [not null, ref: > teams.id]
+  role sector_role [not null, default: 'editor']
+
+  indexes {
+    (sector_id, team_id) [pk]
+  }
+
+  Note: 'Dá acesso ao setor para um time inteiro'
+}
+
+// ======================= KANBAN =======================
+
+// [P1] FUNDAMENTAL
+Table statuses [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  sector_id uuid [not null, ref: > sectors.id]
+  name varchar [not null]
+  color varchar
+  category status_category [not null, note: 'todo / in_progress / done']
+  position int [not null]
+  wip_limit int
+
+  indexes {
+    (sector_id, name) [unique]
+    (id, sector_id) [unique]
+  }
+
+  Note: 'Padrão criado por trigger: A fazer, Em andamento, Concluído'
+}
+
+// [P1] FUNDAMENTAL
+Table tasks [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  sector_id uuid [not null, ref: > sectors.id]
+  status_id uuid [not null, note: 'FK composta (status_id, sector_id) garante status do mesmo setor']
+  parent_task_id uuid [ref: > tasks.id]
+  title varchar [not null]
+  description text
+  priority task_priority [not null, default: 'medium']
+  due_date date
+  completed_at timestamptz [note: 'preenchido por trigger quando o status é category=done']
+  assignee_id uuid [ref: > users.id, note: 'validar no backend: participante efetivo do setor']
+  created_by uuid [not null, ref: > users.id]
+  position int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (sector_id, status_id)
+    assignee_id
+    due_date
+  }
+}
+
+// [P1] FUNDAMENTAL
+Table checklist_items [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  task_id uuid [not null, ref: > tasks.id]
+  content varchar [not null]
+  is_done boolean [not null, default: false]
+  position int [not null, default: 0]
+}
+
+// [P1] FUNDAMENTAL
+Table comments [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  task_id uuid [not null, ref: > tasks.id]
+  author_id uuid [not null, ref: > users.id]
+  content text [not null]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// [P1] FUNDAMENTAL
+Table resource_links [headercolor: #0F6E56] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [ref: > organizations.id]
+  sector_id uuid [ref: > sectors.id]
+  task_id uuid [ref: > tasks.id]
+  title varchar
+  url varchar [not null]
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Exatamente um entre organization_id, sector_id, task_id (CHECK no SQL)'
+}
+
+// [P2-F] SECUNDARIO: Google Agenda
+Table task_calendar_events [headercolor: #534AB7] {
+  task_id uuid [not null, ref: > tasks.id]
+  user_id uuid [not null, ref: > users.id]
+  google_event_id varchar [not null]
+  calendar_id varchar [not null, default: 'primary']
+  last_synced_at timestamptz
+  last_error text
+
+  indexes {
+    (task_id, user_id) [pk]
+  }
+
+  Note: 'Evento do Google Agenda criado a partir do prazo da tarefa'
+}
+
+// ======================= ADAPTÁVEL =======================
+
+// [P3] SCHEMA-ONLY
+Table custom_fields [headercolor: #888780] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  sector_id uuid [not null, ref: > sectors.id]
+  name varchar [not null]
+  type field_type [not null]
+  position int [not null, default: 0]
+
+  indexes {
+    (sector_id, name) [unique]
+  }
+}
+
+// [P3] SCHEMA-ONLY
+Table custom_field_options [headercolor: #888780] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  field_id uuid [not null, ref: > custom_fields.id]
+  name varchar [not null]
+  color varchar
+  position int [not null, default: 0]
+}
+
+// [P3] SCHEMA-ONLY
+Table task_field_values [headercolor: #888780] {
+  task_id uuid [not null, ref: > tasks.id]
+  field_id uuid [not null, ref: > custom_fields.id]
+  value_text text
+  value_number numeric
+  value_date date
+  value_bool boolean
+  option_id uuid [ref: > custom_field_options.id]
+
+  indexes {
+    (task_id, field_id) [pk]
+  }
+}
+
+// [P3] SCHEMA-ONLY
+Table views [headercolor: #888780] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  sector_id uuid [not null, ref: > sectors.id]
+  name varchar [not null]
+  layout view_layout [not null, default: 'board']
+  group_by_field_id uuid [ref: > custom_fields.id]
+  filters jsonb
+  sort jsonb
+  position int [not null, default: 0]
+}
+
+// [P3] SCHEMA-ONLY
+Table task_dependencies [headercolor: #888780] {
+  task_id uuid [not null, ref: > tasks.id]
+  depends_on_task_id uuid [not null, ref: > tasks.id]
+
+  indexes {
+    (task_id, depends_on_task_id) [pk]
+  }
+}
+
+// ======================= NOTIFICAÇÕES =======================
+
+// [P2-E] SECUNDARIO: notificacoes e push
+Table notifications [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  type notification_type [not null]
+  actor_id uuid [ref: > users.id, note: 'quem causou (avatar na lista)']
+  title varchar [not null]
+  body text
+  organization_id uuid [ref: > organizations.id]
+  sector_id uuid [ref: > sectors.id]
+  task_id uuid [ref: > tasks.id]
+  read_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, created_at)
+  }
+}
+
+// ======================= CHAT =======================
+
+// [P2-H] SECUNDARIO: chat (depende de P2-A)
+Table chat_channels [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [not null, ref: > organizations.id]
+  kind channel_kind [not null]
+  team_id uuid [ref: > teams.id, note: 'só para kind = team']
+  direct_key varchar [note: "só para kind = direct: 'idMenor:idMaior'"]
+  name varchar
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Canal "Geral" da organização e canal de cada time são criados por trigger'
+}
+
+// [P2-H] SECUNDARIO: chat (depende de P2-A)
+Table chat_channel_members [headercolor: #534AB7] {
+  channel_id uuid [not null, ref: > chat_channels.id]
+  user_id uuid [not null, ref: > users.id]
+  last_read_at timestamptz
+  joined_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (channel_id, user_id) [pk]
+  }
+
+  Note: 'Controle de não lidas e participantes de conversas diretas'
+}
+
+// [P2-H] SECUNDARIO: chat (depende de P2-A)
+Table chat_messages [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  channel_id uuid [not null, ref: > chat_channels.id]
+  author_id uuid [not null, ref: > users.id]
+  content text [not null, default: '']
+  reply_to_id uuid [ref: > chat_messages.id]
+  created_at timestamptz [not null, default: `now()`]
+  edited_at timestamptz
+  deleted_at timestamptz
+
+  indexes {
+    (channel_id, created_at)
+  }
+}
+
+// ======================= ANEXOS =======================
+
+// [P2-I] SECUNDARIO: anexos (message_id depende de P2-H)
+Table attachments [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  organization_id uuid [not null, ref: > organizations.id]
+  sector_id uuid [ref: > sectors.id]
+  task_id uuid [ref: > tasks.id]
+  comment_id uuid [ref: > comments.id]
+  message_id uuid [ref: > chat_messages.id]
+  uploaded_by uuid [not null, ref: > users.id]
+  storage_key varchar [unique, not null, note: 'caminho do arquivo no storage']
+  file_name varchar [not null]
+  mime_type varchar [not null]
+  size_bytes bigint [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'No máximo um alvo (setor, tarefa, comentário ou mensagem). Nenhum = documento da organização.'
+}
+
+// ======================= PLANO PAGO =======================
+
+// [P2-G] SECUNDARIO: plano pago
+Table plans [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  code varchar [unique, not null, note: "'pro_monthly', 'pro_yearly'"]
+  name varchar [not null]
+  description text
+  price_cents int [not null]
+  currency char(3) [not null, default: 'BRL']
+  billing_interval billing_interval [not null]
+  provider_price_id varchar [note: 'id do preço no gateway']
+  is_active boolean [not null, default: true]
+}
+
+// [P2-G] SECUNDARIO: plano pago
+Table subscriptions [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  plan_id uuid [not null, ref: > plans.id]
+  status subscription_status [not null, default: 'incomplete']
+  provider varchar [not null]
+  provider_customer_id varchar
+  provider_subscription_id varchar
+  current_period_start timestamptz
+  current_period_end timestamptz
+  cancel_at_period_end boolean [not null, default: false]
+  canceled_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (provider, provider_subscription_id) [unique]
+    user_id
+  }
+
+  Note: 'Premium é do usuário. is_premium(user_id) no SQL valida o acesso.'
+}
+
+// [P2-G] SECUNDARIO: plano pago
+Table payments [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  subscription_id uuid [ref: > subscriptions.id]
+  user_id uuid [not null, ref: > users.id]
+  provider varchar [not null]
+  provider_payment_id varchar [not null]
+  amount_cents int [not null]
+  currency char(3) [not null, default: 'BRL']
+  status payment_status [not null, default: 'pending']
+  method varchar [note: 'card, pix, boleto']
+  invoice_url varchar
+  paid_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (provider, provider_payment_id) [unique]
+    (user_id, created_at)
+  }
+}
+
+// [P2-G] SECUNDARIO: plano pago
+Table payment_events [headercolor: #534AB7] {
+  id uuid [pk, default: `gen_random_uuid()`]
+  provider varchar [not null]
+  event_id varchar [not null]
+  event_type varchar [not null]
+  payload jsonb [not null]
+  received_at timestamptz [not null, default: `now()`]
+  processed_at timestamptz
+  error text
+
+  indexes {
+    (provider, event_id) [unique]
+  }
+
+  Note: 'Webhooks do gateway. A UNIQUE garante idempotência.'
+}
+
+// ======================= GRUPOS POR PRIORIDADE =======================
+TableGroup g_p1 {
+  users
+  organizations
+  organization_members
+  sectors
+  sector_members
+  statuses
+  tasks
+  checklist_items
+  comments
+  resource_links
+}
+
+TableGroup g_p2_a {
+  teams
+  team_members
+  sector_teams
+}
+
+TableGroup g_p2_b {
+  user_identities
+}
+
+TableGroup g_p2_c {
+  user_settings
+}
+
+TableGroup g_p2_d {
+  organization_invites
+  email_log
+}
+
+TableGroup g_p2_e {
+  notifications
+  push_subscriptions
+}
+
+TableGroup g_p2_f {
+  user_integrations
+  task_calendar_events
+}
+
+TableGroup g_p2_g {
+  plans
+  subscriptions
+  payments
+  payment_events
+}
+
+TableGroup g_p2_h {
+  chat_channels
+  chat_channel_members
+  chat_messages
+}
+
+TableGroup g_p2_i {
+  attachments
+}
+
+TableGroup g_p3 {
+  custom_fields
+  custom_field_options
+  task_field_values
+  views
+  task_dependencies
+}

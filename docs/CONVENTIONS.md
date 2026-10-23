@@ -87,6 +87,7 @@ core/modules/<module>/            # e.g. core/modules/payments/
 
 - Translatable `verbose_name` on fields: `models.CharField(_("name"), ...)`.
 - Timestamps: `created_at` (`auto_now_add`), `updated_at` (`auto_now`).
+- Domain models: inherit `core.models.base.BaseModel` (UUID pk, timestamps, `is_active`, `owner`); choices are nested `TextChoices`; mark priority with `# [P1]` / `# [P2-x]` (see `PRODUCT_SCOPE.md`).
 - Prefer soft-delete (`is_active=False`) over deleting users.
 
 ## API
