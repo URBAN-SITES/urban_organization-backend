@@ -57,6 +57,9 @@ An accepted FCM message ID is not proof that a browser displayed the notificatio
 - `FRONTEND_URL` now also exists in Django settings and supplies the notification click
   destination. FCM click links are included only for HTTPS URLs.
 - Vite proxies `/ws/` as well as `/api/`. Production Nginx already proxies WebSockets.
+- The full pre-deployment suite exposed an existing CORS regression on `dev`: every
+  origin was accepted despite the existing rejection test. The configured trusted-origin
+  allowlist is restored, including production origins appended by production settings.
 - Push requires a supported browser, permission, a secure context and an active worker.
   The Vite development server has the PWA worker disabled; the UI reports this instead
   of waiting indefinitely. Test push in a built/previewed or HTTPS deployed application.

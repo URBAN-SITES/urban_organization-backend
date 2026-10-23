@@ -23,8 +23,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://3009.michalski.app",
 ]
 # frontends allowed to call the API; credentials so the auth cookies are sent
-# CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_COOKIE_HTTPONLY = False
