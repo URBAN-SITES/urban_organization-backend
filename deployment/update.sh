@@ -46,7 +46,7 @@ echo "Building dev revisions: $revision"
 # Build both images before replacing any running application containers.
 "${compose[@]}" build
 "${compose[@]}" up -d --wait --wait-timeout 180
-for url in https://4000.michalski.app/ https://3009.michalski.app/api/docs/urls/; do
+for url in https://4000.michalski.app/ https://3009.michalski.app/admin/login/; do
     curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 --max-time 20 -o /dev/null "$url"
 done
 printf '%s\n' "$revision" > deploy/current-revision
