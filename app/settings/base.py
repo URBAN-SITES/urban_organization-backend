@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 # from django.contrib import messages
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,6 +24,7 @@ CSRF_TRUSTED_ORIGINS = [
 # frontends allowed to call the API; credentials so the auth cookies are sent
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SAMESITE = "Lax"
