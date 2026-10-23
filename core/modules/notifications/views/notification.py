@@ -98,9 +98,9 @@ class SendPushView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Send a push to one FCM token",
+        summary="Send a test push to my registered device",
         request=SendPushSerializer,
-        responses={200: None, 502: None, 503: None},
+        responses={200: None, 403: None, 502: None, 503: None},
     )
     def post(self, request):
         serializer = SendPushSerializer(data=request.data)
@@ -111,7 +111,14 @@ class SendPushView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         try:
-            message_id = NotificationService.send_to_token(**serializer.validated_data)
+            message_id = NotificationService.send_to_token(
+                request.user, **serializer.validated_data
+            )
+        except OSError, ValueError:
+            return Response(
+                {"detail": MSG_PUSH_NOT_CONFIGURED},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except FirebaseError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({"message_id": message_id})

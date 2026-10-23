@@ -12,6 +12,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Path to the Firebase service account JSON; empty disables push
 FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 APPEND_SLASH = True
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 CSRF_TRUSTED_ORIGINS = [
