@@ -29,6 +29,8 @@ dependencies = [
   "qrcode[pil]>=8.2",
   "celery[redis]>=5.6.3",
   "channels[daphne]>=4.3.2",
+  "django-extensions>=4.1",
+  "pydotplus>=2.0.2",
 ]
 requires-python = ">=3.14"
 readme = "README.md"
@@ -36,9 +38,11 @@ license = { text = "MIT" }
 
 [dependency-groups]
 dev = [
-  "pre-commit>=4.6.2",
-  "pyright>=1.1.411",
-  "ruff>=0.16.2",
+    "pre-commit>=4.6.2",
+    "pyright>=1.1.411",
+    "ruff>=0.16.2",
+    "pydotplus>=2.0.2",
+    "pyparsing<3",
 ]
 lint = [
   "ruff>=0.16.2",
