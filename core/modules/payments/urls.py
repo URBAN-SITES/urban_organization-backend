@@ -1,13 +1,15 @@
 from django.urls import path
 
 from core.modules.payments.views.payment import (
-    PaymentListCreateView,
+    PaymentCardCreateView,
+    PaymentPixListCreateView,
     PaymentWebhookView,
 )
 
 app_name = "payments"
 
 urlpatterns = [
-    path("", PaymentListCreateView.as_view(), name="list-create"),
+    path("", PaymentPixListCreateView.as_view(), name="list-create"),
+    path("card/", PaymentCardCreateView.as_view(), name="card-create"),
     path("webhook/", PaymentWebhookView.as_view(), name="webhook"),
 ]
