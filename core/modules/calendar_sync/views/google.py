@@ -9,11 +9,13 @@ from core.modules.calendar_sync.serializers.google import (
     GoogleAuthorizeSerializer,
     GoogleConnectSerializer,
     GoogleStatusSerializer,
+    TaskCalendarStatusSerializer,
 )
 from core.modules.calendar_sync.services.google import (
     SCOPE_DRIVE,
     GoogleCalendarService,
 )
+from core.modules.calendar_sync.services.tasks import TaskCalendarService
 
 
 @extend_schema(tags=["Integrações"])
@@ -74,3 +76,37 @@ class GoogleConnectView(APIView):
         serializer.is_valid(raise_exception=True)
         GoogleCalendarService.connect(request.user, **serializer.validated_data)
         return Response({"connected": True}, status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=["Integrações"])
+class TaskCalendarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def _payload(event):
+        return {
+            "synced": event is not None,
+            "last_synced_at": event.last_synced_at if event else None,
+        }
+
+    @extend_schema(
+        summary="Is this task in my Google Calendar?",
+        responses={200: TaskCalendarStatusSerializer},
+    )
+    def get(self, request, task_id):
+        return Response(self._payload(TaskCalendarService.get(request.user, task_id)))
+
+    @extend_schema(
+        summary="Add (or update) the task's due date as an all-day event in my Google Calendar",
+        request=None,
+        responses={200: TaskCalendarStatusSerializer},
+    )
+    def post(self, request, task_id):
+        return Response(self._payload(TaskCalendarService.sync(request.user, task_id)))
+
+    @extend_schema(
+        summary="Remove the task's event from my Google Calendar", responses={204: None}
+    )
+    def delete(self, request, task_id):
+        TaskCalendarService.unsync(request.user, task_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)

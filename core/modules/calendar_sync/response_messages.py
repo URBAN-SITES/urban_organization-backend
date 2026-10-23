@@ -12,3 +12,6 @@ MSG_GOOGLE_SCOPE_MISSING = _(
 MSG_DRIVE_TOO_BIG = _("The file can have at most 10 MB.")
 MSG_DRIVE_FORBIDDEN = _("Google denied access to this file.")
 MSG_DRIVE_NOT_FOUND = _("File not found in your Google Drive.")
+MSG_CALENDAR_NO_DUE_DATE = _(
+    "Set a due date on the task before adding it to Google Calendar."
+)

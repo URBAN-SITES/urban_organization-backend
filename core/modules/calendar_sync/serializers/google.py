@@ -15,3 +15,8 @@ class GoogleStatusSerializer(serializers.Serializer):
     drive = serializers.BooleanField(
         help_text="True when the connection also allows Google Drive"
     )
+
+
+class TaskCalendarStatusSerializer(serializers.Serializer):
+    synced = serializers.BooleanField()
+    last_synced_at = serializers.DateTimeField(allow_null=True)
