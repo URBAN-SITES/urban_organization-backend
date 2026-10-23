@@ -37,13 +37,13 @@ Mark each model with a `# [P1]` / `# [P2-x]` comment.
 
 | Flag | Module | Models | State |
 |------|--------|--------|-------|
-| P1 | `organizations` | `Organization`, `OrganizationMember` | models drafted |
-| P1 | `kanban` | `Sector`, `SectorMember`, `Status`, `Task`, `ChecklistItem`, `Comment`, `ResourceLink` | models drafted |
-| P2-A | `teams` | `Team`, `TeamMember`, `SectorTeam` | models drafted |
+| P1 | `organizations` | `Organization`, `OrganizationMember` | API done |
+| P1 | `kanban` | `Sector`, `SectorMember`, `Status`, `Task`, `ChecklistItem`, `Comment`, `ResourceLink` | API done (access rules, columns, tasks, move, filters, progress) |
+| P2-A | `teams` | `Team`, `TeamMember`, `SectorTeam` | API done (`SectorTeam` linked from the sector API) |
 | P2-C | `user_settings` | `UserSettings` | models drafted |
-| P2-D | `invitations` | `OrganizationInvite` (e-mail via `send_email_task`) | models drafted |
+| P2-D | `invitations` | `OrganizationInvite` (e-mail link, hashed single-use token) | API done |
 | P2-F | `calendar_sync` | `UserIntegration` (use `EncryptedTextField`), `TaskCalendarEvent` | models drafted |
-| P2-H | `chat` | `ChatChannel`, `ChatChannelMember`, `ChatMessage` (needs P2-A; uses `core/websockets`) | models drafted |
+| P2-H | `chat` | `ChatChannel`, `ChatChannelMember`, `ChatMessage` (needs P2-A; real time over `core/websockets`) | API done (General, own team, between teams, direct; unread counts) |
 | P2-I | `uploads` | `Attachment` (Cloudinary `UploadService` already exists) | model drafted in `uploads/models/` |
 | P3 | `kanban` | `CustomField`, `CustomFieldOption`, `TaskFieldValue`, `SavedView`, `TaskDependency` | models drafted (schema only) |
 
@@ -75,6 +75,15 @@ Mark each model with a `# [P1]` / `# [P2-x]` comment.
 - `Task.assignee` must be an effective participant of the sector (validate in service).
 - Search and filters (assignee, status, priority, due date) are queries on `Task`
   (`django-filter` is installed).
+
+Chat channel kinds (WhatsApp-community style): `organization` (General, everyone),
+`sector` (anyone with access to the sector), `team` (one team), `teams` (two or more teams,
+members = union, `ChatChannelTeam`), `direct` (two users). Access is always derived from
+current membership. Messages support replies, `@` mentions (notified), `#` task citation
+(card), attachments (Cloudinary, up to 5 files of 10 MB), typing and online presence over
+`/ws/`, and "Start Meet" (Google Calendar OAuth, `core/modules/calendar_sync`). Global search
+(`core/modules/search`) covers tasks, people and files the caller may see. AI task creation
+from messages is not built yet.
 
 ## 5. Choices made while mapping to this base
 
