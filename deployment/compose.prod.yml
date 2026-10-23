@@ -35,6 +35,8 @@ services:
       dockerfile: ../deploy/backend.Dockerfile
     restart: unless-stopped
     env_file: ./backend-resenha/.env
+    secrets:
+      - firebase_admin
     environment: &backend_environment
       DJANGO_SETTINGS_MODULE: app.settings.prod
       SECRET_KEY: ${DJANGO_PROD_SECRET_KEY:?Set DJANGO_PROD_SECRET_KEY in .env.prod}
@@ -48,6 +50,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
+      FIREBASE_CREDENTIALS: /run/secrets/firebase_admin
     volumes:
       - media_data:/app/media
     depends_on:
@@ -66,6 +69,8 @@ services:
     image: resenha-backend:prod
     restart: unless-stopped
     env_file: ./backend-resenha/.env
+    secrets:
+      - firebase_admin
     environment: *backend_environment
     command: ["celery", "-A", "app", "worker", "--loglevel=info", "--concurrency=2"]
     volumes:
@@ -80,6 +85,7 @@ services:
       dockerfile: ../deploy/frontend.Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_PUBLIC_MP_KEY: ${VITE_PUBLIC_MP_KEY:-}
         VITE_MAPBOX_API_KEY: ${VITE_MAPBOX_API_KEY:-}
         VITE_API_KEY: ${VITE_API_KEY:-}
         VITE_AUTH_DOMAIN: ${VITE_AUTH_DOMAIN:-}
@@ -99,6 +105,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+secrets:
+  firebase_admin:
+    file: ${FIREBASE_CREDENTIALS_FILE:-./backend-resenha/firebase-credentials.json}
 
 volumes:
   postgres_data:
