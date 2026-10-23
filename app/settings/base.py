@@ -28,7 +28,10 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_NAME = "csrftoken"
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = False  # TODO: ALTERNAR TRUE EM PRODUÇÃO
 INSTALLED_APPS = [
     "daphne",  # makes runserver serve HTTP + WebSocket (ASGI)
     "django.contrib.admin",
