@@ -175,7 +175,9 @@ class GoogleApiAndMeetTests(TestCase):
 
     def test_status_connect_and_disconnect(self):
         base = f"{API}integrations/google/"
-        self.assertEqual(self.client.get(base).json(), {"connected": False})
+        self.assertEqual(
+            self.client.get(base).json(), {"connected": False, "drive": False}
+        )
         with google_env():
             url = self.client.get(f"{base}authorize/").json()["url"]
             state = parse_qs(urlparse(url).query)["state"][0]
@@ -183,9 +185,13 @@ class GoogleApiAndMeetTests(TestCase):
             with patch(POST, return_value=reply(200, data)):
                 res = self.client.post(f"{base}connect/", {"code": "c", "state": state})
         self.assertEqual(res.json(), {"connected": True})
-        self.assertEqual(self.client.get(base).json(), {"connected": True})
+        self.assertEqual(
+            self.client.get(base).json(), {"connected": True, "drive": False}
+        )
         self.client.delete(base)
-        self.assertEqual(self.client.get(base).json(), {"connected": False})
+        self.assertEqual(
+            self.client.get(base).json(), {"connected": False, "drive": False}
+        )
         self.assertEqual(APIClient().get(base).status_code, 401)
 
     def test_meet_posts_the_link_in_the_channel(self):

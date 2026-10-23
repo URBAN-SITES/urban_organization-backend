@@ -14,6 +14,7 @@ from core.modules.calendar_sync.response_messages import (
     MSG_GOOGLE_CODE_REJECTED,
     MSG_GOOGLE_NOT_CONFIGURED,
     MSG_GOOGLE_NOT_CONNECTED,
+    MSG_GOOGLE_SCOPE_MISSING,
     MSG_GOOGLE_STATE_INVALID,
     MSG_GOOGLE_UNAVAILABLE,
 )
@@ -21,7 +22,10 @@ from core.modules.calendar_sync.response_messages import (
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
-SCOPE = "https://www.googleapis.com/auth/calendar.events"
+SCOPE_CALENDAR = "https://www.googleapis.com/auth/calendar.events"
+# drive.file is the non-sensitive scope: the app only sees files it created itself
+SCOPE_DRIVE = "https://www.googleapis.com/auth/drive.file"
+SCOPE = SCOPE_CALENDAR
 STATE_MAX_AGE = 600  # seconds
 TIMEOUT = 10
 Provider = UserIntegration.Provider
@@ -55,8 +59,9 @@ class GoogleCalendarService:
     """Google Calendar access used to create Meet links. Not the Google *login*."""
 
     @staticmethod
-    def authorize_url(user: User) -> str:
+    def authorize_url(user: User, drive: bool = False) -> str:
         client_id, _secret, redirect = _settings()
+        scope = " ".join([SCOPE_CALENDAR, SCOPE_DRIVE] if drive else [SCOPE_CALENDAR])
         state = signing.dumps({"user": str(user.pk)}, salt="google-oauth")
         return (
             AUTH_URL
@@ -66,7 +71,8 @@ class GoogleCalendarService:
                     "client_id": client_id,
                     "redirect_uri": redirect,
                     "response_type": "code",
-                    "scope": SCOPE,
+                    "scope": scope,
+                    "include_granted_scopes": "true",  # asking for Drive later keeps Calendar
                     "access_type": "offline",
                     "prompt": "consent",  # forces a refresh_token on every consent
                     "state": state,
@@ -110,6 +116,29 @@ class GoogleCalendarService:
         return integration
 
     @staticmethod
+    def has_scope(integration: UserIntegration, scope: str) -> bool:
+        # rows saved before scopes were tracked only ever had Calendar access
+        if not integration.scopes:
+            return scope == SCOPE_CALENDAR
+        return scope in integration.scopes
+
+    @staticmethod
+    def access_token(user: User, scope: str) -> str:
+        """A valid access token for `scope`, refreshed when needed."""
+        integration = GoogleCalendarService.get_integration(user)
+        if integration is None:
+            raise ValidationError(MSG_GOOGLE_NOT_CONNECTED)
+        if not GoogleCalendarService.has_scope(integration, scope):
+            raise ValidationError(MSG_GOOGLE_SCOPE_MISSING)
+        return GoogleCalendarService._fresh_access_token(integration)
+
+    @staticmethod
+    def mark_revoked(user: User) -> None:
+        UserIntegration.objects.filter(
+            user=user, provider=Provider.GOOGLE_CALENDAR
+        ).update(status=UserIntegration.Status.REVOKED)
+
+    @staticmethod
     def get_integration(user: User) -> UserIntegration | None:
         return UserIntegration.objects.filter(
             user=user,
@@ -126,10 +155,7 @@ class GoogleCalendarService:
     @staticmethod
     def create_meet(user: User, title: str) -> str:
         """Creates a one-hour calendar event with a Meet room and returns its link."""
-        integration = GoogleCalendarService.get_integration(user)
-        if integration is None:
-            raise ValidationError(MSG_GOOGLE_NOT_CONNECTED)
-        access = GoogleCalendarService._fresh_access_token(integration)
+        access = GoogleCalendarService.access_token(user, SCOPE_CALENDAR)
         now = timezone.now()
         try:
             response = requests.post(
@@ -152,8 +178,7 @@ class GoogleCalendarService:
         except requests.RequestException:
             raise GoogleUnavailable()
         if response.status_code in (401, 403):
-            integration.status = UserIntegration.Status.REVOKED
-            integration.save(update_fields=["status"])
+            GoogleCalendarService.mark_revoked(user)
             raise ValidationError(MSG_GOOGLE_NOT_CONNECTED)
         link = response.json().get("hangoutLink") if response.ok else None
         if not link:

@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,7 +10,10 @@ from core.modules.calendar_sync.serializers.google import (
     GoogleConnectSerializer,
     GoogleStatusSerializer,
 )
-from core.modules.calendar_sync.services.google import GoogleCalendarService
+from core.modules.calendar_sync.services.google import (
+    SCOPE_DRIVE,
+    GoogleCalendarService,
+)
 
 
 @extend_schema(tags=["Integrações"])
@@ -22,10 +25,12 @@ class GoogleStatusView(APIView):
         responses={200: GoogleStatusSerializer},
     )
     def get(self, request):
+        integration = GoogleCalendarService.get_integration(request.user)
         return Response(
             {
-                "connected": GoogleCalendarService.get_integration(request.user)
-                is not None
+                "connected": integration is not None,
+                "drive": integration is not None
+                and GoogleCalendarService.has_scope(integration, SCOPE_DRIVE),
             }
         )
 
@@ -40,11 +45,19 @@ class GoogleAuthorizeView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Google consent URL (open it in the browser)",
+        summary="Google consent URL (open it in the browser); ?drive=true also asks for Drive",
+        parameters=[
+            OpenApiParameter(
+                "drive", bool, description="Also ask for Google Drive access"
+            )
+        ],
         responses={200: GoogleAuthorizeSerializer},
     )
     def get(self, request):
-        return Response({"url": GoogleCalendarService.authorize_url(request.user)})
+        drive = request.query_params.get("drive") == "true"
+        return Response(
+            {"url": GoogleCalendarService.authorize_url(request.user, drive)}
+        )
 
 
 @extend_schema(tags=["Integrações"])

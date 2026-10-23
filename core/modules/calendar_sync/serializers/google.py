@@ -12,3 +12,6 @@ class GoogleConnectSerializer(serializers.Serializer):
 
 class GoogleStatusSerializer(serializers.Serializer):
     connected = serializers.BooleanField()
+    drive = serializers.BooleanField(
+        help_text="True when the connection also allows Google Drive"
+    )
