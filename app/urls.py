@@ -130,6 +130,12 @@ route_core = [
     path("uploads/", include("core.modules.uploads.urls")),
     path("notifications/", include("core.modules.notifications.urls")),
     path("payments/", include("core.modules.payments.urls")),
+    path("organizations/", include("core.modules.organizations.urls")),
+    path(
+        "organizations/<uuid:organization_id>/teams/",
+        include("core.modules.teams.urls"),
+    ),
+    path("", include("core.modules.invitations.urls")),
     path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
     path("users/me/update/", UserUpdateSelfView.as_view(), name="me-update"),
