@@ -51,3 +51,7 @@ Keep the private service-account JSON at `backend-resenha/firebase-credentials.j
 `.env.prod` to its absolute path so release snapshots can mount it read-only in
 backend and worker at `/run/secrets/firebase_admin`. Do not place private keys,
 OAuth client secrets or payment access tokens in any `VITE_*` variable.
+
+The backend health probe and deployment HTTP check use `/admin/login/`, a native
+Django view outside DRF throttling. Probing Swagger every ten seconds exhausts the
+anonymous API quota and incorrectly marks a running backend unhealthy.
