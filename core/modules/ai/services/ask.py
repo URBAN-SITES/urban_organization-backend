@@ -6,7 +6,6 @@ from google.genai.errors import APIError
 from rest_framework import exceptions
 
 from core.modules.ai.prompts.system import INCEPTUM_INSTRUCTIONS
-
 from core.modules.ai.response_messages import (
     MSG_AI_BUSY,
     MSG_AI_DECLINED,
