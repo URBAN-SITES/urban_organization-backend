@@ -1,4 +1,5 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import F
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
@@ -31,9 +32,13 @@ class OrganizationService:
     @staticmethod
     @transaction.atomic
     def create(user: User, is_personal: bool = False, **data) -> Organization:
-        organization = Organization.objects.create(
-            owner=user, is_personal=is_personal, **data
-        )
+        try:
+            with transaction.atomic():
+                organization = Organization.objects.create(
+                    owner=user, is_personal=is_personal, **data
+                )
+        except IntegrityError:
+            raise ValidationError({"slug": "This workspace address is already in use."})
         OrganizationMember.objects.create(
             organization=organization, user=user, role=Role.OWNER
         )
@@ -42,8 +47,10 @@ class OrganizationService:
     @staticmethod
     def list_for(user: User):
         OrganizationService.ensure_personal(user)
-        return Organization.objects.filter(is_active=True, members__user=user).order_by(
-            "-is_personal", "name"
+        return (
+            Organization.objects.filter(is_active=True, members__user=user)
+            .annotate(current_role=F("members__role"))
+            .order_by("-is_personal", "name")
         )
 
     @staticmethod

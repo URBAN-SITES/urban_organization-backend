@@ -1,6 +1,7 @@
 from django.urls import path
 
 from core.modules.organizations.views.organization import (
+    OrganizationBySlugView,
     OrganizationDetailView,
     OrganizationListCreateView,
     OrganizationMemberDetailView,
@@ -10,6 +11,7 @@ from core.modules.organizations.views.organization import (
 app_name = "organizations"
 
 urlpatterns = [
+    path("by-slug/<slug:slug>/", OrganizationBySlugView.as_view(), name="by-slug"),
     path("", OrganizationListCreateView.as_view(), name="list"),
     path("<uuid:organization_id>/", OrganizationDetailView.as_view(), name="detail"),
     path(

@@ -1,0 +1,14 @@
+{% autoescape off %}{% if subject == "Verify your e-mail" %}Confirme seu cadastro
+
+Use o código abaixo para confirmar seu e-mail e continuar o cadastro.{% elif subject == "Your password reset code" %}Recupere sua senha
+
+Use o código abaixo para continuar a recuperação da sua senha.{% elif subject == "Confirm your new e-mail address" %}Confirme seu novo e-mail
+
+Use o código abaixo para confirmar seu novo endereço de e-mail.{% else %}Seu código de verificação
+
+Use o código abaixo para continuar sua solicitação.{% endif %}
+
+Seu código é: {{ code }}
+
+Inceptum · Gestão de tarefas
+{% endautoescape %}

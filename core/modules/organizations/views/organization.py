@@ -1,10 +1,12 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.modules.organizations.models.organization import Organization
 from core.modules.organizations.serializers.organization import (
     OrganizationMemberAddSerializer,
     OrganizationMemberRoleSerializer,
@@ -38,7 +40,8 @@ class OrganizationListCreateView(ListAPIView):
             request.user, **serializer.validated_data
         )
         return Response(
-            OrganizationSerializer(organization).data, status=status.HTTP_201_CREATED
+            OrganizationSerializer(organization, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -51,6 +54,7 @@ class OrganizationDetailView(APIView):
     )
     def get(self, request, organization_id):
         membership = OrganizationService.get_membership(request.user, organization_id)
+        membership.organization.current_role = membership.role
         return Response(OrganizationSerializer(membership.organization).data)
 
     @extend_schema(
@@ -64,7 +68,9 @@ class OrganizationDetailView(APIView):
         organization = OrganizationService.update(
             request.user, organization_id, serializer.validated_data
         )
-        return Response(OrganizationSerializer(organization).data)
+        return Response(
+            OrganizationSerializer(organization, context={"request": request}).data
+        )
 
     @extend_schema(
         summary="Delete an organization (owner, not the personal one)",
@@ -73,6 +79,22 @@ class OrganizationDetailView(APIView):
     def delete(self, request, organization_id):
         OrganizationService.delete(request.user, organization_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Organizações"])
+class OrganizationBySlugView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get a workspace by address", responses={200: OrganizationSerializer}
+    )
+    def get(self, request, slug):
+        organization = Organization.objects.filter(slug=slug, is_active=True).first()
+        if organization is None:
+            raise NotFound()
+        membership = OrganizationService.get_membership(request.user, organization.pk)
+        organization.current_role = membership.role
+        return Response(OrganizationSerializer(organization).data)
 
 
 @extend_schema(tags=["Organizações"])

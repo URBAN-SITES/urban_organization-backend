@@ -1,12 +1,40 @@
+from uuid import uuid4
+
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
 
 
+def default_organization_slug():
+    return f"workspace-{uuid4().hex}"
+
+
 # [P1] `owner` (from BaseModel) is the DBML `created_by`.
 class Organization(BaseModel):
+    class TeamSize(models.TextChoices):
+        SOLO = "1", _("Just me")
+        SMALL = "2-10", _("2 to 10 people")
+        MEDIUM = "11-50", _("11 to 50 people")
+        LARGE = "51-200", _("51 to 200 people")
+        ENTERPRISE = "201+", _("More than 200 people")
+
+    slug = models.SlugField(
+        max_length=63,
+        unique=True,
+        default=default_organization_slug,
+        validators=[
+            RegexValidator(
+                r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "Use lowercase letters, numbers and single hyphens.",
+            )
+        ],
+    )
+    team_size = models.CharField(
+        _("team size"), max_length=10, choices=TeamSize, blank=True, default=""
+    )
     name = models.CharField(_("name"), max_length=255)
     description = models.TextField(_("description"), blank=True)
     logo_url = models.URLField(_("logo url"), blank=True)

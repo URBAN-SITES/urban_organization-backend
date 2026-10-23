@@ -1,0 +1,6 @@
+{% autoescape off %}Você recebeu um convite para fazer parte da organização {{ organization }} no Inceptum.
+
+Aceitar convite: {{ link }}
+
+Inceptum · Gestão de tarefas
+{% endautoescape %}

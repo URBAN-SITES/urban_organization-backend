@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Inceptum{% endblock %}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f4f4; color:#000000; font-family:Arial, Helvetica, sans-serif; -webkit-text-size-adjust:100%;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; table-layout:fixed; background-color:#ffffff; border:1px solid #e6e6e6; border-radius:12px;">
+            <tr>
+              <td style="padding:28px 24px; border-bottom:1px solid #e6e6e6; font-size:22px; line-height:28px; font-weight:700; letter-spacing:-0.5px;">Inceptum<span style="color:#2590f6;">.</span></td>
+            </tr>
+            <tr>
+              <td style="padding:32px 24px; font-size:16px; line-height:26px; overflow-wrap:anywhere; word-wrap:break-word;">
+                {% block content %}{% endblock %}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px; border-top:1px solid #e6e6e6; color:#525252; font-size:12px; line-height:20px;">Inceptum &middot; Gestão de tarefas</td>
+            </tr>
+          </table>
+          <!--[if mso]></td></tr></table><![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

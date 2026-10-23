@@ -60,10 +60,12 @@ Each flow has three steps: **request** (sends a code by e-mail), **verify**
 | Password reset | `POST /api/v1/password-reset/request/`, `verify/`, `confirm/` | Always answers "code sent", even if the e-mail does not exist |
 | E-mail change | `POST /api/v1/email-change/request/`, `verify/`, `confirm/` | Logged users only; the code goes to the new address; confirm needs the current password |
 
+See [transactional e-mail layouts](docs/EMAIL_LAYOUTS.md) for the existing code and
+invitation templates, verification results and remaining visual checks.
+
 ## To do
 
 - [ ] Log the user out as soon as the e-mail or password changes.
-- [ ] Visual template for the e-mailed codes, plus a mail sending profile in the `MAILERS` setting.
 - [ ] Add docstrings to classes and functions.
 - [ ] Improve the use of drf-spectacular.
 

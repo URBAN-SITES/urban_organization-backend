@@ -21,6 +21,10 @@ def default_invite_expiry():
 
 # [P2-D] Store only the token hash (like OneTimeCode); the raw token goes by e-mail.
 class OrganizationInvite(models.Model):
+    sectors = models.ManyToManyField(
+        "core.Sector", blank=True, related_name="organization_invites"
+    )
+
     class Status(models.TextChoices):
         PENDING = "pending", _("pending")
         ACCEPTED = "accepted", _("accepted")

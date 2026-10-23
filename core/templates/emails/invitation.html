@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% block title %}Convite para {{ organization }} · Inceptum{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 16px; font-size:26px; line-height:34px; letter-spacing:-0.5px;">Você recebeu um convite</h1>
+<p style="margin:0 0 24px; color:#525252;">Você recebeu um convite para fazer parte da organização <strong style="color:#000000;">{{ organization }}</strong> no Inceptum.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" bgcolor="#000000" style="border-radius:8px; mso-padding-alt:14px 24px;">
+      <a href="{{ link }}" style="display:inline-block; padding:14px 24px; border:1px solid #000000; border-radius:8px; color:#ffffff; font-size:16px; line-height:24px; font-weight:700; text-align:center; text-decoration:none;">Aceitar convite</a>
+    </td>
+  </tr>
+</table>
+<p style="margin:24px 0 8px; color:#525252; font-size:13px; line-height:21px;">Se o botão não funcionar, copie e cole este endereço no navegador:</p>
+<p style="margin:0; font-size:13px; line-height:21px; word-break:break-all;"><a href="{{ link }}" style="color:#000000; text-decoration:underline; word-break:break-all;">{{ link }}</a></p>
+{% endblock %}

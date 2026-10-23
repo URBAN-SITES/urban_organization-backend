@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest import mock
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.models.user import User
@@ -9,10 +10,12 @@ from core.modules.payments.models.payment import Payment
 
 class PaymentFlowTests(TestCase):
     def setUp(self):
+        cache.clear()
         User.objects.create_user("a@a.com", "S3cure-pass!", name="A")
-        self.client.post(
+        login = self.client.post(
             "/api/v1/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
         )
+        self.assertEqual(login.status_code, 200)
         self.sdk = (
             mock.patch("core.modules.payments.services.payment._sdk")
             .start()

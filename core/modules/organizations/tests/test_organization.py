@@ -43,6 +43,30 @@ class OrganizationTests(TestCase):
         member = OrganizationMember.objects.get(organization_id=org_id)
         self.assertEqual((member.user, member.role), (self.owner, "owner"))
 
+    def test_current_role_is_scoped_to_caller_and_read_only(self):
+        response = self.client.post(URL, {"name": "Roles", "current_role": "viewer"})
+        self.assertEqual(response.json()["current_role"], "owner")
+        org_id = response.json()["id"]
+        viewer = make_user("role-viewer@a.com")
+        OrganizationMember.objects.create(
+            organization_id=org_id, user=viewer, role="viewer"
+        )
+        viewer_client = client_for(viewer)
+        self.assertEqual(
+            viewer_client.get(f"{URL}{org_id}/").json()["current_role"], "viewer"
+        )
+        roles = {
+            item["id"]: item["current_role"]
+            for item in viewer_client.get(URL).json()["results"]
+        }
+        self.assertEqual(roles[org_id], "viewer")
+        self.assertEqual(
+            self.client.patch(f"{URL}{org_id}/", {"name": "Renamed"}).json()[
+                "current_role"
+            ],
+            "owner",
+        )
+
     def test_non_member_gets_404(self):
         org_id = self.create_org()
         outsider = client_for(make_user("out@a.com"))

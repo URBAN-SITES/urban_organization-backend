@@ -1,5 +1,6 @@
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.template.loader import render_to_string
 
 
 def send_email_token(email: str, code: str, subject: str) -> None:
@@ -11,5 +12,13 @@ def send_email_token(email: str, code: str, subject: str) -> None:
 
 def send_email_token_sync(email: str, code: str, subject: str) -> None:
     """Send a token e-mail directly; used by the Celery worker."""
-    message = EmailMessage(subject=subject, body=f"Your code is: {code}", to=[email])
+    context = {"code": code, "subject": subject}
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=render_to_string("emails/code.txt", context),
+        to=[email],
+    )
+    message.attach_alternative(
+        render_to_string("emails/code.html", context), "text/html"
+    )
     message.send()

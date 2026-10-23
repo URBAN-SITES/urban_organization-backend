@@ -42,7 +42,7 @@ class InviteTests(TestCase):
         link = next(
             line for line in mail.outbox[-1].body.splitlines() if "http" in line
         )
-        return parse_qs(urlparse(link.split("here: ")[1]).query)["token"][0]
+        return parse_qs(urlparse(link.split(": ", 1)[1]).query)["token"][0]
 
     def test_create_sends_link_and_stores_only_hash(self):
         res = self.invite()

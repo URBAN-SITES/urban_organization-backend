@@ -8,6 +8,9 @@ from core.modules.organizations.serializers.organization import (
 
 
 class InviteSerializer(serializers.ModelSerializer):
+    sector_ids = serializers.PrimaryKeyRelatedField(
+        source="sectors", many=True, read_only=True
+    )
     organization_id = serializers.UUIDField(read_only=True)
     organization_name = serializers.CharField(
         source="organization.name", read_only=True
@@ -21,6 +24,7 @@ class InviteSerializer(serializers.ModelSerializer):
             "organization_name",
             "email",
             "role",
+            "sector_ids",
             "status",
             "expires_at",
             "created_at",
@@ -29,6 +33,7 @@ class InviteSerializer(serializers.ModelSerializer):
 
 
 class InviteCreateSerializer(serializers.Serializer):
+    sector_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
     email = serializers.EmailField()
     role = serializers.ChoiceField(
         choices=[
