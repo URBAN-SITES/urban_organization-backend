@@ -432,6 +432,13 @@ class AssistantService:
                 calls_used += 1
                 result = cls._tool(user, call, actions, seen, pending)
                 failures = failures + 1 if result.get("status") == "failed" else 0
+                if result.get("status") == "failed":
+                    logger.info(
+                        "AI tool failed name=%s args=%s error=%s",
+                        call.name,
+                        sorted(call.args or {}),
+                        str(result.get("error"))[:240],
+                    )
                 results.append(
                     types.Part(
                         function_response=types.FunctionResponse(
