@@ -81,3 +81,28 @@ class InviteAcceptView(APIView):
         serializer.is_valid(raise_exception=True)
         member = InviteService.accept(request.user, serializer.validated_data["token"])
         return Response(InviteAcceptedSerializer(member).data)
+
+
+@extend_schema(tags=["Ingressar Em Uma Organização"])
+class MyInviteAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Accept one of my pending invitations",
+        responses={200: InviteAcceptedSerializer},
+    )
+    def post(self, request, invite_id):
+        member = InviteService.accept_by_id(request.user, invite_id)
+        return Response(InviteAcceptedSerializer(member).data)
+
+
+@extend_schema(tags=["Ingressar Em Uma Organização"])
+class MyInviteDeclineView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Decline one of my pending invitations", responses={204: None}
+    )
+    def post(self, request, invite_id):
+        InviteService.decline(request.user, invite_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)

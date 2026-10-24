@@ -140,3 +140,42 @@ class InviteTests(TestCase):
         self.assertEqual(
             outsider.get("/api/v1/invitations/mine/").json()["results"], []
         )
+
+    def mine_id(self):
+        return OrganizationInvite.objects.get().id
+
+    def test_accept_from_my_list_creates_membership_once(self):
+        self.invite(role="viewer")
+        url = f"/api/v1/invitations/{self.mine_id()}/accept/"
+        res = client_for(self.invitee).post(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["organization_id"], str(self.org.id))
+        member = OrganizationMember.objects.get(
+            user=self.invitee, organization=self.org
+        )
+        self.assertEqual(member.role, "viewer")
+        self.assertEqual(OrganizationInvite.objects.get().status, "accepted")
+        self.assertEqual(client_for(self.invitee).post(url).status_code, 400)
+        mine = client_for(self.invitee).get("/api/v1/invitations/mine/").json()
+        self.assertEqual(mine["results"], [])
+
+    def test_only_the_invited_e_mail_can_accept_or_decline_by_id(self):
+        self.invite()
+        stranger = client_for(make_user("evil@a.com"))
+        base = f"/api/v1/invitations/{self.mine_id()}"
+        self.assertEqual(stranger.post(f"{base}/accept/").status_code, 400)
+        self.assertEqual(stranger.post(f"{base}/decline/").status_code, 400)
+        self.assertEqual(OrganizationInvite.objects.get().status, "pending")
+
+    def test_decline_closes_the_invitation(self):
+        self.invite()
+        res = client_for(self.invitee).post(
+            f"/api/v1/invitations/{self.mine_id()}/decline/"
+        )
+        self.assertEqual(res.status_code, 204)
+        self.assertEqual(OrganizationInvite.objects.get().status, "revoked")
+        self.assertFalse(
+            OrganizationMember.objects.filter(
+                user=self.invitee, organization=self.org
+            ).exists()
+        )

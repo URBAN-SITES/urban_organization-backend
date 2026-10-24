@@ -134,11 +134,31 @@ class InviteService:
 
     @staticmethod
     def accept(user: User, token: str) -> OrganizationMember:
+        return InviteService._accept(user, token_hash=_hash(token))
+
+    @staticmethod
+    def accept_by_id(user: User, invite_id) -> OrganizationMember:
+        """In-app acceptance of an invitation listed in `list_mine` (no e-mail token)."""
+        return InviteService._accept(user, id=invite_id)
+
+    @staticmethod
+    def decline(user: User, invite_id) -> None:
+        updated = OrganizationInvite.objects.filter(
+            id=invite_id,
+            email__iexact=user.email,
+            status=Status.PENDING,
+            expires_at__gt=timezone.now(),
+        ).update(status=Status.REVOKED)
+        if not updated:
+            raise ValidationError(MSG_INVITE_INVALID)
+
+    @staticmethod
+    def _accept(user: User, **lookup) -> OrganizationMember:
         with transaction.atomic():
             invite = (
                 OrganizationInvite.objects.select_for_update()
                 .select_related("organization")
-                .filter(token_hash=_hash(token))
+                .filter(**lookup)
                 .first()
             )
             # same answer for unknown, used, expired or someone else's invite
