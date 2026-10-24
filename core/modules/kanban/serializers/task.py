@@ -15,6 +15,9 @@ class TaskSerializer(serializers.ModelSerializer):
         source="assignee.name", read_only=True, default=None
     )
     is_overdue = serializers.SerializerMethodField()
+    checklist_total = serializers.SerializerMethodField()
+    checklist_done = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -32,9 +35,27 @@ class TaskSerializer(serializers.ModelSerializer):
             "assignee_name",
             "position",
             "is_overdue",
+            "checklist_total",
+            "checklist_done",
+            "comment_count",
             "created_at",
         )
         read_only_fields = fields
+
+    # the list view annotates these counts; single-task responses (create/move/detail)
+    # fall back to one small query each
+    def get_checklist_total(self, task) -> int:
+        return getattr(task, "checklist_total", None) or task.checklist_items.count()
+
+    def get_checklist_done(self, task) -> int:
+        done = getattr(task, "checklist_done", None)
+        return (
+            task.checklist_items.filter(is_done=True).count() if done is None else done
+        )
+
+    def get_comment_count(self, task) -> int:
+        count = getattr(task, "comment_count", None)
+        return task.comments.count() if count is None else count
 
     def get_is_overdue(self, task) -> bool:
         return bool(

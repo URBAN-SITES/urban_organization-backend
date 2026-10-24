@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -36,8 +36,18 @@ class TaskService:
     @staticmethod
     def list_for(user: User, sector_id):
         sector, _role = SectorService.get_sector(user, sector_id)
-        return Task.objects.filter(sector=sector, is_active=True).select_related(
-            "status", "assignee"
+        return (
+            Task.objects.filter(sector=sector, is_active=True)
+            .select_related("status", "assignee")
+            .annotate(
+                checklist_total=Count("checklist_items", distinct=True),
+                checklist_done=Count(
+                    "checklist_items",
+                    filter=Q(checklist_items__is_done=True),
+                    distinct=True,
+                ),
+                comment_count=Count("comments", distinct=True),
+            )
         )
 
     @staticmethod

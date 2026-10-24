@@ -240,3 +240,30 @@ class TaskTests(KanbanTestCase):
             self.tasks_url, {"title": "x", "assignee": str(self.member.id)}
         )
         self.assertEqual(res.status_code, 400)
+
+
+class TaskCountersTests(KanbanTestCase):
+    def test_list_and_move_report_checklist_and_comment_counts(self):
+        sector = self.make_sector()
+        task = self.make_task(sector, title="Com itens")
+        for content, done in (("a", True), ("b", False)):
+            self.client.post(
+                f"{API}tasks/{task['id']}/checklist/",
+                {"content": content, "is_done": done},
+            )
+        self.client.post(f"{API}tasks/{task['id']}/comments/", {"content": "oi"})
+
+        listed = self.client.get(f"{API}sectors/{sector}/tasks/").json()
+        row = listed["results"][0]
+        self.assertEqual(
+            (row["checklist_total"], row["checklist_done"], row["comment_count"]),
+            (2, 1, 1),
+        )
+        moved = self.client.post(
+            f"{API}tasks/{task['id']}/move/",
+            {"status": self.status_ids(sector)["Concluído"]},
+        ).json()
+        self.assertEqual(
+            (moved["checklist_total"], moved["checklist_done"], moved["comment_count"]),
+            (2, 1, 1),
+        )
