@@ -141,7 +141,9 @@ class MentionAndTaskTests(ChatTestCase):
             self.ana, team, "psst", mentions=[str(self.bob.id), str(self.ana.id)]
         )
         self.assertEqual(res.json()["mentions"], [])  # Bob is not in the team
-        self.assertEqual(Notification.objects.count(), 0)
+        self.assertEqual(
+            list(Notification.objects.values_list("user_id", flat=True)), [self.owner.id]
+        )
 
     def test_cite_a_task_shows_a_card(self):
         sector = SectorService.create(
