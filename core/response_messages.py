@@ -31,6 +31,10 @@ MSG_INVALID_OR_EXPIRED_REFRESH_TOKEN = _("Invalid or expired refresh token.")
 MSG_SESSION_REVOKED_OR_INACTIVE = _("Session revoked or inactive.")
 MSG_GOOGLE_CREDENTIAL_INVALID = _("Invalid Google credential.")
 MSG_GOOGLE_EMAIL_NOT_VERIFIED = _("Google e-mail is not verified.")
+MSG_GOOGLE_UNAVAILABLE = _(
+    "Google sign-in is temporarily unavailable. Try again shortly."
+)
+MSG_GOOGLE_NOT_CONFIGURED = _("Google sign-in is not configured on the server.")
 MSG_IDEMPOTENCY_IN_PROGRESS = _("A request with this Idempotency-Key is in progress.")
 MSG_QRCODE_DATA_INVALID = _("Required, up to 1000 characters.")
 MSG_ROLE_REQUIRED = _("You do not have the required role.")

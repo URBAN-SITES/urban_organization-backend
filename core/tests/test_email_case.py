@@ -1,5 +1,6 @@
 from unittest import mock
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.models.email_verification import EmailVerification
@@ -12,6 +13,10 @@ SEND = "core.services.registration.send_email_token"
 
 
 class EmailCaseTests(TestCase):
+    def setUp(self):
+        cache.clear()  # the login throttle (10/min) is shared by every test
+        self.addCleanup(cache.clear)
+
     def test_registration_stores_lowercase_and_reuses_the_pending_user(self):
         with mock.patch(SEND):
             RegistrationService.request_registration("Foo@Example.com")
