@@ -16,14 +16,19 @@ from core.modules.ai.response_messages import (
     MSG_AI_ACTION_FAILED,
     MSG_AI_ACTION_INTERRUPTED,
     MSG_AI_BUSY,
+    MSG_AI_CONFIRMATION_REQUIRED,
+    MSG_AI_CONFIRMED_ALL,
+    MSG_AI_CONFIRMED_PARTIAL,
     MSG_AI_DECLINED,
     MSG_AI_INVALID_ARGUMENTS,
+    MSG_AI_INVALID_CONFIRMATION,
     MSG_AI_INVALID_CONVERSATION,
     MSG_AI_UNAVAILABLE,
 )
 from core.modules.ai.services.actions import get_action, json_value, registry
 from core.modules.ai.services.ask import AI_MODEL, _client
 from core.modules.kanban.services.sector import SectorService
+from core.modules.kanban.services.status import StatusService
 from core.modules.kanban.services.task import TaskService
 from core.modules.organizations.services.organization import OrganizationService
 from core.modules.user_settings.services.user_settings import UserSettingsService
@@ -34,6 +39,35 @@ MAX_CALLS = 40
 MAX_SECONDS = 180
 HISTORY_TTL = 1800
 REQUEST_TTL = 86400
+CONFIRM_TTL = 600
+# Destructive actions never run on the model's say-so: the user confirms them.
+DESTRUCTIVE_SUFFIXES = ("_delete", "_remove", "_revoke")
+
+
+def is_destructive(name):
+    return name.endswith(DESTRUCTIVE_SUFFIXES)
+
+
+def pending_key(user):
+    return f"ai:confirm:{user.pk}"
+
+
+def compact_actions(actions):
+    """Keep history small: receipts without full payloads."""
+    compact = []
+    for receipt in actions:
+        entry = {
+            key: receipt[key] for key in ("action", "status", "targets") if key in receipt
+        }
+        result = receipt.get("result")
+        if isinstance(result, dict):
+            entry["result"] = {
+                key: result[key]
+                for key in ("id", "title", "name", "status")
+                if key in result
+            }
+        compact.append(entry)
+    return compact
 
 
 def tool_declarations():
@@ -91,11 +125,22 @@ def checked_context(user, context):
 
 class AssistantService:
     @classmethod
-    def ask(cls, user, prompt, context=None, conversation_id=None, request_id=None):
+    def ask(
+        cls,
+        user,
+        prompt,
+        context=None,
+        conversation_id=None,
+        request_id=None,
+        confirmation_token=None,
+    ):
         context = json_value(context or {})
         request_key = f"ai:request:{user.pk}:{request_id or uuid.uuid4()}"
         fingerprint = hashlib.sha256(
-            json.dumps([prompt, context, str(conversation_id)], sort_keys=True).encode()
+            json.dumps(
+                [prompt, context, str(conversation_id), str(confirmation_token)],
+                sort_keys=True,
+            ).encode()
         ).hexdigest()
         previous = cache.get(request_key)
         if previous:
@@ -117,14 +162,21 @@ class AssistantService:
                 history = cache.get(f"ai:history:{user.pk}:{conversation_id}")
                 if history is None:
                     raise exceptions.ValidationError(MSG_AI_INVALID_CONVERSATION)
-            result = cls._run(user, prompt, context, history)
+            pending = []
+            if confirmation_token:
+                result = cls._confirm(user, confirmation_token)
+            else:
+                # A new message supersedes any deletion still awaiting confirmation.
+                cache.delete(pending_key(user))
+                result = cls._run(user, prompt, context, history, pending)
+            result["confirmation_token"] = cls._store_pending(user, pending)
             history = (
                 history
                 + [
                     {
                         "user": prompt,
                         "answer": result["answer"],
-                        "actions": result["actions"],
+                        "actions": compact_actions(result["actions"]),
                     }
                 ]
             )[-6:]
@@ -142,8 +194,56 @@ class AssistantService:
         finally:
             cache.delete(request_key + ":lock")
 
+    @staticmethod
+    def _store_pending(user, pending):
+        if not pending:
+            return None
+        token = str(uuid.uuid4())
+        cache.set(pending_key(user), {"token": token, "actions": pending}, CONFIRM_TTL)
+        return token
+
     @classmethod
-    def _run(cls, user, prompt, context, history):
+    def _confirm(cls, user, token):
+        stored = cache.get(pending_key(user))
+        if not stored or stored["token"] != str(token):
+            raise exceptions.ValidationError(MSG_AI_INVALID_CONFIRMATION)
+        # Single use, even if execution is interrupted: never replay a delete.
+        cache.delete(pending_key(user))
+        actions, seen = [], {}
+        for item in stored["actions"]:
+            call = types.FunctionCall(
+                name="execute_action",
+                args={
+                    "action": item["action"],
+                    "arguments": json.dumps(item["arguments"]),
+                },
+            )
+            cls._tool(user, call, actions, seen, [], confirmed=True)
+        done = sum(1 for a in actions if a["status"] == "succeeded")
+        message = MSG_AI_CONFIRMED_ALL if done == len(actions) else MSG_AI_CONFIRMED_PARTIAL
+        return {
+            "answer": str(message) % {"done": done, "total": len(actions)},
+            "actions": actions,
+            "interrupted": False,
+        }
+
+    @staticmethod
+    def _snapshot(user, context):
+        """Ground the model in real IDs so it does not have to guess or probe."""
+        organizations = [
+            {"id": str(org.pk), "name": org.name, "role": org.current_role}
+            for org in OrganizationService.list_for(user)
+        ]
+        snapshot = {"organizations": organizations}
+        if context.get("sector_id"):
+            snapshot["selected_sector_statuses"] = [
+                {"id": str(s.pk), "name": s.name, "category": s.category}
+                for s in StatusService.list_for(user, context["sector_id"])
+            ]
+        return snapshot
+
+    @classmethod
+    def _run(cls, user, prompt, context, history, pending):
         preferences = UserSettingsService.get(user)
         contents = [
             types.Content(
@@ -159,6 +259,7 @@ class AssistantService:
                                     "name": user.name,
                                     "timezone": preferences.timezone,
                                 },
+                                "workspace_snapshot": cls._snapshot(user, context),
                                 "previous_conversation_data": history,
                             },
                             ensure_ascii=False,
@@ -233,7 +334,7 @@ class AssistantService:
                 if calls_used >= MAX_CALLS or time.monotonic() >= deadline:
                     return cls._interrupted(actions)
                 calls_used += 1
-                result = cls._tool(user, call, actions, seen)
+                result = cls._tool(user, call, actions, seen, pending)
                 results.append(
                     types.Part(
                         function_response=types.FunctionResponse(
@@ -253,7 +354,7 @@ class AssistantService:
         }
 
     @staticmethod
-    def _tool(user, call, actions, seen):
+    def _tool(user, call, actions, seen, pending, confirmed=False):
         receipt = None
         key = None
         try:
@@ -296,8 +397,17 @@ class AssistantService:
                             if key in ("event_id", "calendar_id")
                         }
                     )
-            value = action.execute(user, arguments)
-            receipt.update(status="succeeded", result=value)
+            if is_destructive(action.name) and not confirmed:
+                if not isinstance(arguments, dict):
+                    raise exceptions.ValidationError(MSG_AI_INVALID_ARGUMENTS)
+                pending.append({"action": action.name, "arguments": arguments})
+                receipt.update(
+                    status="confirmation_required",
+                    detail=str(MSG_AI_CONFIRMATION_REQUIRED),
+                )
+            else:
+                value = action.execute(user, arguments)
+                receipt.update(status="succeeded", result=value)
         except exceptions.APIException as error:
             failure = {
                 "status": "uncertain" if error.status_code >= 500 else "failed",

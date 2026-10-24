@@ -23,6 +23,7 @@ class AIAskSerializer(StrictSerializer):
     context = AIContextSerializer(required=False)
     conversation_id = serializers.UUIDField(required=False)
     request_id = serializers.UUIDField(required=False)
+    confirmation_token = serializers.UUIDField(required=False)
 
 
 class AIAnswerSerializer(serializers.Serializer):
@@ -30,3 +31,4 @@ class AIAnswerSerializer(serializers.Serializer):
     actions = serializers.ListField(child=serializers.DictField(), required=False)
     conversation_id = serializers.UUIDField(required=False, allow_null=True)
     interrupted = serializers.BooleanField(required=False)
+    confirmation_token = serializers.UUIDField(required=False, allow_null=True)

@@ -12,6 +12,16 @@ MSG_AI_ACTION_INTERRUPTED = _(
 MSG_AI_INVALID_CONVERSATION = _(
     "Invalid or expired conversation. Start a new conversation."
 )
+MSG_AI_CONFIRMATION_REQUIRED = _(
+    "Not executed. The user must confirm this deletion first; ask for confirmation."
+)
+MSG_AI_CONFIRMED_ALL = _("Confirmed: %(done)d of %(total)d action(s) completed.")
+MSG_AI_CONFIRMED_PARTIAL = _(
+    "Confirmed, but only %(done)d of %(total)d action(s) completed; check the results."
+)
+MSG_AI_INVALID_CONFIRMATION = _(
+    "This confirmation expired or no longer applies. Request the deletion again."
+)
 MSG_AI_CALENDAR_ACCESS = _(
     "Calendar access was denied. Check permissions or reconnect Google."
 )

@@ -300,3 +300,63 @@ class AssistantTests(KanbanTestCase):
         with self.assertRaises(ValidationError):
             AssistantService.ask(self.owner, "Crie No")
         self.assertFalse(Task.objects.filter(title="No").exists())
+
+    def ask_delete(self, client, task):
+        client.return_value.models.generate_content.side_effect = [
+            reply(calls=[action("task_delete", task_id=task["id"])]),
+            reply("Confirma a exclusão?"),
+        ]
+        return AssistantService.ask(self.owner, "Exclua a tarefa")
+
+    def test_delete_waits_for_server_side_confirmation(self, client):
+        task = self.make_task(self.sector)
+        result = self.ask_delete(client, task)
+        self.assertEqual(result["actions"][0]["status"], "confirmation_required")
+        self.assertTrue(result["confirmation_token"])
+        self.assertTrue(Task.objects.filter(pk=task["id"]).exists())
+
+        confirmed = AssistantService.ask(
+            self.owner,
+            "Confirmar exclusão da tarefa.",
+            confirmation_token=uuid.UUID(result["confirmation_token"]),
+        )
+        self.assertEqual(confirmed["actions"][0]["status"], "succeeded")
+        self.assertFalse(Task.objects.get(pk=task["id"]).is_active)
+        self.assertIsNone(confirmed["confirmation_token"])
+        # Confirming runs the stored action; the model is not consulted again.
+        self.assertEqual(client.return_value.models.generate_content.call_count, 2)
+
+    def test_confirmation_token_is_single_use(self, client):
+        task = self.make_task(self.sector)
+        token = uuid.UUID(self.ask_delete(client, task)["confirmation_token"])
+        AssistantService.ask(self.owner, "Confirmar", confirmation_token=token)
+        with self.assertRaises(ValidationError):
+            AssistantService.ask(self.owner, "Confirmar", confirmation_token=token)
+
+    def test_unknown_or_foreign_token_never_deletes(self, client):
+        task = self.make_task(self.sector)
+        token = uuid.UUID(self.ask_delete(client, task)["confirmation_token"])
+        with self.assertRaises(ValidationError):
+            AssistantService.ask(self.owner, "Confirmar", confirmation_token=uuid.uuid4())
+        self.assertTrue(Task.objects.get(pk=task["id"]).is_active)
+
+    def test_new_message_cancels_pending_deletion(self, client):
+        task = self.make_task(self.sector)
+        token = uuid.UUID(self.ask_delete(client, task)["confirmation_token"])
+        client.return_value.models.generate_content.side_effect = [reply("Cancelado.")]
+        AssistantService.ask(self.owner, "Cancele a exclusão pendente.")
+        with self.assertRaises(ValidationError):
+            AssistantService.ask(self.owner, "Confirmar", confirmation_token=token)
+        self.assertTrue(Task.objects.get(pk=task["id"]).is_active)
+
+    def test_prompt_carries_real_workspace_snapshot(self, client):
+        client.return_value.models.generate_content.return_value = reply("Ok")
+        AssistantService.ask(
+            self.owner, "Liste", context={"sector_id": uuid.UUID(self.sector)}
+        )
+        text = client.return_value.models.generate_content.call_args.kwargs[
+            "contents"
+        ][0].parts[0].text
+        snapshot = json.loads(text)["workspace_snapshot"]
+        self.assertTrue(snapshot["organizations"])
+        self.assertTrue(snapshot["selected_sector_statuses"])

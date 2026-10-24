@@ -96,6 +96,17 @@ with `interrupted: true`, rather than hiding the mutations behind a generic 500.
 There is no transaction spanning multiple tools or external providers. The UI must
 not interpret HTTP 200 alone as proof that every requested action succeeded.
 
+## Deletion confirmation
+
+Actions ending in `_delete`, `_remove` or `_revoke` never run on the model's
+request. The receipt has `status: "confirmation_required"` and the response carries
+a top-level `confirmation_token`. To execute, send `POST /ai/ask/` with that
+`confirmation_token` (plus any `prompt` text); the server runs exactly the queued
+actions without consulting the model. The token is per user, single use and expires
+after 10 minutes. Any new message without the token cancels the pending deletion.
+Each prompt also includes a `workspace_snapshot` (the user's organizations and the
+selected sector's columns) so the model uses real IDs.
+
 ## Execution and permissions
 
 The model discovers schemas with `discover_actions`, then requests a named
