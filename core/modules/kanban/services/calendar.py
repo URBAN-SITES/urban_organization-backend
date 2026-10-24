@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from core.modules.kanban.models.task import Status, Task
@@ -25,6 +26,9 @@ class CalendarService:
                 sector__in=sectors, is_active=True, due_date__range=(start, end)
             )
             .select_related("sector", "status", "assignee")
+            .annotate(
+                in_google=Count("calendar_events", filter=Q(calendar_events__user=user))
+            )
             .order_by("due_date", "title")
         )
         today = timezone.localdate()
@@ -34,7 +38,9 @@ class CalendarService:
                 "title": t.title,
                 "due_date": t.due_date,
                 "state": task_state(t, today),
+                "sector_id": t.sector_id,
                 "sector_name": t.sector.name,
+                "in_google": t.in_google > 0,
                 "assignee_name": t.assignee.name if t.assignee else None,
             }
             for t in tasks

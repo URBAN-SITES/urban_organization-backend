@@ -52,6 +52,21 @@ class CalendarTests(InsightsTestCase):
         self.assertEqual(states, {"Late": "late", "Soon": "todo", "Finished": "done"})
         self.assertEqual([t["title"] for t in res.json()][0], "Late")  # ordered by date
 
+    def test_flags_tasks_in_my_google_calendar_and_gives_the_sector(self):
+        from core.modules.calendar_sync.models.calendar import TaskCalendarEvent
+
+        synced = self.task("Synced", days=1)
+        self.task("Plain", days=1)
+        TaskCalendarEvent.objects.create(
+            task_id=synced["id"], user=self.owner, google_event_id="evt"
+        )
+
+        res = self.get(self.today, self.today + timedelta(days=3))
+
+        flags = {t["title"]: t["in_google"] for t in res.json()}
+        self.assertEqual(flags, {"Synced": True, "Plain": False})
+        self.assertEqual(res.json()[0]["sector_id"], str(self.sector["id"]))
+
     def test_hidden_from_people_without_access_to_the_sector(self):
         self.task("Secret", days=1)
         res = self.get(self.today, self.today + timedelta(days=3), self.member_client)
