@@ -16,10 +16,12 @@ from core.utils.email_token_sender import send_email_token
 class RegistrationService:
     @staticmethod
     def request_registration(email: str) -> None:
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={"is_active": False},
-        )
+        user = User.objects.find_by_email(email)
+        created = user is None
+        if created:
+            user, created = User.objects.get_or_create(
+                email=email.strip().lower(), defaults={"is_active": False}
+            )
 
         if not created and user.is_active:
             raise serializers.ValidationError({"email": MSG_EMAIL_ALREADY_EXIST})
@@ -39,7 +41,7 @@ class RegistrationService:
 
     @staticmethod
     def verify_code(email: str, code: str) -> bool:
-        user = User.objects.filter(email=email).first()
+        user = User.objects.find_by_email(email)
         verification = (
             EmailVerification.objects.filter(user=user).first() if user else None
         )
@@ -52,7 +54,7 @@ class RegistrationService:
     def confirm_registration(email: str, code: str, name: str, password: str) -> None:
         RegistrationService.verify_code(email, code)
 
-        user = User.objects.get(email=email)
+        user = User.objects.find_by_email(email)
         user.name = name
         user.set_password(password)
         user.is_active = True

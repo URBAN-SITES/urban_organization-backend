@@ -12,11 +12,27 @@ from django.utils.translation import gettext_lazy as _
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
+    def find_by_email(self, email):
+        """Case-insensitive lookup; exact match wins, an ambiguous match finds nobody."""
+        email = email.strip()
+        exact = self.filter(email=email).first()
+        if exact:
+            return exact
+        matches = list(self.filter(email__iexact=email)[:2])
+        return matches[0] if len(matches) == 1 else None
+
+    def get_by_natural_key(self, email):
+        # accounts created before e-mails were lowercased keep logging in
+        user = self.find_by_email(email)
+        if user is None:
+            raise self.model.DoesNotExist
+        return user
+
     def _create_user(self, email, password, **extra_fields):
         if not email:
             raise ValueError(_("The given email address must be set."))
 
-        email = self.normalize_email(email)
+        email = email.strip().lower()
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)

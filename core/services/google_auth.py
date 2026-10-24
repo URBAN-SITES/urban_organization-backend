@@ -27,10 +27,13 @@ class GoogleAuthService:
         if not payload.get("email_verified"):
             raise AuthenticationFailed(MSG_GOOGLE_EMAIL_NOT_VERIFIED)
 
-        user, created = User.objects.get_or_create(
-            email=User.objects.normalize_email(payload["email"]),
-            defaults={"name": payload.get("name", "")},
-        )
+        email = payload["email"].strip().lower()
+        user = User.objects.find_by_email(email)
+        created = user is None
+        if created:
+            user, created = User.objects.get_or_create(
+                email=email, defaults={"name": payload.get("name", "")}
+            )
         if created:
             user.set_unusable_password()
             user.save(update_fields=["password"])

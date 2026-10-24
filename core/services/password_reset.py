@@ -12,7 +12,7 @@ from core.utils.email_token_sender import send_email_token
 class PasswordResetService:
     @staticmethod
     def request_reset(email: str) -> None:
-        user = User.objects.filter(email=email).first()
+        user = User.objects.find_by_email(email)
         if not user:
             return
 
@@ -30,7 +30,7 @@ class PasswordResetService:
 
     @staticmethod
     def verify_code(email: str, code: str) -> bool:
-        user = User.objects.filter(email=email).first()
+        user = User.objects.find_by_email(email)
         reset_code = PasswordReset.objects.filter(user=user).first() if user else None
 
         if not reset_code or not reset_code.verify(code):
@@ -42,7 +42,7 @@ class PasswordResetService:
     def confirm_reset(email: str, code: str, new_password: str) -> None:
         PasswordResetService.verify_code(email, code)
 
-        user = User.objects.get(email=email)
+        user = User.objects.find_by_email(email)
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
 

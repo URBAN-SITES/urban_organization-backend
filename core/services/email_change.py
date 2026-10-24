@@ -11,7 +11,8 @@ from core.utils.email_token_sender import send_email_token
 class EmailChangeService:
     @staticmethod
     def request_change(user: User, new_email: str) -> None:
-        if User.objects.filter(email=new_email).exists():
+        new_email = new_email.strip().lower()
+        if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
             raise serializers.ValidationError(
                 {"new_email": "This e-mail is already in use."}
             )
