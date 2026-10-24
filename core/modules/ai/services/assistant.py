@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 import uuid
 
@@ -24,6 +25,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_INVALID_CONFIRMATION,
     MSG_AI_INVALID_CONVERSATION,
     MSG_AI_UNAVAILABLE,
+    MSG_AI_UNVERIFIED,
 )
 from core.modules.ai.services.actions import get_action, json_value, registry
 from core.modules.ai.services.ask import _client
@@ -44,6 +46,21 @@ REQUEST_TTL = 86400
 CONFIRM_TTL = 600
 # Destructive actions never run on the model's say-so: the user confirms them.
 DESTRUCTIVE_SUFFIXES = ("_delete", "_remove", "_revoke")
+
+
+# First-person completion claims the model must never make without a receipt.
+CLAIM_PATTERN = re.compile(
+    r"\b(criei|cadastrei|adicionei|atualizei|alterei|modifiquei|movi|conclu[ií]|"
+    r"exclu[ií]|apaguei|removi|registrei|atribu[ií]|defini|agendei)\b",
+    re.IGNORECASE,
+)
+
+
+def unverified_claim(answer, actions):
+    """True when the text says something was done but no write receipt succeeded."""
+    if not CLAIM_PATTERN.search(answer):
+        return False
+    return not any(a.get("writes") and a.get("status") == "succeeded" for a in actions)
 
 
 CHOICES_MARKER = "OPCOES:"
@@ -256,6 +273,18 @@ class AssistantService:
             for org in OrganizationService.list_for(user)
         ]
         snapshot = {"organizations": organizations}
+        scope = (
+            [o for o in organizations if o["id"] == str(context["organization_id"])]
+            if context.get("organization_id")
+            else organizations
+        )
+        sectors = []
+        for org in scope:
+            for sector in SectorService.list_for(user, org["id"]):
+                sectors.append(
+                    {"id": str(sector.pk), "name": sector.name, "organization_id": org["id"]}
+                )
+        snapshot["sectors"] = sectors[:30]
         if context.get("sector_id"):
             snapshot["selected_sector_statuses"] = [
                 {"id": str(s.pk), "name": s.name, "category": s.category}
@@ -350,11 +379,15 @@ class AssistantService:
                 answer, choices = split_choices(answer)
                 if not answer:
                     return cls._interrupted(actions)
+                unverified = unverified_claim(answer, actions)
+                if unverified:
+                    answer += str(MSG_AI_UNVERIFIED)
                 return {
                     "answer": answer,
                     "actions": actions,
                     "interrupted": False,
                     "choices": choices,
+                    "unverified": unverified,
                 }
             # Preserve complete model content, including Gemini thought signatures.
             contents.append(content)

@@ -33,3 +33,4 @@ class AIAnswerSerializer(serializers.Serializer):
     interrupted = serializers.BooleanField(required=False)
     confirmation_token = serializers.UUIDField(required=False, allow_null=True)
     choices = serializers.ListField(child=serializers.CharField(), required=False)
+    unverified = serializers.BooleanField(required=False)

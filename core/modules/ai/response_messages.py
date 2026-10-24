@@ -22,6 +22,10 @@ MSG_AI_CONFIRMED_PARTIAL = _(
 MSG_AI_INVALID_CONFIRMATION = _(
     "This confirmation expired or no longer applies. Request the deletion again."
 )
+MSG_AI_UNVERIFIED = _(
+    "\n\n⚠️ Atenção: nenhuma alteração foi registrada no sistema, apesar do texto acima. "
+    "Confira antes de considerar feito."
+)
 MSG_AI_CALENDAR_ACCESS = _(
     "Calendar access was denied. Check permissions or reconnect Google."
 )

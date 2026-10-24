@@ -372,3 +372,43 @@ class AssistantTests(KanbanTestCase):
     def test_plain_answer_has_no_choices(self, client):
         client.return_value.models.generate_content.return_value = reply("Pronto.")
         self.assertEqual(AssistantService.ask(self.owner, "Oi")["choices"], [])
+
+    def test_claim_without_receipt_is_flagged_as_unverified(self, client):
+        client.return_value.models.generate_content.return_value = reply(
+            "Criei a tarefa Launch."
+        )
+        result = AssistantService.ask(self.owner, "Crie a tarefa Launch")
+        self.assertTrue(result["unverified"])
+        self.assertIn("nenhuma alteração foi registrada", result["answer"])
+        self.assertFalse(Task.objects.filter(title="Launch").exists())
+
+    def test_claim_backed_by_receipt_is_not_flagged(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            reply(
+                calls=[
+                    action("task_create", sector_id=self.sector, data={"title": "Ok"})
+                ]
+            ),
+            reply("Criei a tarefa Ok."),
+        ]
+        result = AssistantService.ask(self.owner, "Crie a tarefa Ok")
+        self.assertFalse(result["unverified"])
+        self.assertEqual(result["answer"], "Criei a tarefa Ok.")
+
+    def test_pending_deletion_claim_is_flagged(self, client):
+        task = self.make_task(self.sector)
+        client.return_value.models.generate_content.side_effect = [
+            reply(calls=[action("task_delete", task_id=task["id"])]),
+            reply("Excluí a tarefa."),
+        ]
+        result = AssistantService.ask(self.owner, "Exclua")
+        self.assertTrue(result["unverified"])
+
+    def test_snapshot_lists_real_sectors(self, client):
+        client.return_value.models.generate_content.return_value = reply("Ok")
+        AssistantService.ask(self.owner, "Liste")
+        text = client.return_value.models.generate_content.call_args.kwargs[
+            "contents"
+        ][0].parts[0].text
+        ids = [s["id"] for s in json.loads(text)["workspace_snapshot"]["sectors"]]
+        self.assertIn(self.sector, ids)
