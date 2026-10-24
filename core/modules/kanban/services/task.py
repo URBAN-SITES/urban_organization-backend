@@ -24,7 +24,7 @@ class TaskService:
     def get_task(user: User, task_id, minimum: str = Role.VIEWER):
         """Returns (task, sector, role); 404 when the task is not visible."""
         task = (
-            Task.objects.select_related("sector", "status", "assignee")
+            Task.objects.select_related("sector", "status", "assignee", "owner")
             .filter(id=task_id, is_active=True)
             .first()
         )
@@ -38,7 +38,7 @@ class TaskService:
         sector, _role = SectorService.get_sector(user, sector_id)
         return (
             Task.objects.filter(sector=sector, is_active=True)
-            .select_related("status", "assignee")
+            .select_related("status", "assignee", "owner")
             .annotate(
                 checklist_total=Count("checklist_items", distinct=True),
                 checklist_done=Count(

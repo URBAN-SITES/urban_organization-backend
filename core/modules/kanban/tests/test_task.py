@@ -255,6 +255,7 @@ class TaskCountersTests(KanbanTestCase):
 
         listed = self.client.get(f"{API}sectors/{sector}/tasks/").json()
         row = listed["results"][0]
+        self.assertEqual(row["created_by_name"], self.owner.name)
         self.assertEqual(
             (row["checklist_total"], row["checklist_done"], row["comment_count"]),
             (2, 1, 1),

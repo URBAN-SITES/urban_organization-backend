@@ -14,6 +14,9 @@ class TaskSerializer(serializers.ModelSerializer):
     assignee_name = serializers.CharField(
         source="assignee.name", read_only=True, default=None
     )
+    created_by_name = serializers.CharField(
+        source="owner.name", read_only=True, default=None
+    )
     is_overdue = serializers.SerializerMethodField()
     checklist_total = serializers.SerializerMethodField()
     checklist_done = serializers.SerializerMethodField()
@@ -34,6 +37,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "assignee_id",
             "assignee_name",
             "position",
+            "created_by_name",
             "is_overdue",
             "checklist_total",
             "checklist_done",
