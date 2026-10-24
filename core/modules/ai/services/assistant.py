@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from google.genai import types
 from google.genai.errors import APIError
+import httpx
 from rest_framework import exceptions
 
 from core.modules.ai.prompts.assistant import ASSISTANT_INSTRUCTIONS
@@ -21,6 +22,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_CONFIRMED_ALL,
     MSG_AI_CONFIRMED_PARTIAL,
     MSG_AI_DECLINED,
+    MSG_AI_STUCK,
     MSG_AI_INVALID_ARGUMENTS,
     MSG_AI_INVALID_CONFIRMATION,
     MSG_AI_INVALID_CONVERSATION,
@@ -28,7 +30,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_UNVERIFIED,
 )
 from core.modules.ai.services.actions import get_action, json_value, registry
-from core.modules.ai.services.ask import _client
+from core.modules.ai.services.ask import AI_MODEL, _client
 from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 from core.modules.kanban.services.task import TaskService
@@ -38,8 +40,13 @@ from core.modules.user_settings.services.user_settings import UserSettingsServic
 logger = logging.getLogger(__name__)
 # Tool calling needs a stronger model than the lite chatbot default.
 ASSISTANT_MODEL = "gemini-flash-latest"
+# Used once if the stronger model is overloaded before any tool has run.
+FALLBACK_MODEL = AI_MODEL
+FALLBACK_CODES = (429, 500, 502, 503, 504)
 MAX_ROUNDS = 12
 MAX_CALLS = 40
+# Consecutive failed tool calls before the turn stops and asks the user for detail.
+MAX_FAILURES = 3
 MAX_SECONDS = 180
 HISTORY_TTL = 1800
 REQUEST_TTL = 86400
@@ -332,6 +339,8 @@ class AssistantService:
             ),
         )
         actions, seen = [], {}
+        failures = 0
+        model = os.getenv("AI_ASSISTANT_MODEL", ASSISTANT_MODEL)
         calls_used = 0
         deadline = time.monotonic() + MAX_SECONDS
         for _ in range(MAX_ROUNDS):
@@ -339,7 +348,7 @@ class AssistantService:
                 return cls._interrupted(actions)
             try:
                 response = _client().models.generate_content(
-                    model=os.getenv("AI_ASSISTANT_MODEL", ASSISTANT_MODEL),
+                    model=model,
                     contents=contents,
                     config=config,
                 )
@@ -354,6 +363,25 @@ class AssistantService:
                     raise exceptions.ValidationError(MSG_AI_DECLINED)
                 content = candidate.content
             except Exception as error:
+                # Without writes, restarting the turn on the lighter model is safe.
+                if (
+                    model != FALLBACK_MODEL
+                    and not any(a["writes"] for a in actions)
+                    and (
+                        isinstance(error, httpx.TimeoutException)
+                        or (isinstance(error, APIError) and error.code in FALLBACK_CODES)
+                    )
+                ):
+                    logger.warning(
+                        "AI assistant model fallback (%s)",
+                        getattr(error, "code", type(error).__name__),
+                    )
+                    model = FALLBACK_MODEL
+                    # Thought signatures belong to the model that produced them.
+                    del contents[1:]
+                    actions.clear()
+                    seen.clear()
+                    continue
                 # Never drop receipts after a write, even if the next model call fails.
                 if actions:
                     return cls._interrupted(actions)
@@ -368,6 +396,12 @@ class AssistantService:
             calls = [
                 part.function_call for part in content.parts or [] if part.function_call
             ]
+            logger.info(
+                "AI round model=%s calls=%s text=%s",
+                model,
+                [c.name for c in calls],
+                any(p.text for p in content.parts or []),
+            )
             if not calls:
                 answer = "".join(
                     part.text
@@ -397,6 +431,7 @@ class AssistantService:
                     return cls._interrupted(actions)
                 calls_used += 1
                 result = cls._tool(user, call, actions, seen, pending)
+                failures = failures + 1 if result.get("status") == "failed" else 0
                 results.append(
                     types.Part(
                         function_response=types.FunctionResponse(
@@ -405,6 +440,12 @@ class AssistantService:
                     )
                 )
             contents.append(types.Content(role="user", parts=results))
+            if failures >= MAX_FAILURES:
+                return {
+                    "answer": str(MSG_AI_STUCK),
+                    "actions": actions,
+                    "interrupted": True,
+                }
         return cls._interrupted(actions)
 
     @staticmethod

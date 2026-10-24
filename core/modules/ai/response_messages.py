@@ -7,17 +7,21 @@ MSG_AI_ACTION_FAILED = _(
     "The action failed. Its outcome may be uncertain; check before retrying."
 )
 MSG_AI_ACTION_INTERRUPTED = _(
-    "The assistant stopped. Review the action results before retrying; completed actions were not rolled back."
+    "O assistente parou antes de terminar. Confira os resultados das ações antes de tentar de novo; o que já foi feito não foi desfeito."
+)
+MSG_AI_STUCK = _(
+    "Não consegui concluir porque as ações falharam várias vezes seguidas. "
+    "Me diga com mais detalhe qual setor ou tarefa você quer e tento de novo."
 )
 MSG_AI_INVALID_CONVERSATION = _(
     "Invalid or expired conversation. Start a new conversation."
 )
 MSG_AI_CONFIRMATION_REQUIRED = _(
     "Not executed. The user must confirm this deletion first; ask for confirmation."
-)
-MSG_AI_CONFIRMED_ALL = _("Confirmed: %(done)d of %(total)d action(s) completed.")
+)  # read by the model, not shown to the user
+MSG_AI_CONFIRMED_ALL = _("Exclusão confirmada e concluída (%(done)d de %(total)d).")
 MSG_AI_CONFIRMED_PARTIAL = _(
-    "Confirmed, but only %(done)d of %(total)d action(s) completed; check the results."
+    "Confirmado, mas só %(done)d de %(total)d ações foram concluídas; confira os resultados."
 )
 MSG_AI_INVALID_CONFIRMATION = _(
     "This confirmation expired or no longer applies. Request the deletion again."

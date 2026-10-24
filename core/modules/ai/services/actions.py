@@ -197,9 +197,13 @@ class Action:
         )
         if not isinstance(arguments, dict) or set(arguments) - allowed:
             raise ValidationError(MSG_AI_INVALID_ARGUMENTS)
-        ids = [
-            self.id_field(key).run_validation(arguments.get(key)) for key in self.ids
-        ]
+        ids = []
+        for key in self.ids:
+            try:
+                ids.append(self.id_field(key).run_validation(arguments.get(key)))
+            except ValidationError as error:
+                # Name the field so the model can fix the argument instead of looping.
+                raise ValidationError({key: error.detail}) from None
         data = (
             validate_input(self.input, arguments.get("data", {}), partial=self.partial)
             if self.input

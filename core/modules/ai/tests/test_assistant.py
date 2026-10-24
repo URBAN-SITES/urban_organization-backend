@@ -412,3 +412,68 @@ class AssistantTests(KanbanTestCase):
         ][0].parts[0].text
         ids = [s["id"] for s in json.loads(text)["workspace_snapshot"]["sectors"]]
         self.assertIn(self.sector, ids)
+
+    def test_overloaded_model_falls_back_before_any_tool_ran(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            APIError(503, {"error": {"message": "busy"}}),
+            reply("Olá!"),
+        ]
+        result = AssistantService.ask(self.owner, "Olá")
+        self.assertEqual(result["answer"], "Olá!")
+        models = [
+            c.kwargs["model"]
+            for c in client.return_value.models.generate_content.call_args_list
+        ]
+        self.assertEqual(models[1], "gemini-flash-lite-latest")
+        self.assertNotEqual(models[0], models[1])
+
+    def test_overload_after_a_read_restarts_the_turn_on_the_fallback(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            reply(calls=[action("task_list", sector_id=self.sector)]),
+            APIError(503, {"error": {"message": "busy"}}),
+            reply("Nenhuma tarefa."),
+        ]
+        result = AssistantService.ask(self.owner, "Liste as tarefas")
+        self.assertEqual(result["answer"], "Nenhuma tarefa.")
+        calls = client.return_value.models.generate_content.call_args_list
+        self.assertEqual(len(calls[2].kwargs["contents"]), 1)
+        self.assertEqual(calls[2].kwargs["model"], "gemini-flash-lite-latest")
+
+    def test_overload_after_a_write_never_restarts_the_turn(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            reply(
+                calls=[
+                    action("task_create", sector_id=self.sector, data={"title": "Once"})
+                ]
+            ),
+            APIError(503, {"error": {"message": "busy"}}),
+        ]
+        result = AssistantService.ask(self.owner, "Crie Once")
+        self.assertTrue(result["interrupted"])
+        self.assertEqual(Task.objects.filter(title="Once").count(), 1)
+        self.assertEqual(client.return_value.models.generate_content.call_count, 2)
+
+    def test_gateway_timeout_falls_back_to_the_lighter_model(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            APIError(504, {"error": {"message": "timeout"}}),
+            reply("Olá!"),
+        ]
+        self.assertEqual(AssistantService.ask(self.owner, "Olá")["answer"], "Olá!")
+
+    def test_id_validation_error_names_the_field(self, client):
+        client.return_value.models.generate_content.side_effect = [
+            reply(calls=[action("status_list", sector_id=None)]),
+            reply("Qual setor?"),
+        ]
+        result = AssistantService.ask(self.owner, "Liste as colunas")
+        self.assertIn("sector_id", json.dumps(result["actions"][0]["error"]))
+
+    def test_repeated_failures_stop_the_turn_with_a_clear_message(self, client):
+        bad = action("status_list", sector_id=None)
+        client.return_value.models.generate_content.side_effect = [
+            reply(calls=[bad]) for _ in range(6)
+        ]
+        result = AssistantService.ask(self.owner, "Liste as colunas")
+        self.assertTrue(result["interrupted"])
+        self.assertIn("falharam várias vezes", result["answer"])
+        self.assertEqual(client.return_value.models.generate_content.call_count, 3)
