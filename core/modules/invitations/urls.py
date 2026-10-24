@@ -2,6 +2,7 @@ from django.urls import path
 
 from core.modules.invitations.views.invite import (
     InviteAcceptView,
+    InvitePreviewView,
     MyInviteAcceptView,
     MyInviteDeclineView,
     MyInviteListView,
@@ -25,6 +26,7 @@ urlpatterns = [
     ),
     path("invitations/mine/", MyInviteListView.as_view(), name="mine"),
     path("invitations/accept/", InviteAcceptView.as_view(), name="accept"),
+    path("invitations/preview/", InvitePreviewView.as_view(), name="preview"),
     path(
         "invitations/<uuid:invite_id>/accept/",
         MyInviteAcceptView.as_view(),

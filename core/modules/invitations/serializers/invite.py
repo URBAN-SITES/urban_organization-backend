@@ -55,3 +55,11 @@ class InviteAcceptedSerializer(OrganizationMemberSerializer):
     class Meta(OrganizationMemberSerializer.Meta):
         fields = ("organization_id", *OrganizationMemberSerializer.Meta.fields)
         read_only_fields = fields
+
+
+class InvitePreviewSerializer(serializers.Serializer):
+    organization_name = serializers.CharField()
+    role = serializers.CharField()
+    email = serializers.EmailField()
+    expires_at = serializers.DateTimeField()
+    has_account = serializers.BooleanField()

@@ -179,3 +179,60 @@ class InviteTests(TestCase):
                 user=self.invitee, organization=self.org
             ).exists()
         )
+
+    def test_accept_errors_say_what_went_wrong(self):
+        self.invite()
+        token = self.token_from_mail()
+        url = "/api/v1/invitations/accept/"
+        stranger = client_for(make_user("evil@a.com")).post(url, {"token": token})
+        self.assertEqual(stranger.json()["code"], "invite_wrong_account")
+        self.assertEqual(stranger.json()["invited_email"], "g***@a.com")
+        unknown = client_for(self.invitee).post(url, {"token": "nope"})
+        self.assertEqual(unknown.json()["code"], "invite_invalid")
+        self.assertEqual(
+            client_for(self.invitee).post(url, {"token": token}).status_code, 200
+        )
+        again = client_for(self.invitee).post(url, {"token": token})
+        self.assertEqual(again.json()["code"], "invite_used")
+        self.assertEqual(again.json()["organization_id"], str(self.org.id))
+
+    def test_expired_token_reports_expiry(self):
+        self.invite()
+        token = self.token_from_mail()
+        OrganizationInvite.objects.update(
+            expires_at=timezone.now() - timedelta(hours=1)
+        )
+        res = client_for(self.invitee).post(
+            "/api/v1/invitations/accept/", {"token": token}
+        )
+        self.assertEqual(res.json()["code"], "invite_expired")
+        self.assertEqual(OrganizationInvite.objects.get().status, "expired")
+
+    def test_by_id_never_explains_someone_elses_invitation(self):
+        self.invite()
+        invite_id = OrganizationInvite.objects.get().id
+        res = client_for(make_user("evil@a.com")).post(
+            f"/api/v1/invitations/{invite_id}/accept/"
+        )
+        self.assertEqual(res.json()["code"], "invite_invalid")
+
+    def test_preview_tells_whether_the_invited_e_mail_has_an_account(self):
+        self.invite()
+        token = self.token_from_mail()
+        res = APIClient().post("/api/v1/invitations/preview/", {"token": token})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            (
+                res.json()["organization_name"],
+                res.json()["email"],
+                res.json()["has_account"],
+            ),
+            ("Acme", "guest@a.com", True),
+        )
+        self.invite("new@a.com")
+        newcomer = APIClient().post(
+            "/api/v1/invitations/preview/", {"token": self.token_from_mail()}
+        )
+        self.assertFalse(newcomer.json()["has_account"])
+        bad = APIClient().post("/api/v1/invitations/preview/", {"token": "nope"})
+        self.assertEqual(bad.json()["code"], "invite_invalid")

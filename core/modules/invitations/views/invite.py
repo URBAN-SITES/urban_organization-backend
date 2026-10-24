@@ -1,7 +1,7 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,6 +9,7 @@ from core.modules.invitations.serializers.invite import (
     InviteAcceptedSerializer,
     InviteAcceptSerializer,
     InviteCreateSerializer,
+    InvitePreviewSerializer,
     InviteSerializer,
 )
 from core.modules.invitations.services.invite import InviteService
@@ -106,3 +107,21 @@ class MyInviteDeclineView(APIView):
     def post(self, request, invite_id):
         InviteService.decline(request.user, invite_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Ingressar Em Uma Organização"])
+class InvitePreviewView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_scope = "auth"
+
+    @extend_schema(
+        summary="Show what an invitation link is about, and whether the e-mail has an account",
+        request=InviteAcceptSerializer,
+        responses={200: InvitePreviewSerializer},
+    )
+    def post(self, request):
+        serializer = InviteAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = InviteService.preview(serializer.validated_data["token"])
+        return Response(InvitePreviewSerializer(data).data)

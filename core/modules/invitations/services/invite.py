@@ -12,9 +12,12 @@ from core.modules.invitations.response_messages import (
     MSG_INVITE_ACCEPTED,
     MSG_INVITE_ALREADY_MEMBER,
     MSG_INVITE_ALREADY_PENDING,
+    MSG_INVITE_EXPIRED,
     MSG_INVITE_INVALID,
     MSG_INVITE_NOT_PENDING,
     MSG_INVITE_RECEIVED,
+    MSG_INVITE_USED,
+    MSG_INVITE_WRONG_ACCOUNT,
 )
 from core.modules.invitations.tasks.invite import send_invite_email_task
 from core.modules.kanban.models.sector import Sector, SectorMember
@@ -29,6 +32,16 @@ Status = OrganizationInvite.Status
 def _hash(token: str) -> str:
     # the token has 256 bits of entropy, so a plain SHA-256 is enough (and indexable)
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _error(code: str, message=MSG_INVITE_INVALID, **extra) -> ValidationError:
+    """400 with a machine-readable `code` so the app can say what actually went wrong."""
+    return ValidationError({"detail": str(message), "code": code, **extra})
+
+
+def _mask(email: str) -> str:
+    name, _, domain = email.partition("@")
+    return f"{name[:1]}***@{domain}"
 
 
 class InviteService:
@@ -161,14 +174,25 @@ class InviteService:
                 .filter(**lookup)
                 .first()
             )
-            # same answer for unknown, used, expired or someone else's invite
-            if (
-                invite is None
-                or invite.status != Status.PENDING
-                or not invite.organization.is_active
-                or invite.email.lower() != user.email.lower()
-            ):
-                raise ValidationError(MSG_INVITE_INVALID)
+            # An unknown token or id says nothing. The reason is only given to someone holding
+            # the token or to the invited e-mail itself.
+            if invite is None:
+                raise _error("invite_invalid")
+            invitee = invite.email.lower() == user.email.lower()
+            if "token_hash" in lookup and not invitee:
+                raise _error(
+                    "invite_wrong_account",
+                    MSG_INVITE_WRONG_ACCOUNT,
+                    invited_email=_mask(invite.email),
+                )
+            if not invitee:
+                raise _error("invite_invalid")
+            if invite.status != Status.PENDING or not invite.organization.is_active:
+                raise _error(
+                    "invite_used",
+                    MSG_INVITE_USED,
+                    organization_id=str(invite.organization_id),
+                )
             if invite.expires_at > timezone.now():
                 member, _ = OrganizationMember.objects.get_or_create(
                     organization=invite.organization,
@@ -214,4 +238,28 @@ class InviteService:
             # raising inside the block would roll this save back
             invite.status = Status.EXPIRED
             invite.save(update_fields=["status"])
-        raise ValidationError(MSG_INVITE_INVALID)
+        raise _error("invite_expired", MSG_INVITE_EXPIRED)
+
+    @staticmethod
+    def preview(token: str) -> dict:
+        """What the e-mailed link is about, before logging in (token holders only)."""
+        invite = (
+            OrganizationInvite.objects.select_related("organization")
+            .filter(token_hash=_hash(token))
+            .first()
+        )
+        if invite is None:
+            raise _error("invite_invalid")
+        if invite.status != Status.PENDING or not invite.organization.is_active:
+            raise _error("invite_used", MSG_INVITE_USED)
+        if invite.expires_at <= timezone.now():
+            raise _error("invite_expired", MSG_INVITE_EXPIRED)
+        return {
+            "organization_name": invite.organization.name,
+            "role": invite.role,
+            "email": invite.email,
+            "expires_at": invite.expires_at,
+            "has_account": User.objects.filter(
+                email__iexact=invite.email, is_active=True
+            ).exists(),
+        }
