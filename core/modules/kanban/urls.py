@@ -12,6 +12,11 @@ urlpatterns = [
         name="sector-list",
     ),
     path(
+        "organizations/<uuid:organization_id>/dashboard/",
+        sector.DashboardView.as_view(),
+        name="dashboard",
+    ),
+    path(
         "organizations/<uuid:organization_id>/links/",
         item.OrganizationLinkListCreateView.as_view(),
         name="organization-link-list",

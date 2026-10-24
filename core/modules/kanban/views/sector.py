@@ -15,6 +15,7 @@ from core.modules.kanban.serializers.sector import (
     SectorTeamSerializer,
     StatusSerializer,
 )
+from core.modules.kanban.services.dashboard import DashboardService
 from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 
@@ -225,3 +226,12 @@ class StatusDetailView(APIView):
     def delete(self, request, sector_id, status_id):
         StatusService.delete(request.user, sector_id, status_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Setores"])
+class DashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(summary="Home dashboard numbers for the sectors I can see")
+    def get(self, request, organization_id):
+        return Response(DashboardService.summary(request.user, organization_id))
