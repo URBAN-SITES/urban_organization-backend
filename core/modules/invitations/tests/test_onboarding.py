@@ -88,7 +88,7 @@ class InvitationOnboardingTests(TestCase):
 
     def test_google_new_and_existing_accounts_then_acceptance(self):
         for existing in (False, True):
-            email = f"google-{existing}@example.invalid"
+            email = f"google-{existing}@example.invalid".lower()
             self.client = APIClient()
             if existing:
                 User.objects.create_user(email=email, password=PASSWORD)
