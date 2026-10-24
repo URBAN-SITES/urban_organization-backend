@@ -14,6 +14,7 @@ from core.modules.ai.response_messages import (
 )
 from core.modules.ai.serializers.actions import (
     DateRangeSerializer,
+    DraftTaskSerializer,
     DriveSearchSerializer,
     MessageSerializer,
     PageSerializer,
@@ -21,6 +22,7 @@ from core.modules.ai.serializers.actions import (
     SearchSerializer,
     validate_input,
 )
+from core.modules.ai.services.quick_task import draft_task
 from core.modules.calendar_sync.serializers.drive import DriveAttachSerializer
 from core.modules.calendar_sync.services.drive import GoogleDriveService
 from core.modules.calendar_sync.services.google import GoogleCalendarService
@@ -402,6 +404,12 @@ def registry():
         lambda u, task_id: TaskService.get_task(u, task_id)[0],
         ids=("task_id",),
         output=TaskSerializer,
+    )
+    add(
+        "task_draft",
+        lambda u, **data: draft_task(u, **data),
+        input=DraftTaskSerializer,
+        description="ALWAYS use this to create a task: it writes nothing and returns a draft card the user adjusts and confirms. Pass title, priority, due_date, due_time (HH:MM), sector_id (from workspace_snapshot) and assignees as plain names.",
     )
     add(
         "task_move",

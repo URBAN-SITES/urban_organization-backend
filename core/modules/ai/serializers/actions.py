@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from core.modules.ai.response_messages import MSG_AI_INVALID_ARGUMENTS
+from core.modules.kanban.models.task import Task
 from core.modules.chat.serializers.chat import ChatMessageWriteSerializer
 
 
@@ -46,3 +47,35 @@ class MessageSerializer(ChatMessageWriteSerializer):
 
 class DriveSearchSerializer(serializers.Serializer):
     search = serializers.CharField(max_length=200, default="", allow_blank=True)
+
+
+class QuickTaskSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255, help_text="Short imperative title.")
+    description = serializers.CharField(
+        max_length=5000, required=False, allow_blank=True
+    )
+    priority = serializers.ChoiceField(
+        choices=Task.Priority.choices, default=Task.Priority.MEDIUM
+    )
+    due_date = serializers.DateField(
+        required=False, help_text="YYYY-MM-DD; resolve relative dates first."
+    )
+    due_time = serializers.TimeField(
+        required=False,
+        format="%H:%M",
+        input_formats=["%H:%M"],
+        help_text="24h HH:MM, e.g. 12:00 for noon.",
+    )
+    assignees = serializers.ListField(
+        child=serializers.CharField(max_length=120),
+        required=False,
+        max_length=5,
+        help_text="People names exactly as the user wrote them (e.g. 'matheus'); "
+        "the server resolves them. Never invent IDs.",
+    )
+
+
+class DraftTaskSerializer(QuickTaskSerializer):
+    sector_id = serializers.UUIDField(
+        required=False, help_text="Sector UUID from workspace_snapshot; omit if unknown."
+    )

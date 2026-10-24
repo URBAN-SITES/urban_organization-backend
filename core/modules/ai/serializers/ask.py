@@ -34,3 +34,26 @@ class AIAnswerSerializer(serializers.Serializer):
     confirmation_token = serializers.UUIDField(required=False, allow_null=True)
     choices = serializers.ListField(child=serializers.CharField(), required=False)
     unverified = serializers.BooleanField(required=False)
+
+
+class AITaskCreateSerializer(StrictSerializer):
+    """A task the user confirmed in the draft card. People arrive as chosen IDs."""
+
+    request_id = serializers.UUIDField()
+    sector_id = serializers.UUIDField()
+    title = serializers.CharField(max_length=255)
+    description = serializers.CharField(max_length=5000, required=False, allow_blank=True)
+    priority = serializers.ChoiceField(
+        choices=("low", "medium", "high", "urgent"), default="medium"
+    )
+    due_date = serializers.DateField(required=False, allow_null=True)
+    due_time = serializers.TimeField(
+        required=False, allow_null=True, format="%H:%M", input_formats=["%H:%M"]
+    )
+    assignee_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, max_length=5
+    )
+
+
+class AITaskOptionsQuerySerializer(serializers.Serializer):
+    sector_id = serializers.UUIDField()

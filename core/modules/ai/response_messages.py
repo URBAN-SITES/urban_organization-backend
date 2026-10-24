@@ -30,6 +30,23 @@ MSG_AI_UNVERIFIED = _(
     "\n\n⚠️ Atenção: nenhuma alteração foi registrada no sistema, apesar do texto acima. "
     "Confira antes de considerar feito."
 )
+MSG_AI_PERSON_NOT_FOUND = _('Não encontrei "%(name)s" entre as pessoas deste setor.')
+MSG_AI_PERSON_NO_ACCESS = _(
+    '"%(name)s" é da organização, mas não tem acesso a este setor. Adicione a pessoa ao setor antes de atribuir.'
+)
+MSG_AI_PERSON_AMBIGUOUS = _(
+    'Há mais de uma pessoa para "%(name)s": %(options)s. Pergunte ao usuário qual delas.'
+)
+MSG_AI_NOTE_TIME = _(
+    "O quadro guarda só a data do prazo; o horário %(time)s foi registrado na descrição da tarefa."
+)
+MSG_AI_NOTE_TIME_NO_DATE = _(
+    "O horário %(time)s foi registrado na descrição, mas a tarefa ficou sem data de prazo."
+)
+MSG_AI_NOTE_PEOPLE = _(
+    "A tarefa tem um único responsável (%(first)s); %(others)s ficou registrado na descrição como envolvido. "
+    "Ofereça criar uma tarefa separada para quem ficou de fora."
+)
 MSG_AI_CALENDAR_ACCESS = _(
     "Calendar access was denied. Check permissions or reconnect Google."
 )
