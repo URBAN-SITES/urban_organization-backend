@@ -37,7 +37,6 @@ class DashboardTests(KanbanTestCase):
         self.assertTrue(data["today"][0]["is_overdue"])
         self.assertEqual(data["weekly_done"][-1]["done"], 1)
         self.assertEqual(data["open_by_sector"], [{"sector": "Board", "open": 2}])
-        self.assertEqual(data["activity"][0]["kind"], "done")
 
     def test_private_sector_is_hidden_from_non_participants(self):
         sector = self.make_sector()

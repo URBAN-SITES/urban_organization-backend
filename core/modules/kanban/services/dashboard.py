@@ -3,12 +3,11 @@ from datetime import timedelta
 from django.db.models import Count
 from django.utils import timezone
 
-from core.modules.kanban.models.task import Comment, Status, Task
+from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.services.sector import SectorService
 
 WEEKS = 6
 TODAY_LIMIT = 8
-ACTIVITY_LIMIT = 8
 
 
 def _week_start(day):
@@ -73,28 +72,4 @@ class DashboardService:
                 .annotate(open=Count("id"))
                 .order_by("-open", "sector__name")
             ],
-            "activity": DashboardService._activity(tasks),
         }
-
-    @staticmethod
-    def _activity(tasks) -> list[dict]:
-        comments = Comment.objects.filter(task__in=tasks).select_related("author", "task")
-        finished = tasks.filter(completed_at__isnull=False).select_related("assignee")
-        events = [
-            {
-                "kind": "comment",
-                "person": c.author.get_short_name(),
-                "task_title": c.task.title,
-                "at": c.created_at,
-            }
-            for c in comments.order_by("-created_at")[:ACTIVITY_LIMIT]
-        ] + [
-            {
-                "kind": "done",
-                "person": t.assignee.get_short_name() if t.assignee else None,
-                "task_title": t.title,
-                "at": t.completed_at,
-            }
-            for t in finished.order_by("-completed_at")[:ACTIVITY_LIMIT]
-        ]
-        return sorted(events, key=lambda e: e["at"], reverse=True)[:ACTIVITY_LIMIT]
