@@ -1,10 +1,11 @@
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.modules.kanban.response_messages import MSG_CALENDAR_RANGE_INVALID
 from core.modules.kanban.serializers.sector import (
     SectorMemberAddSerializer,
     SectorMemberRoleSerializer,
@@ -15,7 +16,10 @@ from core.modules.kanban.serializers.sector import (
     SectorTeamSerializer,
     StatusSerializer,
 )
+from core.modules.kanban.services.calendar import MAX_SPAN_DAYS, CalendarService
 from core.modules.kanban.services.dashboard import DashboardService
+from core.modules.kanban.services.files import FileService
+from core.modules.kanban.services.reports import ReportService
 from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 
@@ -235,3 +239,64 @@ class DashboardView(APIView):
     @extend_schema(summary="Home dashboard numbers for the sectors I can see")
     def get(self, request, organization_id):
         return Response(DashboardService.summary(request.user, organization_id))
+
+
+class DateRangeSerializer(serializers.Serializer):
+    start = serializers.DateField()
+    end = serializers.DateField()
+
+    def validate(self, data):
+        if (
+            data["end"] < data["start"]
+            or (data["end"] - data["start"]).days > MAX_SPAN_DAYS
+        ):
+            raise serializers.ValidationError(MSG_CALENDAR_RANGE_INVALID)
+        return data
+
+
+@extend_schema(tags=["Setores"])
+class CalendarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Deliveries between two dates in the sectors I can see",
+        parameters=[
+            OpenApiParameter("start", str, required=True, description="YYYY-MM-DD"),
+            OpenApiParameter("end", str, required=True, description="YYYY-MM-DD"),
+        ],
+    )
+    def get(self, request, organization_id):
+        query = DateRangeSerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            CalendarService.items(
+                request.user,
+                organization_id,
+                query.validated_data["start"],
+                query.validated_data["end"],
+            )
+        )
+
+
+@extend_schema(tags=["Setores"])
+class ReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Delivery report for the last N days (7, 30 or 90)",
+        parameters=[OpenApiParameter("days", int, required=False)],
+    )
+    def get(self, request, organization_id):
+        days = serializers.ChoiceField(choices=(7, 30, 90), default=30).run_validation(
+            request.query_params.get("days") or serializers.empty
+        )
+        return Response(ReportService.summary(request.user, organization_id, int(days)))
+
+
+@extend_schema(tags=["Setores"])
+class FileListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(summary="Files and links attached anywhere in the organization")
+    def get(self, request, organization_id):
+        return Response(FileService.list_for(request.user, organization_id))

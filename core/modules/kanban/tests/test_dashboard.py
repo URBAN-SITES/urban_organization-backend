@@ -7,7 +7,9 @@ from core.modules.kanban.tests.helpers import API, KanbanTestCase
 
 class DashboardTests(KanbanTestCase):
     def dashboard(self, client=None):
-        res = (client or self.client).get(f"{API}organizations/{self.org.id}/dashboard/")
+        res = (client or self.client).get(
+            f"{API}organizations/{self.org.id}/dashboard/"
+        )
         self.assertEqual(res.status_code, 200, res.content)
         return res.json()
 
@@ -21,7 +23,9 @@ class DashboardTests(KanbanTestCase):
             assignee=str(self.owner.id),
             due_date=str(today - timedelta(days=2)),
         )
-        self.make_task(sector, title="Today", assignee=str(self.owner.id), due_date=str(today))
+        self.make_task(
+            sector, title="Today", assignee=str(self.owner.id), due_date=str(today)
+        )
         finished = self.make_task(sector, title="Finished", assignee=str(self.owner.id))
         res = self.client.post(
             f"{API}tasks/{finished['id']}/move/", {"status": statuses["Done"]}
@@ -52,3 +56,15 @@ class DashboardTests(KanbanTestCase):
             f"{API}organizations/{self.org.id}/dashboard/"
         )
         self.assertIn(res.status_code, (403, 404))
+
+    def test_deleted_tasks_are_not_counted(self):
+        sector = self.make_sector()
+        task = self.make_task(sector, title="Gone", assignee=str(self.owner.id))
+        self.assertEqual(self.dashboard()["open_tasks"], 1)
+
+        self.assertEqual(
+            self.client.delete(f"{API}tasks/{task['id']}/").status_code, 204
+        )
+
+        data = self.dashboard()
+        self.assertEqual((data["open_tasks"], data["open_by_sector"]), (0, []))

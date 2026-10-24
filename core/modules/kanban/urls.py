@@ -17,6 +17,21 @@ urlpatterns = [
         name="dashboard",
     ),
     path(
+        "organizations/<uuid:organization_id>/calendar/",
+        sector.CalendarView.as_view(),
+        name="calendar",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/reports/",
+        sector.ReportView.as_view(),
+        name="reports",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/files/",
+        sector.FileListView.as_view(),
+        name="files",
+    ),
+    path(
         "organizations/<uuid:organization_id>/links/",
         item.OrganizationLinkListCreateView.as_view(),
         name="organization-link-list",
