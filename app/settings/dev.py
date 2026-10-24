@@ -6,6 +6,10 @@ DEBUG = True
 DEBUG_PROPAGATE_EXCEPTIONS = False
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
 SECRET_KEY = os.getenv("SECRET_KEY")
+# extra front-end origins (e.g. Vite falls back to :5174 when :5173 is taken)
+CSRF_TRUSTED_ORIGINS += [  # noqa: F405
+    origin for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin
+]
 if os.getenv("POSTGRES_HOST"):
     DATABASES = {
         "default": {
