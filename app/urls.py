@@ -5,6 +5,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from core.views.csrf import CsrfView
 from core.views.email_change import (
     EmailChangeConfirmView,
     EmailChangeRequestView,
@@ -46,6 +47,7 @@ route_docs = [
 ]
 
 route_core = [
+    path("csrf/", CsrfView.as_view(), name="csrf"),
     path("login/", LoginView.as_view(), name="login"),
     path("login/google/", GoogleLoginView.as_view(), name="login-google"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
