@@ -360,3 +360,15 @@ class AssistantTests(KanbanTestCase):
         snapshot = json.loads(text)["workspace_snapshot"]
         self.assertTrue(snapshot["organizations"])
         self.assertTrue(snapshot["selected_sector_statuses"])
+
+    def test_choices_line_becomes_clickable_options(self, client):
+        client.return_value.models.generate_content.return_value = reply(
+            "Qual tarefa?\nOPCOES: Revisar | Publicar"
+        )
+        result = AssistantService.ask(self.owner, "Exclua a tarefa")
+        self.assertEqual(result["answer"], "Qual tarefa?")
+        self.assertEqual(result["choices"], ["Revisar", "Publicar"])
+
+    def test_plain_answer_has_no_choices(self, client):
+        client.return_value.models.generate_content.return_value = reply("Pronto.")
+        self.assertEqual(AssistantService.ask(self.owner, "Oi")["choices"], [])

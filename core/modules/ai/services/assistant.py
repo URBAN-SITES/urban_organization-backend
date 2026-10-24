@@ -26,7 +26,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_UNAVAILABLE,
 )
 from core.modules.ai.services.actions import get_action, json_value, registry
-from core.modules.ai.services.ask import AI_MODEL, _client
+from core.modules.ai.services.ask import _client
 from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 from core.modules.kanban.services.task import TaskService
@@ -34,6 +34,8 @@ from core.modules.organizations.services.organization import OrganizationService
 from core.modules.user_settings.services.user_settings import UserSettingsService
 
 logger = logging.getLogger(__name__)
+# Tool calling needs a stronger model than the lite chatbot default.
+ASSISTANT_MODEL = "gemini-flash-latest"
 MAX_ROUNDS = 12
 MAX_CALLS = 40
 MAX_SECONDS = 180
@@ -42,6 +44,25 @@ REQUEST_TTL = 86400
 CONFIRM_TTL = 600
 # Destructive actions never run on the model's say-so: the user confirms them.
 DESTRUCTIVE_SUFFIXES = ("_delete", "_remove", "_revoke")
+
+
+CHOICES_MARKER = "OPCOES:"
+MAX_CHOICES = 6
+
+
+def split_choices(answer):
+    """Pull the optional trailing `OPCOES: a | b` line out of the answer.
+
+    Choices are only UI shortcuts: picking one sends an ordinary new message."""
+    lines = answer.rstrip().split("\n")
+    if not lines or not lines[-1].startswith(CHOICES_MARKER):
+        return answer, []
+    options = [
+        o.strip()[:80]
+        for o in lines[-1][len(CHOICES_MARKER) :].split("|")
+        if o.strip()
+    ]
+    return "\n".join(lines[:-1]).rstrip(), options[:MAX_CHOICES]
 
 
 def is_destructive(name):
@@ -289,7 +310,7 @@ class AssistantService:
                 return cls._interrupted(actions)
             try:
                 response = _client().models.generate_content(
-                    model=os.getenv("AI_ASSISTANT_MODEL", AI_MODEL),
+                    model=os.getenv("AI_ASSISTANT_MODEL", ASSISTANT_MODEL),
                     contents=contents,
                     config=config,
                 )
@@ -326,7 +347,15 @@ class AssistantService:
                 )
                 if not answer:
                     return cls._interrupted(actions)
-                return {"answer": answer, "actions": actions, "interrupted": False}
+                answer, choices = split_choices(answer)
+                if not answer:
+                    return cls._interrupted(actions)
+                return {
+                    "answer": answer,
+                    "actions": actions,
+                    "interrupted": False,
+                    "choices": choices,
+                }
             # Preserve complete model content, including Gemini thought signatures.
             contents.append(content)
             results = []

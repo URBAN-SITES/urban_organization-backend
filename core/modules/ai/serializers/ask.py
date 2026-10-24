@@ -32,3 +32,4 @@ class AIAnswerSerializer(serializers.Serializer):
     conversation_id = serializers.UUIDField(required=False, allow_null=True)
     interrupted = serializers.BooleanField(required=False)
     confirmation_token = serializers.UUIDField(required=False, allow_null=True)
+    choices = serializers.ListField(child=serializers.CharField(), required=False)

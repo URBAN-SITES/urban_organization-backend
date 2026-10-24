@@ -127,7 +127,7 @@ budget checked between calls; an in-flight call can exceed the budget. Gemini
 calls have a 60-second timeout and one attempt. External writes are not
 automatically retried. Configure the HTTP deployment timeout accordingly.
 
-`AI_ASSISTANT_MODEL` optionally overrides the existing chatbot model for the
+`AI_ASSISTANT_MODEL` overrides the default (`gemini-flash-latest`) for the
 action assistant. It must support Gemini function calling. `GEMINI_API_KEY` and
 the SDK client are reused. `AIService.ask()` remains available as a text-only
 internal utility; the HTTP endpoint now delegates to `AssistantService.ask()`.
@@ -164,3 +164,9 @@ database. No real invitations, meetings or production resources are created.
 They cover permissions, task lifecycle, memberships, invitations, chat, agenda,
 calendar requests, malformed/unknown tools, deduplication, partial failures,
 conversation ownership and the existing PDF/subscriber behavior.
+
+## Clickable choices
+
+When the model needs the user to pick among a few options, the answer's last line
+`OPCOES: a | b | c` is removed from `answer` and returned as `choices` (max 6, 80
+chars each). Picking one is an ordinary new message; choices carry no authority.
