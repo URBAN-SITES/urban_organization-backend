@@ -10,19 +10,31 @@ from core.modules.crowdfunding.response_messages import (
     MSG_CONTRIBUTION_TOO_SMALL,
     MSG_CPF_INVALID,
 )
+from core.modules.payments.models.payment import Payment
 
 MIN_CONTRIBUTION = Decimal("1.00")
+CONTRIBUTION_RESULTS = {
+    Payment.Status.APPROVED: "approved",
+    Payment.Status.REJECTED: "rejected",
+    Payment.Status.CANCELLED: "rejected",
+    Payment.Status.REFUNDED: "rejected",
+}
 
 
 class CampaignSerializer(serializers.ModelSerializer):
     raised = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     contributors = serializers.IntegerField(read_only=True)
+    paid = serializers.SerializerMethodField()
+
+    def get_paid(self, obj) -> bool:
+        return obj.raised >= obj.goal_amount
 
     class Meta:
         model = Campaign
         fields = (
             "id",
             "organization_id",
+            "task_id",
             "title",
             "description",
             "goal_amount",
@@ -30,6 +42,7 @@ class CampaignSerializer(serializers.ModelSerializer):
             "contributors",
             "deadline",
             "status",
+            "paid",
             "created_by_id",
             "created_at",
         )
@@ -87,6 +100,19 @@ class ContributionResponseSerializer(serializers.Serializer):
     qr_code = serializers.CharField()
     qr_code_base64 = serializers.CharField()
     ticket_url = serializers.URLField(allow_blank=True)
+
+
+class ContributionStatusSerializer(serializers.Serializer):
+    contribution_id = serializers.UUIDField(source="id")
+    campaign_id = serializers.UUIDField()
+    amount = serializers.DecimalField(
+        source="payment.amount", max_digits=10, decimal_places=2
+    )
+    # approved | rejected | pending: what the payment popup shows
+    result = serializers.SerializerMethodField()
+
+    def get_result(self, obj) -> str:
+        return CONTRIBUTION_RESULTS.get(obj.payment.status, "pending")
 
 
 class ContributionSerializer(serializers.Serializer):

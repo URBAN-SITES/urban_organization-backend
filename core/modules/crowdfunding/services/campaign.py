@@ -13,6 +13,8 @@ from core.modules.crowdfunding.response_messages import (
     MSG_CAMPAIGN_EXPIRED,
     MSG_CAMPAIGN_NOT_FOUND,
 )
+from core.modules.kanban.services.sector import Role as SectorRole
+from core.modules.kanban.services.task import TaskService
 from core.modules.organizations.models.organization import OrganizationMember
 from core.modules.organizations.services.organization import OrganizationService
 from core.modules.payments.models.payment import Payment
@@ -38,9 +40,23 @@ class CampaignService:
     @staticmethod
     def list_for(user: User, organization_id):
         OrganizationService.get_membership(user, organization_id)
+        # task charges are listed on their task, not here
         return _with_totals(
-            Campaign.objects.filter(organization_id=organization_id)
+            Campaign.objects.filter(organization_id=organization_id, task=None)
         ).order_by("-created_at")
+
+    @staticmethod
+    def list_for_task(user: User, task_id):
+        task, _sector, _role = TaskService.get_task(user, task_id)
+        return _with_totals(Campaign.objects.filter(task=task)).order_by("created_at")
+
+    @staticmethod
+    def create_for_task(user: User, task_id, data: dict) -> Campaign:
+        task, sector, _role = TaskService.get_task(user, task_id, SectorRole.EDITOR)
+        campaign = Campaign.objects.create(
+            organization_id=sector.organization_id, task=task, created_by=user, **data
+        )
+        return CampaignService.get(user, campaign.id)
 
     @staticmethod
     def create(user: User, organization_id, data: dict) -> Campaign:
@@ -56,13 +72,19 @@ class CampaignService:
         campaign = _with_totals(Campaign.objects.filter(id=campaign_id)).first()
         if campaign is None:
             raise NotFound(MSG_CAMPAIGN_NOT_FOUND)
-        OrganizationService.get_membership(user, campaign.organization_id)
+        if campaign.task_id:  # a task charge follows the access to its task
+            TaskService.get_task(user, campaign.task_id)
+        else:
+            OrganizationService.get_membership(user, campaign.organization_id)
         return campaign
 
     @staticmethod
     def update(user: User, campaign_id, data: dict) -> Campaign:
         campaign = CampaignService.get(user, campaign_id)
-        OrganizationService.require_role(user, campaign.organization_id, Role.ADMIN)
+        if campaign.task_id:
+            TaskService.get_task(user, campaign.task_id, SectorRole.EDITOR)
+        else:
+            OrganizationService.require_role(user, campaign.organization_id, Role.ADMIN)
         for field, value in data.items():
             setattr(campaign, field, value)
         campaign.save(update_fields=[*data, "updated_at"])
@@ -140,3 +162,19 @@ class CampaignService:
             "qr_code_base64": payment.qr_code_base64,
             "ticket_url": payment.ticket_url,
         }
+
+    @staticmethod
+    def contribution_status(user: User, contribution_id) -> Contribution:
+        """My contribution with a payment refreshed from Mercado Pago while pending."""
+        contribution = (
+            Contribution.objects.select_related("payment")
+            .filter(id=contribution_id, user=user)
+            .first()
+        )
+        if contribution is None:
+            raise NotFound(MSG_CAMPAIGN_NOT_FOUND)
+        payment = contribution.payment
+        if payment.status in (Payment.Status.PENDING, Payment.Status.IN_PROCESS):
+            PaymentService.sync_payment(payment)
+            payment.refresh_from_db()
+        return contribution

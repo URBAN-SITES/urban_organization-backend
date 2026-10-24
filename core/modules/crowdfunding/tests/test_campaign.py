@@ -9,7 +9,7 @@ from core.modules.kanban.tests.helpers import API, KanbanTestCase, client_for, m
 from core.modules.payments.models.payment import Payment
 
 
-class CampaignTests(KanbanTestCase):
+class CrowdfundingTestCase(KanbanTestCase):
     def setUp(self):
         super().setUp()
         self.sdk = (
@@ -55,6 +55,8 @@ class CampaignTests(KanbanTestCase):
         payment.status = Payment.Status.APPROVED
         payment.save()
 
+
+class CampaignTests(CrowdfundingTestCase):
     def test_admin_creates_and_members_see_zero_raised(self):
         campaign = self.make_campaign()
         self.assertEqual(Decimal(campaign["raised"]), 0)
@@ -155,3 +157,72 @@ class CampaignTests(KanbanTestCase):
             f"{API}campaigns/{campaign['id']}/", {"title": "x"}
         )
         self.assertEqual(res.status_code, 403)
+
+
+class TaskCampaignTests(CrowdfundingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.sector = self.make_sector()
+        self.task = self.make_task(self.sector)
+
+    def url(self):
+        return f"{API}tasks/{self.task['id']}/campaigns/"
+
+    def test_charge_is_attached_to_the_task_and_hidden_from_the_org_list(self):
+        res = self.client.post(self.url(), {"title": "Invoice", "goal_amount": "480"})
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["task_id"], self.task["id"])
+        self.assertFalse(res.json()["paid"])
+        listed = self.client.get(self.url()).json()["results"]
+        self.assertEqual([c["title"] for c in listed], ["Invoice"])
+        org = self.client.get(self.list_url()).json()["results"]
+        self.assertEqual(org, [])
+
+    def test_sector_viewer_cannot_attach_but_can_see(self):
+        viewer = self.add_org_member("viewer@a.com", "member")
+        self.share_sector(self.sector, viewer, "viewer")
+        viewer_client = client_for(viewer)
+        res = viewer_client.post(self.url(), {"title": "x", "goal_amount": "10"})
+        self.assertEqual(res.status_code, 403)
+        self.client.post(self.url(), {"title": "Invoice", "goal_amount": "10"})
+        self.assertEqual(viewer_client.get(self.url()).status_code, 200)
+
+    def test_org_member_without_sector_access_gets_404(self):
+        self.client.post(self.url(), {"title": "Invoice", "goal_amount": "10"})
+        self.assertEqual(self.member_client.get(self.url()).status_code, 404)
+
+    def test_paid_flag_and_contribution_result_follow_the_payment(self):
+        campaign = self.client.post(
+            self.url(), {"title": "Invoice", "goal_amount": "25.50"}
+        ).json()
+        res = self.contribute(campaign["id"], client=self.client)
+        status_url = f"{API}contributions/{res.data['contribution_id']}/"
+
+        self.sdk.payment().get.return_value = {
+            "status": 200,
+            "response": {
+                "id": 77,
+                "external_reference": str(res.data["payment_id"]),
+                "status": "rejected",
+            },
+        }
+        self.assertEqual(self.client.get(status_url).json()["result"], "rejected")
+        self.assertFalse(
+            self.client.get(f"{API}campaigns/{campaign['id']}/").json()["paid"]
+        )
+
+        Payment.objects.update(status=Payment.Status.APPROVED)
+        self.assertEqual(self.client.get(status_url).json()["result"], "approved")
+        self.assertTrue(
+            self.client.get(f"{API}campaigns/{campaign['id']}/").json()["paid"]
+        )
+
+    def test_pending_result_and_only_the_payer_can_read_it(self):
+        campaign = self.client.post(
+            self.url(), {"title": "Invoice", "goal_amount": "50"}
+        ).json()
+        res = self.contribute(campaign["id"], client=self.client)
+        status_url = f"{API}contributions/{res.data['contribution_id']}/"
+        self.sdk.payment().get.return_value = {"status": 200, "response": {}}
+        self.assertEqual(self.client.get(status_url).json()["result"], "pending")
+        self.assertEqual(self.member_client.get(status_url).status_code, 404)

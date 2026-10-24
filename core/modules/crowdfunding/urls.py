@@ -4,6 +4,8 @@ from core.modules.crowdfunding.views.campaign import (
     CampaignDetailView,
     CampaignListCreateView,
     ContributionListCreateView,
+    ContributionStatusView,
+    TaskCampaignListCreateView,
 )
 
 app_name = "crowdfunding"
@@ -14,6 +16,16 @@ urlpatterns = [
         "organizations/<uuid:organization_id>/campaigns/",
         CampaignListCreateView.as_view(),
         name="campaign-list",
+    ),
+    path(
+        "tasks/<uuid:task_id>/campaigns/",
+        TaskCampaignListCreateView.as_view(),
+        name="task-campaign-list",
+    ),
+    path(
+        "contributions/<uuid:contribution_id>/",
+        ContributionStatusView.as_view(),
+        name="contribution-status",
     ),
     path(
         "campaigns/<uuid:campaign_id>/",

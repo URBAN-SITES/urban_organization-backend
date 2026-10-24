@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.modules.kanban.models.task import Task
 from core.modules.organizations.models.organization import Organization
 from core.modules.payments.models.payment import Payment
 
@@ -21,6 +22,15 @@ class Campaign(models.Model):
         on_delete=models.CASCADE,
         related_name="campaigns",
         verbose_name=_("organization"),
+    )
+    # set when the fundraiser is a charge attached to a task
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="campaigns",
+        verbose_name=_("task"),
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

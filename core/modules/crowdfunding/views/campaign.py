@@ -12,6 +12,7 @@ from core.modules.crowdfunding.serializers.campaign import (
     ContributionCreateSerializer,
     ContributionResponseSerializer,
     ContributionSerializer,
+    ContributionStatusSerializer,
 )
 from core.modules.crowdfunding.services.campaign import CampaignService
 from core.modules.payments.services.payment import PaymentService
@@ -106,3 +107,44 @@ class ContributionListCreateView(ListAPIView):
             },
         )
         return Response(result, status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Vaquinhas"])
+class TaskCampaignListCreateView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CampaignSerializer
+
+    def get_queryset(self):
+        return CampaignService.list_for_task(self.request.user, self.kwargs["task_id"])
+
+    @extend_schema(summary="Charges attached to a task")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Attach a charge to a task (sector editor or manager)",
+        request=CampaignCreateSerializer,
+        responses={201: CampaignSerializer},
+    )
+    def post(self, request, task_id):
+        serializer = CampaignCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign = CampaignService.create_for_task(
+            request.user, task_id, serializer.validated_data
+        )
+        return Response(CampaignSerializer(campaign).data, status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Vaquinhas"])
+class ContributionStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Result of my PIX contribution (poll after showing the QR code)",
+        responses=ContributionStatusSerializer,
+    )
+    def get(self, request, contribution_id):
+        contribution = CampaignService.contribution_status(
+            request.user, contribution_id
+        )
+        return Response(ContributionStatusSerializer(contribution).data)
