@@ -270,10 +270,10 @@ class ChatService:
                     defaults={"last_read_at": timezone.now()},
                 )
                 ChatService._broadcast(channel, "chat.message", message)
-                ChatService._notify_mentions(user, channel, message, mentioned)
         except Exception:
             AttachmentService.discard(stored)
             raise
+        ChatService._notify_recipients(user, channel, message, mentioned)
         return message
 
     @staticmethod
@@ -334,11 +334,19 @@ class ChatService:
         return [u for u in users if ChatService.can_access(u, channel)]
 
     @staticmethod
-    def _notify_mentions(user, channel, message, mentioned) -> None:
-        for target in mentioned:
+    def _notify_recipients(user, channel, message, mentioned) -> None:
+        mentioned_ids = {target.pk for target in mentioned}
+        recipients = User.objects.filter(
+            id__in=ChatService._recipients(channel), is_active=True
+        ).exclude(pk=user.pk)
+        for target in recipients:
             NotificationService.notify(
                 target,
-                f"{user.get_short_name()} mentioned you",
+                (
+                    f"{user.get_short_name()} mentioned you"
+                    if target.pk in mentioned_ids
+                    else f"{user.get_short_name()} sent a message"
+                ),
                 message.content[:200],
                 {
                     "event": "chat.mentioned",

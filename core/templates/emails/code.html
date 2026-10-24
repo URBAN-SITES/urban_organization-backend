@@ -5,7 +5,7 @@
 <p style="margin:0 0 24px; color:#525252;">{% if subject == "Verify your e-mail" %}Use o código abaixo para confirmar seu e-mail e continuar o cadastro.{% elif subject == "Your password reset code" %}Use o código abaixo para continuar a recuperação da sua senha.{% elif subject == "Confirm your new e-mail address" %}Use o código abaixo para confirmar seu novo endereço de e-mail.{% else %}Use o código abaixo para continuar sua solicitação.{% endif %}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
-    <td align="center" style="padding:20px 8px; background-color:#f4f4f4; border:1px solid #e6e6e6; border-radius:8px; font-family:Consolas, 'Courier New', monospace; font-size:30px; line-height:40px; font-weight:700; letter-spacing:4px;">{{ code }}</td>
+    <td align="center" style="padding:20px 8px; background-color:#f3f2ef; border:1px solid #e6e6e6; border-radius:8px; color:#000000; font-family:Consolas, 'Courier New', monospace; font-size:30px; line-height:40px; font-weight:700; letter-spacing:6px;">{{ code }}</td>
   </tr>
 </table>
 {% endblock %}

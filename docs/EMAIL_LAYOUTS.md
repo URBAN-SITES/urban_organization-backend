@@ -9,8 +9,10 @@ Subjects, recipients, code values and invitation URLs are unchanged. Body copy i
 
 `core/templates/emails/base.html` contains the shared, single-column layout with a
 600 px maximum width, presentation tables, inline styles and a conditional Outlook
-wrapper. It uses the frontend's white/black/subtle gray palette and blue accent,
-with system fonts and text branding so no external images or styles are required.
+wrapper. It mirrors the frontend tokens with the warm background (`#f3f2ef`), ink
+surface (`#0e0e0d`), white content surface and orange wordmark detail (`#ff7a0f`).
+The font stack prefers Geist and falls back to email-safe system fonts; the wordmark
+remains text-based so no remote image is required.
 
 - `code.html` and `code.txt` serve registration, password reset and e-mail change.
   Presentation varies by the three existing subject strings; unknown subjects get a
@@ -48,9 +50,9 @@ no project settings or dependencies were changed. The passing result uses that w
 
 ## Pending verification and existing limitations
 
-- The initial e-mail work could not access Figma. The later onboarding work obtained
-  the F04/F05 frames, but the e-mail templates have not been visually approved against
-  Figma; their palette still follows the frontend code used for the original delivery.
+- The 2026-10-24 refresh follows the checked-in application tokens and official local
+  wordmark. Live Figma inspection remained blocked by a reauthentication loop, so the
+  e-mail templates have not been visually approved against a dedicated e-mail frame.
 - The invitation URL remains `/invitations/accept?token=…`. The companion frontend
   PR now supplies acceptance, login/registration continuation and account switching.
   Deploy both PRs together; a backend-only deployment cannot supply that page.
