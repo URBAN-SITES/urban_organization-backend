@@ -117,6 +117,23 @@ class MentionAndTaskTests(ChatTestCase):
         self.assertEqual(note.data["channel_id"], self.general_id)
         self.assertEqual(note.message, "hi @Bob")
 
+    def test_every_message_notifies_channel_members_except_the_author(self):
+        self.say(self.ana, self.general_id, "hello everyone")
+        notifications = Notification.objects.filter().order_by("user_id")
+        self.assertEqual(
+            list(notifications.values_list("user_id", flat=True)),
+            sorted([self.owner.id, self.bob.id]),
+        )
+        self.assertEqual(notifications[0].message, "hello everyone")
+        self.assertEqual(notifications[0].data["channel_id"], self.general_id)
+
+    def test_direct_message_notifies_only_the_other_participant(self):
+        direct = ChatService.open_direct(self.ana, self.org.id, self.bob.id)["id"]
+        self.say(self.ana, direct, "private")
+        self.assertEqual(
+            list(Notification.objects.values_list("user_id", flat=True)), [self.bob.id]
+        )
+
     def test_only_readers_are_mentioned_and_never_the_author(self):
         self.make_team(self.ana)
         team = self.team_channel(self.ana)["id"]

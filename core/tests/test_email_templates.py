@@ -31,6 +31,10 @@ class EmailTemplateTests(SimpleTestCase):
                 self.assertIn(heading, html)
                 self.assertIn("012345", html)
                 self.assertIn('lang="pt-BR"', html)
+                self.assertIn("background-color:#f3f2ef", html)
+                self.assertIn("background-color:#0e0e0d", html)
+                self.assertIn("color:#ff7a0f", html)
+                self.assertNotIn("#2590f6", html)
         self.assertEqual(len(mail.outbox), 3)
 
     def test_unknown_subject_still_sends_a_code(self):
