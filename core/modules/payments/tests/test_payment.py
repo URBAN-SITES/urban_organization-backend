@@ -80,6 +80,53 @@ class PaymentFlowTests(TestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, Payment.Status.APPROVED)
 
+    def test_listing_reconciles_pending_payment_with_provider(self):
+        payment = Payment.objects.create(
+            user=User.objects.get(email="a@a.com"),
+            title="Pro",
+            amount=Decimal("9.99"),
+            status=Payment.Status.PENDING,
+            provider_payment_id="456",
+        )
+        self.sdk.payment().get.return_value = {
+            "status": 200,
+            "response": {
+                "id": 456,
+                "status": "approved",
+                "external_reference": str(payment.id),
+            },
+        }
+
+        response = self.client.get("/api/v1/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["results"][0]["status"], "approved")
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.APPROVED)
+
+    def test_reconciliation_rejects_mismatched_external_reference(self):
+        payment = Payment.objects.create(
+            user=User.objects.get(email="a@a.com"),
+            title="Pro",
+            amount=Decimal("9.99"),
+            status=Payment.Status.PENDING,
+            provider_payment_id="456",
+        )
+        self.sdk.payment().get.return_value = {
+            "status": 200,
+            "response": {
+                "id": 456,
+                "status": "approved",
+                "external_reference": "another-payment",
+            },
+        }
+
+        response = self.client.get("/api/v1/payments/")
+
+        self.assertEqual(response.status_code, 200)
+        payment.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.PENDING)
+
     def test_card_creation_sends_required_mercado_pago_fields(self):
         self.sdk.payment().create.return_value = {
             "status": 201,
@@ -128,7 +175,9 @@ class PaymentFlowTests(TestCase):
                     },
                 },
                 "external_reference": str(payment.id),
-                "notification_url": "http://testserver/api/v1/payments/webhook/",
+                "notification_url": (
+                    "https://3009.michalski.app/api/v1/payments/webhook/"
+                ),
                 "issuer_id": 25,
             },
         )

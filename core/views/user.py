@@ -31,6 +31,7 @@ from core.response_messages import (
 from core.serializers.user import (
     LoginSerializer,
     UserListRetrieveSerializer,
+    UserMeSerializer,
     UserSessionSerializer,
     UserUpdateSelfSerializer,
 )
@@ -299,12 +300,12 @@ class UserMeView(APIView):
         summary="Get current user profile",
         description="Retrieves the profile information for the currently authenticated user.",
         responses={
-            200: UserListRetrieveSerializer,
+            200: UserMeSerializer,
             401: NotAuthenticatedSerializer,
         },
     )
     def get(self, request):
-        serializer = UserListRetrieveSerializer(request.user)
+        serializer = UserMeSerializer(request.user)
         return Response(serializer.data, status.HTTP_200_OK)
 
 

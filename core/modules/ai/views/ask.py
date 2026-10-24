@@ -4,13 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.modules.ai.permissions import IsSubscriber
 from core.modules.ai.serializers.ask import AIAnswerSerializer, AIAskSerializer
 from core.modules.ai.services.ask import AIService
 
 
 @extend_schema(tags=["IA"])
 class AIAskView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSubscriber]
 
     # Documentation
     @extend_schema(

@@ -330,7 +330,9 @@ class AIAnalysisEndpointTests(SimpleTestCase):
         cache.clear()
         self.client = APIClient()
         self.client.force_authenticate(
-            user=SimpleNamespace(is_authenticated=True, pk="analysis-test-user")
+            user=SimpleNamespace(
+                is_authenticated=True, is_subscriber=True, pk="analysis-test-user"
+            )
         )
         self.url = "/api/v1/ai/analyze/"
 
