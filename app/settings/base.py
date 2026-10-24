@@ -21,6 +21,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:8000",
     "https://3009.michalski.app",
+    "https://4000.michalski.app",
+    "https://5000.michalski.app",
+    "https://inceptum.michalski.app",
+    "https://api-inceptum.michalski.app",
 ]
 # frontends allowed to call the API; credentials so the auth cookies are sent
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
