@@ -11,12 +11,12 @@ class BaseUserSerializer(serializers.ModelSerializer):
 
 class UserListRetrieveSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
-        fields = ("id", "name", "email", "created_at")
+        fields = ("id", "name", "email", "bio", "avatar_url", "created_at")
 
 
 class UserUpdateSelfSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
-        fields = ("name",)
+        fields = ("name", "bio", "avatar_url")
 
     def validate(self, attrs):
         forbidden_fields = {
@@ -56,4 +56,12 @@ class UserSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserSession
-        fields = ["id", "device", "ip", "created_at", "current"]
+        fields = [
+            "id",
+            "device",
+            "ip",
+            "location",
+            "created_at",
+            "last_activity",
+            "current",
+        ]

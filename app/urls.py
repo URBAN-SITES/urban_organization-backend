@@ -142,6 +142,7 @@ route_core = [
     path("integrations/google/", include("core.modules.calendar_sync.urls")),
     path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
+    path("users/me/settings/", include("core.modules.user_settings.urls")),
     path("users/me/update/", UserUpdateSelfView.as_view(), name="me-update"),
     path("users/list/", UserListView.as_view(), name="users-list"),
     path("users/<uuid:user_id>/", UserDetailView.as_view(), name="user-detail"),
