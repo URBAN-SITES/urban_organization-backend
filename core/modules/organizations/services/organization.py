@@ -25,9 +25,16 @@ class OrganizationService:
         """Every user owns one personal organization (created lazily on first list)."""
         if Organization.objects.filter(owner=user, is_personal=True).exists():
             return
-        OrganizationService.create(
-            user, name=f"{user.get_short_name()}'s workspace", is_personal=True
-        )
+        with transaction.atomic():
+            # Concurrent first requests (the front end lists organizations from several
+            # places) must not each create one: lock the user row, then check again.
+            # SQLite ignores the lock; dev.py opens its write transactions as IMMEDIATE.
+            User.objects.select_for_update().get(pk=user.pk)
+            if Organization.objects.filter(owner=user, is_personal=True).exists():
+                return
+            OrganizationService.create(
+                user, name=f"{user.get_short_name()}'s workspace", is_personal=True
+            )
 
     @staticmethod
     @transaction.atomic

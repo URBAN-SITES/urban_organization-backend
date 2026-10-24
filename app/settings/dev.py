@@ -23,6 +23,8 @@ else:
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
             "TIME_ZONE": "UTC",
+            # write transactions take the lock up front, so check-then-insert is safe
+            "OPTIONS": {"transaction_mode": "IMMEDIATE"},
         }
     }
 
