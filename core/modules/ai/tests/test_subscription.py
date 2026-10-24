@@ -41,7 +41,7 @@ class SubscriberAccessTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertFalse(self.user.is_subscriber)
 
-    @patch("core.modules.ai.views.ask.AIService.ask")
+    @patch("core.modules.ai.views.ask.AssistantService.ask")
     @patch("core.modules.ai.views.analysis.AIAnalysisService.analyze")
     def test_free_user_cannot_call_any_ai_endpoint(self, analyze, ask):
         for url in ("ask", "analyze"):
@@ -49,6 +49,29 @@ class SubscriberAccessTests(TestCase):
             self.assertEqual(response.status_code, 403)
         analyze.assert_not_called()
         ask.assert_not_called()
+
+    @patch.dict("os.environ", {"AI_TEMPORARY_ACCESS_EMAILS": "subscriber@test.com"})
+    @patch("core.modules.ai.views.ask.AssistantService.ask")
+    @patch("core.modules.ai.views.analysis.AIAnalysisService.analyze")
+    def test_temporary_access_is_limited_to_the_named_user_and_assistant(
+        self, analyze, ask
+    ):
+        ask.return_value = {"answer": "OK", "actions": []}
+        self.assertEqual(
+            self.client.post("/api/v1/ai/ask/", {"prompt": "hello"}).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.post("/api/v1/ai/analyze/", {}, format="multipart").status_code,
+            403,
+        )
+        other = APIClient()
+        other.force_authenticate(self.other)
+        self.assertEqual(
+            other.post("/api/v1/ai/ask/", {"prompt": "hello"}).status_code, 403
+        )
+        ask.assert_called_once()
+        analyze.assert_not_called()
 
     def test_only_confirmed_own_payment_grants_access(self):
         payment = self.payment(status="pending")
@@ -82,10 +105,10 @@ class SubscriberAccessTests(TestCase):
             self.assertEqual(self.user.is_subscriber, status == "approved")
         self.assertEqual(Payment.objects.count(), 1)
 
-    @patch("core.modules.ai.views.ask.AIService.ask")
+    @patch("core.modules.ai.views.ask.AssistantService.ask")
     def test_approved_user_calls_ai_and_refund_blocks_next_request(self, ask):
         payment = self.payment()
-        ask.return_value = "OK"
+        ask.return_value = {"answer": "OK", "actions": []}
         self.assertEqual(
             self.client.post("/api/v1/ai/ask/", {"prompt": "hello"}).status_code, 200
         )

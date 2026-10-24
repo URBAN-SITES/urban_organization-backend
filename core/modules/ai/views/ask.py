@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from core.modules.ai.permissions import IsSubscriber
 from core.modules.ai.serializers.ask import AIAnswerSerializer, AIAskSerializer
-from core.modules.ai.services.ask import AIService
+from core.modules.ai.services.assistant import AssistantService
 
 
 @extend_schema(tags=["IA"])
@@ -15,7 +15,7 @@ class AIAskView(APIView):
 
     # Documentation
     @extend_schema(
-        summary="Ask the AI (Gemini)",
+        summary="Ask the assistant to operate the workspace (excluding payments)",
         request=AIAskSerializer,
         responses={200: AIAnswerSerializer},
     )
@@ -25,5 +25,7 @@ class AIAskView(APIView):
         serializer = AIAskSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        answer = AIService.ask(serializer.validated_data["prompt"])
-        return Response({"answer": answer}, status.HTTP_200_OK)
+        result = AssistantService.ask(request.user, **serializer.validated_data)
+        response = Response(result, status.HTTP_200_OK)
+        response["Cache-Control"] = "no-store"
+        return response
