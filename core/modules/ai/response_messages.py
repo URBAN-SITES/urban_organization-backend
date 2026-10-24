@@ -1,6 +1,20 @@
 from django.utils.translation import gettext_lazy as _
 
 MSG_AI_BUSY = _("AI is busy, try again shortly.")
+MSG_AI_INVALID_ARGUMENTS = _("Invalid or unsupported action arguments.")
+MSG_AI_UNKNOWN_ACTION = _("This action is not available to the assistant.")
+MSG_AI_ACTION_FAILED = _(
+    "The action failed. Its outcome may be uncertain; check before retrying."
+)
+MSG_AI_ACTION_INTERRUPTED = _(
+    "The assistant stopped. Review the action results before retrying; completed actions were not rolled back."
+)
+MSG_AI_INVALID_CONVERSATION = _(
+    "Invalid or expired conversation. Start a new conversation."
+)
+MSG_AI_CALENDAR_ACCESS = _(
+    "Calendar access was denied. Check permissions or reconnect Google."
+)
 MSG_AI_UNAVAILABLE = _("AI service unavailable.")
 MSG_AI_DECLINED = _("The AI declined this request.")
 MSG_AI_INVALID_FILE = _("Upload a valid JPEG, PNG, WebP image or PDF document.")
