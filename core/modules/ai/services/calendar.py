@@ -15,6 +15,7 @@ from rest_framework.exceptions import (
 )
 
 from core.modules.ai.response_messages import (
+    MSG_AI_BUSY,
     MSG_AI_CALENDAR_ACCESS,
     MSG_AI_INVALID_ARGUMENTS,
 )
@@ -127,7 +128,7 @@ def _call(user, method, path, scope, **kwargs):
     if response.status_code in (404, 410):
         raise NotFound()
     if response.status_code == 429:
-        raise Throttled()
+        raise Throttled(detail=MSG_AI_BUSY)
     if response.status_code == 400:
         raise ValidationError(MSG_AI_INVALID_ARGUMENTS)
     if not 200 <= response.status_code < 300:
