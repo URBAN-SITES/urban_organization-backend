@@ -12,9 +12,11 @@ from core.modules.kanban.response_messages import (
     MSG_TASK_ASSIGNED,
     MSG_TASK_ASSIGNEE_INVALID,
     MSG_TASK_PARENT_INVALID,
+    MSG_TASK_STATUS_CHANGED,
 )
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.notifications.services.notification import NotificationService
+from core.modules.user_settings.models.user_settings import UserSettings
 
 
 class TaskService:
@@ -66,6 +68,7 @@ class TaskService:
         return task
 
     @staticmethod
+    @transaction.atomic
     def update(user: User, task_id, data: dict) -> Task:
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         old_assignee = task.assignee_id
@@ -91,7 +94,8 @@ class TaskService:
         """The only place that changes a task's column (keeps completed_at coherent)."""
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         TaskService._check_status(sector, status)
-        if status.pk != task.status_id:
+        status_changed = status.pk != task.status_id
+        if status_changed:
             TaskService._check_wip(status, task)
         TaskService._apply_status(task, status)
         task.save()
@@ -106,6 +110,15 @@ class TaskService:
         for order, sibling in enumerate(siblings):
             sibling.position = order
         Task.objects.bulk_update(siblings, ["position"])
+        if status_changed:
+            TaskService._notify_assignee(
+                user,
+                task,
+                title=MSG_TASK_STATUS_CHANGED,
+                message=f"{task.title}: {status.name}",
+                event="task.status_changed",
+                preference="app_status",
+            )
         return task
 
     # helpers ------------------------------------------------------------
@@ -146,11 +159,37 @@ class TaskService:
             raise ValidationError(MSG_TASK_ASSIGNEE_INVALID)
 
     @staticmethod
-    def _notify_assignee(actor: User, task: Task) -> None:
-        if task.assignee_id and task.assignee_id != actor.pk:
-            NotificationService.notify(
-                task.assignee,
-                str(MSG_TASK_ASSIGNED),
-                task.title,
-                {"task_id": str(task.pk), "sector_id": str(task.sector_id)},
-            )
+    def _notify_assignee(
+        actor: User,
+        task: Task,
+        *,
+        title=MSG_TASK_ASSIGNED,
+        message: str | None = None,
+        event: str = "task.assigned",
+        preference: str | None = None,
+    ) -> None:
+        if not task.assignee_id or task.assignee_id == actor.pk:
+            return
+        if (
+            not task.assignee.is_active
+            or SectorService.effective_role(task.assignee, task.sector) is None
+        ):
+            return
+        if (
+            preference
+            and UserSettings.objects.filter(
+                user=task.assignee, **{preference: False}
+            ).exists()
+        ):
+            return
+        NotificationService.notify(
+            task.assignee,
+            str(title),
+            task.title if message is None else message,
+            {
+                "event": event,
+                "task_id": str(task.pk),
+                "sector_id": str(task.sector_id),
+                "organization_id": str(task.sector.organization_id),
+            },
+        )

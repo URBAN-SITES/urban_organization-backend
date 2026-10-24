@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Max
 from rest_framework.exceptions import NotFound, PermissionDenied
 
@@ -10,7 +11,6 @@ from core.modules.kanban.response_messages import (
 )
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.kanban.services.task import TaskService
-from core.modules.notifications.services.notification import NotificationService
 from core.modules.organizations.models.organization import OrganizationMember
 from core.modules.organizations.services.organization import OrganizationService
 
@@ -57,16 +57,18 @@ class CommentService:
         return Comment.objects.filter(task=task).select_related("author")
 
     @staticmethod
+    @transaction.atomic
     def create(user: User, task_id, content: str) -> Comment:
         task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         comment = Comment.objects.create(task=task, author=user, content=content)
-        if task.assignee_id and task.assignee_id != user.pk:
-            NotificationService.notify(
-                task.assignee,
-                str(MSG_TASK_COMMENTED),
-                content[:200],
-                {"task_id": str(task.pk), "sector_id": str(task.sector_id)},
-            )
+        TaskService._notify_assignee(
+            user,
+            task,
+            title=MSG_TASK_COMMENTED,
+            message=content[:200],
+            event="task.commented",
+            preference="app_comments",
+        )
         return comment
 
     @staticmethod

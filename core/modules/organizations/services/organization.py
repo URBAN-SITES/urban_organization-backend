@@ -3,12 +3,16 @@ from django.db.models import F
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
+from core.modules.notifications.services.notification import NotificationService
 from core.modules.organizations.models.organization import (
     Organization,
     OrganizationMember,
 )
 from core.modules.organizations.response_messages import (
     MSG_ORGANIZATION_ALREADY_MEMBER,
+    MSG_ORGANIZATION_MEMBER_ADDED,
+    MSG_ORGANIZATION_MEMBER_REMOVED,
+    MSG_ORGANIZATION_MEMBER_ROLE_CHANGED,
     MSG_ORGANIZATION_OWNER_PROTECTED,
     MSG_ORGANIZATION_PERSONAL_PROTECTED,
     MSG_ORGANIZATION_ROLE_REQUIRED,
@@ -108,6 +112,7 @@ class OrganizationService:
         )
 
     @staticmethod
+    @transaction.atomic
     def add_member(user: User, organization_id, email: str, role: str):
         actor = OrganizationService.require_role(user, organization_id, Role.ADMIN)
         OrganizationService._check_grant(actor, role)
@@ -119,19 +124,37 @@ class OrganizationService:
         )
         if not created:
             raise ValidationError(MSG_ORGANIZATION_ALREADY_MEMBER)
+        OrganizationService._notify_member(
+            user,
+            member,
+            actor.organization,
+            MSG_ORGANIZATION_MEMBER_ADDED,
+            "organization.member_added",
+        )
         return member
 
     @staticmethod
+    @transaction.atomic
     def change_role(user: User, organization_id, member_id, role: str):
         actor = OrganizationService.require_role(user, organization_id, Role.ADMIN)
         member = OrganizationService._get_member(organization_id, member_id)
         OrganizationService._check_grant(actor, role)
         OrganizationService._check_target(actor, member)
+        if member.role == role:
+            return member
         member.role = role
         member.save(update_fields=["role"])
+        OrganizationService._notify_member(
+            user,
+            member,
+            actor.organization,
+            MSG_ORGANIZATION_MEMBER_ROLE_CHANGED,
+            "organization.role_changed",
+        )
         return member
 
     @staticmethod
+    @transaction.atomic
     def remove_member(user: User, organization_id, member_id) -> None:
         actor = OrganizationService.get_membership(user, organization_id)
         member = OrganizationService._get_member(organization_id, member_id)
@@ -140,7 +163,29 @@ class OrganizationService:
             OrganizationService._check_target(actor, member)
         elif member.role == Role.OWNER:
             raise PermissionDenied(MSG_ORGANIZATION_OWNER_PROTECTED)
+        OrganizationService._notify_member(
+            user,
+            member,
+            actor.organization,
+            MSG_ORGANIZATION_MEMBER_REMOVED,
+            "organization.member_removed",
+        )
         member.delete()
+
+    @staticmethod
+    def _notify_member(actor, member, organization, title, event) -> None:
+        if member.user_id == actor.pk or not member.user.is_active:
+            return
+        NotificationService.notify(
+            member.user,
+            str(title),
+            organization.name,
+            {
+                "event": event,
+                "organization_id": str(organization.pk),
+                "role": member.role,
+            },
+        )
 
     @staticmethod
     def _get_member(organization_id, member_id) -> OrganizationMember:

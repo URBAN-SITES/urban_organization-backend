@@ -1,13 +1,19 @@
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, patch
 
 from django.db import transaction
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from firebase_admin import messaging
+from firebase_admin.exceptions import UnavailableError
 from rest_framework.test import APIClient
 
 from core.models.user import User
 from core.modules.notifications.models.notification import DeviceToken
-from core.modules.notifications.services.notification import NotificationService
+from core.modules.notifications.response_messages import MSG_PUSH_DISABLED
+from core.modules.notifications.services.notification import (
+    NotificationService,
+    _firebase_app,
+)
 from core.modules.user_settings.models.user_settings import UserSettings
 
 
@@ -63,7 +69,9 @@ class NotificationApiTests(TestCase):
         self.assertEqual(APIClient().get("/api/v1/notifications/").status_code, 401)
 
 
-@override_settings(FIREBASE_CREDENTIALS="fake.json", FRONTEND_URL="https://app.example/")
+@override_settings(
+    FIREBASE_CREDENTIALS="fake.json", FRONTEND_URL="https://app.example/"
+)
 @patch("core.modules.notifications.services.notification._firebase_app")
 @patch(
     "core.modules.notifications.services.notification.messaging.send_each_for_multicast"
@@ -125,6 +133,71 @@ class NotificationPushTests(TestCase):
             [len(call.args[0].tokens) for call in send.call_args_list], [500, 1]
         )
 
+    def test_project_mismatch_is_logged_without_deleting_device(self, send, _app):
+        DeviceToken.objects.create(user=self.user, token="private-device-token")
+        send.return_value = MagicMock(
+            responses=[
+                MagicMock(exception=messaging.SenderIdMismatchError("wrong project"))
+            ],
+            success_count=0,
+            failure_count=1,
+        )
+        with self.assertLogs(
+            "core.modules.notifications.services.notification", level="WARNING"
+        ) as logs:
+            with self.captureOnCommitCallbacks(execute=True):
+                NotificationService.notify(self.user, "Hi")
+        self.assertTrue(DeviceToken.objects.filter(user=self.user).exists())
+        self.assertIn("SenderIdMismatchError", " ".join(logs.output))
+        self.assertNotIn("private-device-token", " ".join(logs.output))
+
+    def test_individual_transient_error_is_logged_and_token_is_kept(self, send, _app):
+        DeviceToken.objects.create(user=self.user, token="private-device-token")
+        send.return_value = MagicMock(
+            responses=[MagicMock(exception=UnavailableError("try later"))],
+            success_count=0,
+            failure_count=1,
+        )
+        with self.assertLogs(
+            "core.modules.notifications.services.notification", level="WARNING"
+        ) as logs:
+            with self.captureOnCommitCallbacks(execute=True):
+                NotificationService.notify(self.user, "Hi")
+        self.assertTrue(DeviceToken.objects.filter(user=self.user).exists())
+        self.assertEqual(self.user.notifications.count(), 1)
+        self.assertIn("UNAVAILABLE", " ".join(logs.output))
+        self.assertNotIn("private-device-token", " ".join(logs.output))
+
+    @override_settings(FIREBASE_CREDENTIALS="")
+    def test_missing_configuration_is_logged_without_sending(self, send, _app):
+        DeviceToken.objects.create(user=self.user, token="t")
+        with self.assertLogs(
+            "core.modules.notifications.services.notification", level="WARNING"
+        ) as logs:
+            with self.captureOnCommitCallbacks(execute=True):
+                NotificationService.notify(self.user, "Hi")
+        self.assertIn("credentials not configured", " ".join(logs.output))
+        send.assert_not_called()
+        self.assertEqual(self.user.notifications.count(), 1)
+
+    @override_settings(FRONTEND_URL="http://localhost:5173/")
+    def test_localhost_receives_notification_without_https_click_link(self, send, _app):
+        DeviceToken.objects.create(user=self.user, token="t")
+        send.return_value = MagicMock(responses=[])
+        with self.captureOnCommitCallbacks(execute=True):
+            NotificationService.notify(self.user, "Hi", "body")
+        message = send.call_args.args[0]
+        self.assertEqual(message.notification.title, "Hi")
+        self.assertEqual(message.notification.body, "body")
+        self.assertIsNone(message.webpush.fcm_options)
+
+    def test_deactivation_before_commit_suppresses_push(self, send, _app):
+        DeviceToken.objects.create(user=self.user, token="t")
+        with self.captureOnCommitCallbacks(execute=True):
+            NotificationService.notify(self.user, "Hi")
+            User.objects.filter(pk=self.user.pk).update(is_active=False)
+        send.assert_not_called()
+
 
 class NotificationDeliveryTests(TestCase):
     def setUp(self):
@@ -162,6 +235,61 @@ class NotificationDeliveryTests(TestCase):
             notification = NotificationService.notify(self.user, "Hi")
         push.assert_called_once_with(notification)
 
+    @patch.object(NotificationService, "deliver")
+    def test_unexpected_delivery_failure_does_not_skip_later_recipients(self, deliver):
+        deliver.side_effect = [
+            RuntimeError("database unavailable during delivery"),
+            None,
+        ]
+        with self.assertLogs("django.test", level="ERROR"):
+            with self.captureOnCommitCallbacks(execute=True):
+                first = NotificationService.notify(self.user, "First")
+                second = NotificationService.notify(self.user, "Second")
+        self.assertEqual(
+            [call.args[0] for call in deliver.call_args_list], [first, second]
+        )
+        self.assertEqual(self.user.notifications.count(), 2)
+
+    def test_generated_title_fits_database_limit(self):
+        notification = NotificationService.notify(
+            self.user, "a" * 255 + " mentioned you"
+        )
+        self.assertEqual(len(notification.title), 255)
+
+
+class FirebaseInitializationTests(SimpleTestCase):
+    @override_settings(FIREBASE_CREDENTIALS="fake.json")
+    @patch("core.modules.notifications.services.notification.credentials.Certificate")
+    @patch(
+        "core.modules.notifications.services.notification.firebase_admin.initialize_app"
+    )
+    @patch("core.modules.notifications.services.notification.firebase_admin.get_app")
+    def test_concurrent_initialization_uses_one_default_app(
+        self, get_app, initialize, certificate
+    ):
+        app = object()
+        initialized = False
+
+        def get():
+            if not initialized:
+                raise ValueError("No default app")
+            return app
+
+        def create(credential):
+            nonlocal initialized
+            if initialized:
+                raise ValueError("App already exists")
+            initialized = True
+            return app
+
+        get_app.side_effect = get
+        initialize.side_effect = create
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            apps = list(executor.map(lambda _: _firebase_app(), range(8)))
+        self.assertTrue(all(result is app for result in apps))
+        initialize.assert_called_once_with(certificate.return_value)
+        certificate.assert_called_once_with("fake.json")
+
 
 class SendPushApiTests(TestCase):
     def setUp(self):
@@ -190,6 +318,7 @@ class SendPushApiTests(TestCase):
         UserSettings.objects.create(user=self.user, push_enabled=False)
         res = self.client.post("/api/v1/notifications/send/", self.payload)
         self.assertEqual(res.status_code, 403)
+        self.assertEqual(res.json()["detail"], str(MSG_PUSH_DISABLED))
         send.assert_not_called()
 
     @override_settings(FIREBASE_CREDENTIALS="")
@@ -214,7 +343,10 @@ class SendPushApiTests(TestCase):
     )
     def test_sends(self, send, _app):
         res = self.client.post("/api/v1/notifications/send/", self.payload)
+        self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json(), {"message_id": "msg-1"})
+        # The frontend test checks FCM delivery, not inbox persistence.
+        self.assertEqual(self.user.notifications.count(), 0)
         message = send.call_args.args[0]
         self.assertEqual(
             (message.token, message.notification.title, message.notification.body),
@@ -230,3 +362,34 @@ class SendPushApiTests(TestCase):
     def test_fcm_error(self, send, _app):
         res = self.client.post("/api/v1/notifications/send/", self.payload)
         self.assertEqual(res.status_code, 502)
+        self.assertFalse(DeviceToken.objects.filter(user=self.user, token="t").exists())
+
+    @override_settings(FIREBASE_CREDENTIALS="fake.json")
+    @patch("core.modules.notifications.services.notification._firebase_app")
+    @patch(
+        "core.modules.notifications.services.notification.messaging.send",
+        side_effect=messaging.SenderIdMismatchError("wrong project"),
+    )
+    def test_test_push_project_mismatch_preserves_token(self, send, _app):
+        with self.assertLogs(
+            "core.modules.notifications.services.notification", level="WARNING"
+        ) as logs:
+            res = self.client.post(
+                "/api/v1/notifications/send/", self.payload, format="json"
+            )
+        self.assertEqual(res.status_code, 502)
+        self.assertTrue(DeviceToken.objects.filter(user=self.user, token="t").exists())
+        self.assertIn("SenderIdMismatchError", " ".join(logs.output))
+
+    @override_settings(FIREBASE_CREDENTIALS="fake.json")
+    @patch("core.modules.notifications.services.notification._firebase_app")
+    @patch(
+        "core.modules.notifications.services.notification.messaging.send",
+        side_effect=UnavailableError("try later"),
+    )
+    def test_test_push_transient_error_preserves_token(self, send, _app):
+        res = self.client.post(
+            "/api/v1/notifications/send/", self.payload, format="json"
+        )
+        self.assertEqual(res.status_code, 502)
+        self.assertTrue(DeviceToken.objects.filter(user=self.user, token="t").exists())

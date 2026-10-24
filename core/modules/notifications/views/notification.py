@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from firebase_admin.exceptions import FirebaseError
@@ -16,6 +18,8 @@ from core.modules.notifications.serializers.notification import (
     SendPushSerializer,
 )
 from core.modules.notifications.services.notification import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema(tags=["Notificações"])
@@ -115,6 +119,9 @@ class SendPushView(APIView):
                 request.user, **serializer.validated_data
             )
         except OSError, ValueError:
+            logger.exception(
+                "FCM test failed: credentials or message configuration is invalid"
+            )
             return Response(
                 {"detail": MSG_PUSH_NOT_CONFIGURED},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

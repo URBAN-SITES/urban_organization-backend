@@ -1,27 +1,36 @@
 import logging
+from threading import Lock
 
 import firebase_admin
 from django.conf import settings
 from django.db import transaction
 from firebase_admin import credentials, messaging
+from firebase_admin.exceptions import FirebaseError
 from rest_framework.exceptions import PermissionDenied
 
 from core.models.user import User
 from core.modules.notifications.models.notification import DeviceToken, Notification
-from core.modules.notifications.response_messages import MSG_DEVICE_NOT_REGISTERED
+from core.modules.notifications.response_messages import (
+    MSG_DEVICE_NOT_REGISTERED,
+    MSG_PUSH_DISABLED,
+)
 from core.modules.notifications.serializers.notification import NotificationSerializer
 from core.modules.user_settings.models.user_settings import UserSettings
 from core.websockets.consumers import send_to_user
 
 logger = logging.getLogger(__name__)
+_firebase_lock = Lock()
 
 
 def _firebase_app():
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(
-            credentials.Certificate(settings.FIREBASE_CREDENTIALS)
-        )
-    return firebase_admin.get_app()
+    # Initialization is lazy and may be reached by concurrent first requests.
+    with _firebase_lock:
+        try:
+            return firebase_admin.get_app()
+        except ValueError:
+            return firebase_admin.initialize_app(
+                credentials.Certificate(settings.FIREBASE_CREDENTIALS)
+            )
 
 
 class NotificationService:
@@ -29,9 +38,13 @@ class NotificationService:
     def notify(user: User, title: str, message: str = "", data=None) -> Notification:
         """Call from any service: NotificationService.notify(user, "Payment approved")"""
         notification = Notification.objects.create(
-            user=user, title=title, message=message, data=data or {}
+            user=user, title=str(title)[:255], message=message, data=data or {}
         )
-        transaction.on_commit(lambda: NotificationService.deliver(notification))
+        # An external delivery failure must not turn a committed business action
+        # into HTTP 500 or prevent later recipients' callbacks from running.
+        transaction.on_commit(
+            lambda: NotificationService.deliver(notification), robust=True
+        )
         return notification
 
     @staticmethod
@@ -50,11 +63,20 @@ class NotificationService:
 
     @staticmethod
     def push(notification: Notification) -> None:
-        if not settings.FIREBASE_CREDENTIALS or not notification.user.is_active:
+        if not User.objects.filter(pk=notification.user_id, is_active=True).exists():
+            return
+        if not settings.FIREBASE_CREDENTIALS:
+            logger.warning(
+                "FCM push skipped: credentials not configured notification_id=%s",
+                notification.pk,
+            )
             return
         if UserSettings.objects.filter(
             user=notification.user, push_enabled=False
         ).exists():
+            logger.debug(
+                "FCM push skipped: user opted out notification_id=%s", notification.pk
+            )
             return
         tokens = list(
             DeviceToken.objects.filter(user=notification.user).values_list(
@@ -62,6 +84,10 @@ class NotificationService:
             )
         )
         if not tokens:
+            logger.debug(
+                "FCM push skipped: no registered devices notification_id=%s",
+                notification.pk,
+            )
             return
         # FCM data values must be strings
         data = {k: str(v) for k, v in notification.data.items()}
@@ -82,17 +108,33 @@ class NotificationService:
                 )
             except Exception:
                 # Push is best-effort: the notification is already saved.
-                logger.exception("FCM push failed")
+                logger.exception("FCM push failed notification_id=%s", notification.pk)
                 continue
-            dead = [
-                token
-                for token, response in zip(batch, result.responses)
-                if isinstance(
-                    response.exception,
-                    (messaging.UnregisteredError, messaging.SenderIdMismatchError),
+            dead = []
+            for response_index, (token, response) in enumerate(
+                zip(batch, result.responses)
+            ):
+                error = response.exception
+                if error is None:
+                    continue
+                # A project mismatch is a configuration error, not an expired token.
+                # Keep the device so fixing credentials does not require registration again.
+                if isinstance(error, messaging.UnregisteredError):
+                    dead.append(token)
+                logger.warning(
+                    "FCM device delivery failed notification_id=%s device_index=%s error_type=%s error_code=%s",
+                    notification.pk,
+                    offset + response_index,
+                    type(error).__name__,
+                    getattr(error, "code", type(error).__name__),
                 )
-            ]
             DeviceToken.objects.filter(user=notification.user, token__in=dead).delete()
+            logger.info(
+                "FCM batch completed notification_id=%s success_count=%s failure_count=%s",
+                notification.pk,
+                result.success_count,
+                result.failure_count,
+            )
 
     @staticmethod
     def webpush(tag: str = "") -> messaging.WebpushConfig:
@@ -115,15 +157,28 @@ class NotificationService:
         if not DeviceToken.objects.filter(user=user, token=token).exists():
             raise PermissionDenied(MSG_DEVICE_NOT_REGISTERED)
         if UserSettings.objects.filter(user=user, push_enabled=False).exists():
-            raise PermissionDenied(MSG_DEVICE_NOT_REGISTERED)
-        return messaging.send(
-            messaging.Message(
-                token=token,
-                notification=messaging.Notification(title=title, body=body),
-                webpush=NotificationService.webpush(),
-            ),
-            app=_firebase_app(),
-        )
+            raise PermissionDenied(MSG_PUSH_DISABLED)
+        try:
+            message_id = messaging.send(
+                messaging.Message(
+                    token=token,
+                    notification=messaging.Notification(title=title, body=body),
+                    webpush=NotificationService.webpush(),
+                ),
+                app=_firebase_app(),
+            )
+        except FirebaseError as error:
+            if isinstance(error, messaging.UnregisteredError):
+                DeviceToken.objects.filter(user=user, token=token).delete()
+            logger.warning(
+                "FCM test delivery failed user_id=%s error_type=%s error_code=%s",
+                user.pk,
+                type(error).__name__,
+                error.code,
+            )
+            raise
+        logger.info("FCM test accepted user_id=%s message_id=%s", user.pk, message_id)
+        return message_id
 
     @staticmethod
     def register_device(user: User, token: str) -> None:

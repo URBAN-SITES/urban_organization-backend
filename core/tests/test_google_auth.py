@@ -28,6 +28,7 @@ class GoogleLoginTests(TestCase):
         self.assertEqual(user.name, "G User")
         self.assertFalse(user.has_usable_password())
 
+    @mock.patch("core.services.google_auth.GOOGLE_CLIENT_ID", "test-client-id")
     @mock.patch(VERIFY, side_effect=ValueError)
     def test_invalid_credential_is_rejected(self, _):
         # DRF answers 403 on views without authentication classes

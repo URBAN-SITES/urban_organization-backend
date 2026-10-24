@@ -1,5 +1,9 @@
 # Notification assessment and integration
 
+> Historical assessment. For the current event matrix, frontend requirements and
+> environment configuration after the branch integration, use
+> [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
+
 Reviewed on 2026-10-23 across the backend, frontend and server Compose configuration.
 This document describes the source integration. PRs and the deployment revision record
 track rollout status; live Firebase delivery still requires browser acceptance.

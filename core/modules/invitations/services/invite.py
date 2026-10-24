@@ -9,13 +9,16 @@ from rest_framework.exceptions import NotFound, ValidationError
 from core.models.user import User
 from core.modules.invitations.models.invite import OrganizationInvite
 from core.modules.invitations.response_messages import (
+    MSG_INVITE_ACCEPTED,
     MSG_INVITE_ALREADY_MEMBER,
     MSG_INVITE_ALREADY_PENDING,
     MSG_INVITE_INVALID,
     MSG_INVITE_NOT_PENDING,
+    MSG_INVITE_RECEIVED,
 )
 from core.modules.invitations.tasks.invite import send_invite_email_task
 from core.modules.kanban.models.sector import Sector, SectorMember
+from core.modules.notifications.services.notification import NotificationService
 from core.modules.organizations.models.organization import OrganizationMember
 from core.modules.organizations.services.organization import OrganizationService
 
@@ -74,8 +77,21 @@ class InviteService:
             invite.sectors.set(sectors)
             link = f"{FRONTEND_URL}/invitations/accept?token={token}"
             transaction.on_commit(
-                lambda: send_invite_email_task.delay(email, organization.name, link)
+                lambda: send_invite_email_task.delay(email, organization.name, link),
+                robust=True,
             )
+            target = User.objects.filter(email__iexact=email, is_active=True).first()
+            if target is not None and target.pk != user.pk:
+                NotificationService.notify(
+                    target,
+                    str(MSG_INVITE_RECEIVED),
+                    organization.name,
+                    {
+                        "event": "organization.invited",
+                        "organization_id": str(organization.pk),
+                        "invite_id": str(invite.pk),
+                    },
+                )
         return invite
 
     @staticmethod
@@ -155,6 +171,25 @@ class InviteService:
                 invite.accepted_by = user
                 invite.accepted_at = timezone.now()
                 invite.save(update_fields=["status", "accepted_by", "accepted_at"])
+                # The inviter may have left the organization since sending it.
+                if (
+                    invite.invited_by_id != user.pk
+                    and invite.invited_by.is_active
+                    and OrganizationMember.objects.filter(
+                        organization=invite.organization, user_id=invite.invited_by_id
+                    ).exists()
+                ):
+                    NotificationService.notify(
+                        invite.invited_by,
+                        str(MSG_INVITE_ACCEPTED),
+                        invite.organization.name,
+                        {
+                            "event": "organization.invite_accepted",
+                            "organization_id": str(invite.organization_id),
+                            "invite_id": str(invite.pk),
+                            "accepted_by_id": str(user.pk),
+                        },
+                    )
                 return member
             # raising inside the block would roll this save back
             invite.status = Status.EXPIRED

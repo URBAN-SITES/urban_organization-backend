@@ -270,10 +270,10 @@ class ChatService:
                     defaults={"last_read_at": timezone.now()},
                 )
                 ChatService._broadcast(channel, "chat.message", message)
+                ChatService._notify_mentions(user, channel, message, mentioned)
         except Exception:
             AttachmentService.discard(stored)
             raise
-        ChatService._notify_mentions(user, channel, message, mentioned)
         return message
 
     @staticmethod
@@ -341,6 +341,7 @@ class ChatService:
                 f"{user.get_short_name()} mentioned you",
                 message.content[:200],
                 {
+                    "event": "chat.mentioned",
                     "channel_id": str(channel.pk),
                     "message_id": str(message.pk),
                     "organization_id": str(channel.organization_id),

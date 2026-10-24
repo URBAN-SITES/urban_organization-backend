@@ -7,6 +7,7 @@ class WorkspaceMigrationTests(TransactionTestCase):
     def test_existing_organizations_receive_distinct_addresses(self):
         old = [("core", "0005_chat_sector_mentions_tasks")]
         current = [("core", "0006_workspace_onboarding")]
+        latest = MigrationExecutor(connection).loader.graph.leaf_nodes()
         try:
             executor = MigrationExecutor(connection)
             executor.migrate(old)
@@ -28,4 +29,6 @@ class WorkspaceMigrationTests(TransactionTestCase):
             self.assertTrue(all(row.slug and row.name == "Existing" for row in rows))
             self.assertTrue(all(row.team_size == "" for row in rows))
         finally:
-            MigrationExecutor(connection).migrate(current)
+            # Restore the full schema, including migrations added after 0006,
+            # so subsequent TransactionTestCases can use the current models.
+            MigrationExecutor(connection).migrate(latest)

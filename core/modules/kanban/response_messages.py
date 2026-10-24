@@ -16,6 +16,7 @@ MSG_TASK_ASSIGNEE_INVALID = _("The assignee must be a participant of the sector.
 MSG_TASK_PARENT_INVALID = _("The parent task must be in the same sector.")
 MSG_TASK_ASSIGNED = _("You were assigned to a task")
 MSG_TASK_COMMENTED = _("New comment on your task")
+MSG_TASK_STATUS_CHANGED = _("Your task changed status")
 MSG_CALENDAR_RANGE_INVALID = _(
     "The end date must not be before the start date and the range is limited to 62 days."
 )
