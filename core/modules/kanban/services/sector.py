@@ -20,9 +20,9 @@ Role = SectorMember.Role
 RANK = {Role.VIEWER: 0, Role.EDITOR: 1, Role.MANAGER: 2}
 ORG_ADMINS = (OrganizationMember.Role.OWNER, OrganizationMember.Role.ADMIN)
 DEFAULT_STATUSES = (
-    ("To do", Status.Category.TODO),
-    ("In progress", Status.Category.IN_PROGRESS),
-    ("Done", Status.Category.DONE),
+    ("A fazer", Status.Category.TODO),
+    ("Em andamento", Status.Category.IN_PROGRESS),
+    ("Concluído", Status.Category.DONE),
 )
 
 

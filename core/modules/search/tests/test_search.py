@@ -68,7 +68,7 @@ class SearchTests(TestCase):
         titles = [t["title"] for t in self.search(self.bob, "landing").json()["tasks"]]
         self.assertCountEqual(titles, ["Landing page", "Landing budget"])
         card = self.search(self.owner, "page").json()["tasks"][0]
-        self.assertEqual((card["sector_name"], card["status"]), ("Open", "To do"))
+        self.assertEqual((card["sector_name"], card["status"]), ("Open", "A fazer"))
 
     def test_files_respect_where_they_live(self):
         public = SectorService.create(

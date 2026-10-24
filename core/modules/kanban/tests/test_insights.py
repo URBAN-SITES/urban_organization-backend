@@ -26,7 +26,7 @@ class InsightsTestCase(KanbanTestCase):
         )
         if done:
             res = self.client.post(
-                f"{API}tasks/{task['id']}/move/", {"status": self.statuses["Done"]}
+                f"{API}tasks/{task['id']}/move/", {"status": self.statuses["Concluído"]}
             )
             self.assertEqual(res.status_code, 200, res.content)
         return task

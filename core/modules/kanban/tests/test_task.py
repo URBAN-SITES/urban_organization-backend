@@ -34,11 +34,11 @@ class StatusTests(KanbanTestCase):
     def test_delete_rules(self):
         ids = self.status_ids(self.sector_id)
         self.make_task(self.sector_id)
-        res = self.client.delete(f"{self.url}{ids['To do']}/")
+        res = self.client.delete(f"{self.url}{ids['A fazer']}/")
         self.assertEqual(res.status_code, 400)  # has tasks
-        res = self.client.delete(f"{self.url}{ids['Done']}/")
+        res = self.client.delete(f"{self.url}{ids['Concluído']}/")
         self.assertEqual(res.status_code, 400)  # last done column
-        res = self.client.delete(f"{self.url}{ids['In progress']}/")
+        res = self.client.delete(f"{self.url}{ids['Em andamento']}/")
         self.assertEqual(res.status_code, 204)
 
     def test_changing_category_keeps_completed_at_coherent(self):
@@ -53,7 +53,7 @@ class StatusTests(KanbanTestCase):
         self.assertIsNotNone(Task.objects.get(id=task["id"]).completed_at)
         self.client.patch(f"{self.url}{extra['id']}/", {"category": "todo"})
         self.assertIsNone(Task.objects.get(id=task["id"]).completed_at)
-        self.assertIn("Done", ids)
+        self.assertIn("Concluído", ids)
 
 
 class TaskTests(KanbanTestCase):
@@ -72,17 +72,17 @@ class TaskTests(KanbanTestCase):
     def test_create_defaults_to_first_todo_column_and_appends(self):
         first = self.make_task(self.sector_id)
         second = self.make_task(self.sector_id)
-        self.assertEqual(first["status_id"], self.ids["To do"])
+        self.assertEqual(first["status_id"], self.ids["A fazer"])
         self.assertEqual((first["position"], second["position"]), (0, 1))
         self.assertIsNone(first["completed_at"])
 
     def test_create_in_done_column_is_completed(self):
-        task = self.make_task(self.sector_id, status=self.ids["Done"])
+        task = self.make_task(self.sector_id, status=self.ids["Concluído"])
         self.assertIsNotNone(task["completed_at"])
 
     def test_status_must_belong_to_the_sector(self):
         other = self.make_sector(name="Other")
-        foreign = self.status_ids(other)["Done"]
+        foreign = self.status_ids(other)["Concluído"]
         res = self.client.post(self.tasks_url, {"title": "x", "status": foreign})
         self.assertEqual(res.status_code, 400)
         task = self.make_task(self.sector_id)
@@ -92,14 +92,14 @@ class TaskTests(KanbanTestCase):
         a = self.make_task(self.sector_id, title="A")
         b = self.make_task(self.sector_id, title="B")
         c = self.make_task(self.sector_id, title="C")
-        done = self.move(a["id"], "Done").json()
+        done = self.move(a["id"], "Concluído").json()
         self.assertIsNotNone(done["completed_at"])
-        again = self.move(a["id"], "Done").json()  # stays done, keeps the date
+        again = self.move(a["id"], "Concluído").json()  # stays done, keeps the date
         self.assertEqual(again["completed_at"], done["completed_at"])
-        back = self.move(a["id"], "To do", position=1).json()
+        back = self.move(a["id"], "A fazer", position=1).json()
         self.assertIsNone(back["completed_at"])
         order = list(
-            Task.objects.filter(status_id=self.ids["To do"]).values_list(
+            Task.objects.filter(status_id=self.ids["A fazer"]).values_list(
                 "title", flat=True
             )
         )
@@ -108,15 +108,17 @@ class TaskTests(KanbanTestCase):
         self.assertEqual(c["position"], 2)
 
     def test_wip_limit(self):
-        Status.objects.filter(id=self.ids["In progress"]).update(wip_limit=1)
+        Status.objects.filter(id=self.ids["Em andamento"]).update(wip_limit=1)
         a = self.make_task(self.sector_id)
         b = self.make_task(self.sector_id)
-        self.assertEqual(self.move(a["id"], "In progress").status_code, 200)
-        self.assertEqual(self.move(b["id"], "In progress").status_code, 400)
+        self.assertEqual(self.move(a["id"], "Em andamento").status_code, 200)
+        self.assertEqual(self.move(b["id"], "Em andamento").status_code, 400)
         # reordering inside the full column is still allowed
-        self.assertEqual(self.move(a["id"], "In progress", position=0).status_code, 200)
+        self.assertEqual(
+            self.move(a["id"], "Em andamento", position=0).status_code, 200
+        )
         res = self.client.post(
-            self.tasks_url, {"title": "x", "status": self.ids["In progress"]}
+            self.tasks_url, {"title": "x", "status": self.ids["Em andamento"]}
         )
         self.assertEqual(res.status_code, 400)
 
@@ -124,12 +126,12 @@ class TaskTests(KanbanTestCase):
         task = self.make_task(self.sector_id)
         res = self.client.patch(
             f"{API}tasks/{task['id']}/",
-            {"title": "New", "priority": "urgent", "status": self.ids["Done"]},
+            {"title": "New", "priority": "urgent", "status": self.ids["Concluído"]},
         )
         self.assertEqual(
             (res.json()["title"], res.json()["priority"]), ("New", "urgent")
         )
-        self.assertEqual(res.json()["status_id"], self.ids["To do"])
+        self.assertEqual(res.json()["status_id"], self.ids["A fazer"])
         self.assertIsNone(res.json()["completed_at"])
 
     def test_roles_gate_task_writes(self):
@@ -141,7 +143,8 @@ class TaskTests(KanbanTestCase):
         res = self.member_client.patch(f"{API}tasks/{task['id']}/", {"title": "x"})
         self.assertEqual(res.status_code, 403)
         self.assertEqual(
-            self.move(task["id"], "Done", client=self.member_client).status_code, 403
+            self.move(task["id"], "Concluído", client=self.member_client).status_code,
+            403,
         )
         outsider = client_for(make_user("out@a.com"))
         self.assertEqual(outsider.get(f"{API}tasks/{task['id']}/").status_code, 404)
@@ -196,7 +199,7 @@ class TaskTests(KanbanTestCase):
             assignee=str(self.member.id),
         )
         done = self.make_task(
-            self.sector_id, title="Ship", status=self.ids["Done"], due_date=past
+            self.sector_id, title="Ship", status=self.ids["Concluído"], due_date=past
         )
         sub = self.make_task(self.sector_id, title="Sub", parent=soon["id"])
 
@@ -205,7 +208,7 @@ class TaskTests(KanbanTestCase):
             return {task["id"] for task in results}
 
         self.assertEqual(ids("search=login"), {late["id"]})
-        self.assertEqual(ids(f"status={self.ids['Done']}"), {done["id"]})
+        self.assertEqual(ids(f"status={self.ids['Concluído']}"), {done["id"]})
         self.assertEqual(ids("priority=high"), {soon["id"]})
         self.assertEqual(ids(f"assignee={self.member.id}"), {soon["id"]})
         self.assertEqual(

@@ -28,7 +28,7 @@ class DashboardTests(KanbanTestCase):
         )
         finished = self.make_task(sector, title="Finished", assignee=str(self.owner.id))
         res = self.client.post(
-            f"{API}tasks/{finished['id']}/move/", {"status": statuses["Done"]}
+            f"{API}tasks/{finished['id']}/move/", {"status": statuses["Concluído"]}
         )
         self.assertEqual(res.status_code, 200, res.content)
 

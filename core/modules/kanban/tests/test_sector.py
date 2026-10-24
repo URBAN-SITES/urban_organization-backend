@@ -24,9 +24,9 @@ class SectorTests(KanbanTestCase):
         self.assertEqual(
             [(s.name, s.category, s.position) for s in columns],
             [
-                ("To do", "todo", 0),
-                ("In progress", "in_progress", 1),
-                ("Done", "done", 2),
+                ("A fazer", "todo", 0),
+                ("Em andamento", "in_progress", 1),
+                ("Concluído", "done", 2),
             ],
         )
 
@@ -164,7 +164,7 @@ class SectorTests(KanbanTestCase):
         self.assertEqual(
             empty, {"total": 0, "completed": 0, "overdue": 0, "percent": 0.0}
         )
-        done = self.status_ids(sector_id)["Done"]
+        done = self.status_ids(sector_id)["Concluído"]
         yesterday = (timezone.localdate() - timedelta(days=1)).isoformat()
         self.make_task(sector_id, due_date=yesterday)
         self.make_task(sector_id, status=done, due_date=yesterday)

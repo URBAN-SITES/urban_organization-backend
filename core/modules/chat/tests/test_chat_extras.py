@@ -137,7 +137,7 @@ class MentionAndTaskTests(ChatTestCase):
         card = res.json()["task"]
         self.assertEqual(
             (card["title"], card["status"], card["completed"]),
-            ("Landing page", "To do", False),
+            ("Landing page", "A fazer", False),
         )
         listed = self.clients[self.bob].get(
             f"{API}chat/channels/{self.general_id}/messages/"
