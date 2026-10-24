@@ -8,6 +8,7 @@ from core.models.password_reset import PasswordReset
 from core.models.user import User, UserSession
 from core.modules.calendar_sync import admin as _calendar_sync_admin  # noqa: F401
 from core.modules.chat import admin as _chat_admin  # noqa: F401
+from core.modules.crowdfunding import admin as _crowdfunding_admin  # noqa: F401
 from core.modules.invitations import admin as _invitations_admin  # noqa: F401
 from core.modules.kanban import admin as _kanban_admin  # noqa: F401
 from core.modules.notifications import admin as _notifications_admin  # noqa: F401

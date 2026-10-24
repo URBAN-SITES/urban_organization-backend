@@ -65,7 +65,7 @@ class CalendarTests(InsightsTestCase):
 
         flags = {t["title"]: t["in_google"] for t in res.json()}
         self.assertEqual(flags, {"Synced": True, "Plain": False})
-        self.assertEqual(res.json()[0]["sector_id"], str(self.sector["id"]))
+        self.assertEqual(res.json()[0]["sector_id"], str(self.sector))
 
     def test_hidden_from_people_without_access_to_the_sector(self):
         self.task("Secret", days=1)

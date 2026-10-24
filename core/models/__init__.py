@@ -8,6 +8,8 @@ from core.modules.calendar_sync.models.calendar import (
 from core.modules.chat.models.chat import ChatChannel as ChatChannel
 from core.modules.chat.models.chat import ChatChannelMember as ChatChannelMember
 from core.modules.chat.models.chat import ChatMessage as ChatMessage
+from core.modules.crowdfunding.models.campaign import Campaign as Campaign
+from core.modules.crowdfunding.models.campaign import Contribution as Contribution
 from core.modules.invitations.models.invite import (
     OrganizationInvite as OrganizationInvite,
 )

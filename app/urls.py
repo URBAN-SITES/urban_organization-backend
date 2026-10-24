@@ -141,6 +141,7 @@ route_core = [
     path("", include("core.modules.kanban.urls")),
     path("", include("core.modules.chat.urls")),
     path("", include("core.modules.search.urls")),
+    path("", include("core.modules.crowdfunding.urls")),
     path("integrations/google/", include("core.modules.calendar_sync.urls")),
     path("qrcode/", QRCodeView.as_view(), name="qrcode"),
     path("users/me/", UserMeView.as_view(), name="me"),
