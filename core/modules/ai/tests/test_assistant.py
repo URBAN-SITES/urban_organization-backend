@@ -8,6 +8,7 @@ from google.genai import types
 from google.genai.errors import APIError
 from rest_framework.exceptions import ValidationError
 
+from core.modules.ai.prompts.assistant import ASSISTANT_INSTRUCTIONS
 from core.modules.ai.services.assistant import AssistantService
 from core.modules.kanban.models.task import Task
 from core.modules.kanban.tests.helpers import KanbanTestCase
@@ -59,6 +60,21 @@ class AssistantTests(KanbanTestCase):
         self.assertEqual(response.data["answer"], "Olá!")
         self.assertEqual(response.data["actions"], [])
         self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_system_instruction_restricts_answers_to_inceptum_domain(self, client):
+        client.return_value.models.generate_content.return_value = reply(
+            "Posso ajudar com o Inceptum."
+        )
+        AssistantService.ask(self.owner, "Qual é a capital da França?")
+        system = client.return_value.models.generate_content.call_args.kwargs[
+            "config"
+        ].system_instruction
+        self.assertIn("Responda somente dentro desse domínio", system)
+        self.assertIn("não forneça a informação solicitada", system)
+        self.assertIn("Não use ferramentas para", system)
+        self.assertIn("pedidos fora do domínio", system)
+        self.assertIn("português brasileiro", system)
+        self.assertEqual(system.count(ASSISTANT_INSTRUCTIONS.strip()), 1)
 
     def test_discovery_create_and_answer_with_real_database_action(self, client):
         responses = [

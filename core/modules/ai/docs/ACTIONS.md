@@ -5,6 +5,13 @@ calling. Authentication, CSRF and subscriber requirements are unchanged. The
 existing `{ "prompt": "..." }` request and `answer` response remain supported.
 The PDF analysis endpoint remains independent and has no action tools.
 
+The assistant only answers within the Inceptum domain: its features, project,
+task and event management, Kanban, teams, planning, productivity and practices
+applied to work organized in the platform. It politely refuses unrelated content
+without supplying the requested outside-domain answer or invoking tools. It uses
+Brazilian Portuguese unless the user explicitly asks for another language; that
+preference does not expand the allowed subject matter.
+
 ## Supported capabilities
 
 The explicit registry in `services/actions.py` contains 94 actions:
