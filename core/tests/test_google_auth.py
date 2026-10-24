@@ -42,3 +42,12 @@ class GoogleLoginTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("refresh_token", response.cookies)
+
+    def test_login_body_does_not_expose_the_tokens(self):
+        User.objects.create_user("a@a.com", "S3cure-pass!", name="A")
+        response = self.client.post(
+            "/api/v1/login/", {"email": "a@a.com", "password": "S3cure-pass!"}
+        )
+        self.assertEqual(list(response.json()), ["detail"])
+        self.assertIn("access_token", response.cookies)
+        self.assertIn("refresh_token", response.cookies)

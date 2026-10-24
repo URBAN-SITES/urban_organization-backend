@@ -221,7 +221,6 @@ For `pdm.lock` conflicts, keep either side and run `pdm lock` again.
 | Issue | Where | Fix |
 |-------|-------|-----|
 | Token refresh crashes (500): `UserSession` has no `updated_at` | `SessionService.update_session_jtis` | Use `"last_activity"` in `update_fields` |
-| Login response body also returns the tokens, defeating HttpOnly cookies | `LoginView` | Remove `"data": token_data` |
 | `prod.py` on `main` has empty `DATABASES` / `ALLOWED_HOSTS` | `app/settings/prod.py` | Merge `feat/docker` |
 | `"ATOMIC_REQUESTS "` has a trailing space, so it is ignored | `dev.py` | Remove the space |
 | Models in `core/models/` beyond `User` are registered only because `admin.py` imports them | `core/models/__init__.py` | Import new models there if a worker/script needs them |

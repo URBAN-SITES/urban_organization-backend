@@ -95,9 +95,8 @@ class LoginView(APIView):
             ip_address=request.META.get("REMOTE_ADDR"),
         )
 
-        response = Response(
-            {"detail": MSG_LOGIN_SUCCESSFUL, "data": token_data}, status.HTTP_200_OK
-        )
+        # tokens travel only in the HttpOnly cookies, never in the body
+        response = Response({"detail": MSG_LOGIN_SUCCESSFUL}, status.HTTP_200_OK)
         set_auth_cookies(response, token_data)
         csrf.get_token(request)
 
