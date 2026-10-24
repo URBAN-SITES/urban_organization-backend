@@ -170,3 +170,24 @@ conversation ownership and the existing PDF/subscriber behavior.
 When the model needs the user to pick among a few options, the answer's last line
 `OPCOES: a | b | c` is removed from `answer` and returned as `choices` (max 6, 80
 chars each). Picking one is an ordinary new message; choices carry no authority.
+
+## Task drafts (create with confirmation)
+
+The assistant never creates a task directly. For "crie uma tarefa..." it calls
+`task_draft`, which **writes nothing** and returns a draft: title, priority, `due_date`,
+`due_time`, the resolved sector and people, `sector_options`, `people_options`,
+`unresolved` (ambiguous, no-access or unknown names, with candidates) and `missing`.
+The UI shows it as an editable card (sector/priority/date/time/people selectors).
+
+- `GET /api/v1/ai/tasks/options/?sector_id=` lists people who can be assigned in a sector
+  (used when the user changes the sector in the card).
+- `POST /api/v1/ai/tasks/` creates the confirmed draft:
+  `{request_id, sector_id, title, description, priority, due_date, due_time, assignee_ids}`.
+  People are IDs, re-checked against sector access. Same `request_id` returns the first
+  task (HTTP 200) instead of a second one. Both endpoints require authentication and
+  an active subscription.
+
+The board stores only the deadline **date** and a single assignee. The confirmed task
+therefore gets the time as `Horário: ...` and extra people as `Também envolvidos: ...`
+in its description, and the response carries `notes` explaining it. A real time field
+or multiple assignees would need a Kanban model migration.

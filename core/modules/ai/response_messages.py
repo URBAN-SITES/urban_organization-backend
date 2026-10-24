@@ -44,8 +44,7 @@ MSG_AI_NOTE_TIME_NO_DATE = _(
     "O horário %(time)s foi registrado na descrição, mas a tarefa ficou sem data de prazo."
 )
 MSG_AI_NOTE_PEOPLE = _(
-    "A tarefa tem um único responsável (%(first)s); %(others)s ficou registrado na descrição como envolvido. "
-    "Ofereça criar uma tarefa separada para quem ficou de fora."
+    "A tarefa tem um único responsável (%(first)s); %(others)s ficou registrado(a) na descrição como envolvido(a)."
 )
 MSG_AI_CALENDAR_ACCESS = _(
     "Calendar access was denied. Check permissions or reconnect Google."
