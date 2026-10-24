@@ -14,6 +14,24 @@ class UserListRetrieveSerializer(BaseUserSerializer):
         fields = ("id", "name", "email", "bio", "avatar_url", "created_at")
 
 
+class UserMeSerializer(UserListRetrieveSerializer):
+    is_subscriber = serializers.BooleanField(read_only=True)
+    subscription_price = serializers.SerializerMethodField()
+
+    class Meta(UserListRetrieveSerializer.Meta):
+        fields = (
+            *UserListRetrieveSerializer.Meta.fields,
+            "is_subscriber",
+            "subscription_price",
+        )
+        read_only_fields = fields
+
+    def get_subscription_price(self, obj):
+        from core.modules.payments.services.payment import PAYMENT_AMOUNT
+
+        return str(PAYMENT_AMOUNT)
+
+
 class UserUpdateSelfSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
         fields = ("name", "bio", "avatar_url")
@@ -25,6 +43,8 @@ class UserUpdateSelfSerializer(BaseUserSerializer):
             "is_active",
             "is_staff",
             "is_superuser",
+            "is_subscriber",
+            "subscription_price",
         }
         received_fields = set(self.initial_data.keys())
 

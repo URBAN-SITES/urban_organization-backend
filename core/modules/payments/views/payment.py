@@ -1,9 +1,9 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 
 from core.modules.payments.models.payment import Payment
@@ -16,15 +16,16 @@ from core.modules.payments.serializers.payment import (
 )
 from core.modules.payments.services.payment import PaymentService
 
+PAYMENT_NOTIFICATION_URL = "https://3009.michalski.app/api/v1/payments/webhook/"
+
 
 @extend_schema(tags=["Pagamentos"])
 class PaymentPixListCreateView(ListAPIView):
-
-
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentSerializer
 
     def get_queryset(self):
+        PaymentService.sync_pending_for_user(self.request.user)
         return Payment.objects.filter(user=self.request.user)
 
     @extend_schema(summary="List my payments")
@@ -46,7 +47,7 @@ class PaymentPixListCreateView(ListAPIView):
             title=serializer.validated_data["title"],
             cpf=serializer.validated_data["cpf"],
             name=serializer.validated_data["name"],
-            notification_url=request.build_absolute_uri(reverse("v1:payments:webhook")),
+            notification_url=PAYMENT_NOTIFICATION_URL,
         )
         return Response(result, status.HTTP_201_CREATED)
 
@@ -74,7 +75,7 @@ class PaymentCardCreateView(APIView):
             installments=serializer.validated_data["installments"],
             payment_method_id=serializer.validated_data["payment_method_id"],
             issuer_id=serializer.validated_data.get("issuer_id"),
-            notification_url=request.build_absolute_uri(reverse("v1:payments:webhook")),
+            notification_url=PAYMENT_NOTIFICATION_URL,
         )
         return Response(result, status.HTTP_201_CREATED)
 
@@ -90,7 +91,12 @@ class PaymentWebhookView(APIView):
             "id"
         ) or request.query_params.get("data.id")
         if topic == "payment" and provider_payment_id:
-            PaymentService.sync_from_provider(str(provider_payment_id))
+            try:
+                PaymentService.sync_from_provider(str(provider_payment_id))
+            except APIException:
+                # Mercado Pago retries webhooks. A manual status refresh can also
+                # reconcile the payment if this attempt fails.
+                pass
         # Always return 200, otherwise Mercado Pago keeps retrying.
         return Response(status=status.HTTP_200_OK)
 

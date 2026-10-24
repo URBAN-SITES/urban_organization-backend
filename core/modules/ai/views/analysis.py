@@ -5,12 +5,13 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from core.modules.ai.permissions import IsSubscriber
 from core.modules.ai.serializers.analysis import AIAnalysisSerializer
 from core.modules.ai.services.analysis import AIAnalysisService
 
 
 class AIAnalysisView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSubscriber]
     parser_classes = [MultiPartParser]
 
     @extend_schema(

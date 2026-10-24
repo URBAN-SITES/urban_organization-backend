@@ -100,6 +100,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self) -> str:
         return f"{self.name} <{self.email}>" if self.name else self.email
 
+    @property
+    def is_subscriber(self) -> bool:
+        """Existing confirmed payments grant access; no automatic renewal is sold."""
+        from core.modules.payments.models.payment import Payment
+        from core.modules.payments.services.payment import PAYMENT_AMOUNT
+
+        return (
+            self.payments.filter(status=Payment.Status.APPROVED, amount=PAYMENT_AMOUNT)
+            .exclude(provider_payment_id="")
+            .exists()
+        )
+
     def get_full_name(self) -> str:
         return self.name.strip()
 
