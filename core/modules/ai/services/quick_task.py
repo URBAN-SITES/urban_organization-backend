@@ -93,7 +93,9 @@ def people_by_ids(sector, ids):
     for pk in ids:
         person = by_id.get(str(pk))
         if person is None:
-            raise ValidationError({"assignee_ids": str(MSG_AI_PERSON_NO_ACCESS) % {"name": pk}})
+            raise ValidationError(
+                {"assignee_ids": str(MSG_AI_PERSON_NO_ACCESS) % {"name": pk}}
+            )
         if person not in people:
             people.append(person)
     return people
@@ -103,7 +105,9 @@ def person_dict(user):
     return {"id": str(user.pk), "name": user.name or user.email}
 
 
-def build_task(user, sector_id, people, *, title, description, priority, due_date, due_time):
+def build_task(
+    user, sector_id, people, *, title, description, priority, due_date, due_time
+):
     """The single place that turns a confirmed draft into a Task (and its notes)."""
     lines, notes = [description.strip()] if description.strip() else [], []
     if due_time:
@@ -142,8 +146,14 @@ def quick_create(
     sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
     people = resolve_people(sector, assignees)
     return build_task(
-        user, sector_id, people, title=title, description=description,
-        priority=priority, due_date=due_date, due_time=due_time,
+        user,
+        sector_id,
+        people,
+        title=title,
+        description=description,
+        priority=priority,
+        due_date=due_date,
+        due_time=due_time,
     )
 
 
@@ -161,8 +171,14 @@ def create_from_draft(
     """Confirmed draft: people arrive as IDs chosen in the UI and are re-checked."""
     sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
     return build_task(
-        user, sector_id, people_by_ids(sector, assignee_ids), title=title,
-        description=description, priority=priority, due_date=due_date, due_time=due_time,
+        user,
+        sector_id,
+        people_by_ids(sector, assignee_ids),
+        title=title,
+        description=description,
+        priority=priority,
+        due_date=due_date,
+        due_time=due_time,
     )
 
 
@@ -171,7 +187,10 @@ def editable_sectors(user):
     sectors = []
     for org in OrganizationService.list_for(user):
         for sector in SectorService.list_for(user, org.pk):
-            if SectorService.effective_role(user, sector) in (Role.EDITOR, Role.MANAGER):
+            if SectorService.effective_role(user, sector) in (
+                Role.EDITOR,
+                Role.MANAGER,
+            ):
                 sectors.append(
                     {
                         "id": str(sector.pk),
@@ -217,7 +236,9 @@ def draft_task(
                 }
             )
     elif assignees:
-        unresolved = [{"query": n, "reason": "sector_needed", "candidates": []} for n in assignees]
+        unresolved = [
+            {"query": n, "reason": "sector_needed", "candidates": []} for n in assignees
+        ]
     missing = [
         label
         for label, absent in (

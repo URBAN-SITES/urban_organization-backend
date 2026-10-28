@@ -13,8 +13,7 @@ class OrganizationMemberInline(admin.TabularInline):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    readonly_fields = (
-        "id",)
+    readonly_fields = ("id",)
     list_display = ("name", "owner", "is_personal", "is_active", "created_at")
     list_filter = ("is_personal", "is_active", "created_at")
     search_fields = ("name", "owner__email")
