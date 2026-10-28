@@ -69,10 +69,10 @@ class AssistantTests(KanbanTestCase):
         system = client.return_value.models.generate_content.call_args.kwargs[
             "config"
         ].system_instruction
-        self.assertIn("Responda somente dentro desse domínio", system)
-        self.assertIn("não forneça a informação solicitada", system)
-        self.assertIn("Não use ferramentas para", system)
-        self.assertIn("pedidos fora do domínio", system)
+        self.assertIn("REGRA DE ESCOPO OBRIGATÓRIA", system)
+        self.assertIn("Não responda a absolutamente nenhum assunto externo", system)
+        self.assertIn("Não consulte nem execute ferramentas", system)
+        self.assertIn("pedidos fora do escopo", system)
         self.assertIn("português brasileiro", system)
         self.assertEqual(system.count(ASSISTANT_INSTRUCTIONS.strip()), 1)
 
