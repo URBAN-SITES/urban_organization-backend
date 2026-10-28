@@ -1,9 +1,10 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Exists, OuterRef, Q
+from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
-from core.modules.kanban.models.sector import Sector, SectorMember
+from core.modules.kanban.models.sector import Sector, SectorFavorite, SectorMember
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.response_messages import (
     MSG_SECTOR_ALREADY_MEMBER,
@@ -87,9 +88,14 @@ class SectorService:
         return sector, role
 
     @staticmethod
-    def list_for(user: User, organization_id):
+    def list_for(user: User, organization_id, archived: bool = False):
+        """Sectors the user can see; archived ones only when asked for."""
         membership = OrganizationService.get_membership(user, organization_id)
-        sectors = Sector.objects.filter(organization_id=organization_id, is_active=True)
+        sectors = Sector.objects.filter(
+            organization_id=organization_id,
+            is_active=True,
+            archived_at__isnull=not archived,
+        )
         if membership.role not in ORG_ADMINS:
             sectors = sectors.filter(
                 Q(is_private=False)
@@ -120,6 +126,46 @@ class SectorService:
         for field, value in data.items():
             setattr(sector, field, value)
         sector.save()
+        return sector
+
+    @staticmethod
+    def with_favorite(queryset, user: User):
+        return queryset.annotate(
+            is_favorite=Exists(
+                SectorFavorite.objects.filter(sector=OuterRef("pk"), user=user)
+            )
+        )
+
+    @staticmethod
+    def with_progress(queryset):
+        active = Q(tasks__is_active=True)
+        return queryset.annotate(
+            task_total=Count("tasks", filter=active, distinct=True),
+            task_done=Count(
+                "tasks",
+                filter=active & Q(tasks__completed_at__isnull=False),
+                distinct=True,
+            ),
+        )
+
+    @staticmethod
+    def set_favorite(user: User, sector_id, favorite: bool) -> Sector:
+        sector, _role = SectorService.get_sector(user, sector_id)
+        if favorite:
+            SectorFavorite.objects.get_or_create(sector=sector, user=user)
+        else:
+            SectorFavorite.objects.filter(sector=sector, user=user).delete()
+        sector.is_favorite = favorite
+        return sector
+
+    @staticmethod
+    def set_archived(user: User, sector_id, archived: bool) -> Sector:
+        sector, _role = SectorService.get_sector(user, sector_id, Role.MANAGER)
+        if archived and sector.archived_at is None:
+            sector.archived_at = timezone.now()
+        elif not archived:
+            sector.archived_at = None
+        sector.save(update_fields=["archived_at", "updated_at"])
         return sector
 
     @staticmethod

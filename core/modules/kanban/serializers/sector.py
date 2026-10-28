@@ -9,6 +9,10 @@ class SectorSerializer(serializers.ModelSerializer):
     organization_id = serializers.UUIDField(read_only=True)
     # explicit default: multipart forms would otherwise turn a missing flag into False
     is_private = serializers.BooleanField(default=True)
+    # annotated by the list/detail views; absent on plain instances
+    is_favorite = serializers.SerializerMethodField()
+    task_total = serializers.SerializerMethodField()
+    task_done = serializers.SerializerMethodField()
 
     class Meta:
         model = Sector
@@ -20,9 +24,22 @@ class SectorSerializer(serializers.ModelSerializer):
             "icon",
             "color",
             "is_private",
+            "archived_at",
+            "is_favorite",
+            "task_total",
+            "task_done",
             "created_at",
         )
-        read_only_fields = ("id", "organization_id", "created_at")
+        read_only_fields = ("id", "organization_id", "archived_at", "created_at")
+
+    def get_is_favorite(self, obj) -> bool:
+        return bool(getattr(obj, "is_favorite", False))
+
+    def get_task_total(self, obj) -> int | None:
+        return getattr(obj, "task_total", None)
+
+    def get_task_done(self, obj) -> int | None:
+        return getattr(obj, "task_done", None)
 
 
 class SectorMemberSerializer(serializers.ModelSerializer):

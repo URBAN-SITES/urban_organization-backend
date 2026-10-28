@@ -14,6 +14,11 @@ from core.modules.kanban.response_messages import (
     MSG_TASK_PARENT_INVALID,
     MSG_TASK_STATUS_CHANGED,
 )
+from core.modules.kanban.services.activity import (
+    Action,
+    ActivityService,
+    snapshot,
+)
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.notifications.services.notification import NotificationService
 from core.modules.user_settings.models.user_settings import UserSettings
@@ -74,6 +79,7 @@ class TaskService:
         )
         TaskService._apply_status(task, status)
         task.save()
+        ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
         return task
 
@@ -82,11 +88,13 @@ class TaskService:
     def update(user: User, task_id, data: dict) -> Task:
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         old_assignee = task.assignee_id
+        before, before_display = snapshot(task), ActivityService.display(task)
         if "assignee" in data:
             TaskService._check_assignee(sector, data["assignee"])
         for field, value in data.items():
             setattr(task, field, value)
         task.save()
+        ActivityService.record_changes(task, user, before, before_display)
         if task.assignee_id != old_assignee:
             TaskService._notify_assignee(user, task)
         return task
@@ -95,6 +103,7 @@ class TaskService:
     @transaction.atomic
     def delete(user: User, task_id) -> None:
         task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
+        ActivityService.record(task, user, Action.DELETED)
         task.soft_delete()
         Task.objects.filter(parent=task).update(is_active=False)
 
@@ -107,8 +116,10 @@ class TaskService:
         status_changed = status.pk != task.status_id
         if status_changed:
             TaskService._check_wip(status, task)
+        before, before_display = snapshot(task), ActivityService.display(task)
         TaskService._apply_status(task, status)
         task.save()
+        ActivityService.record_changes(task, user, before, before_display)
 
         siblings = list(
             Task.objects.filter(status=status, is_active=True)

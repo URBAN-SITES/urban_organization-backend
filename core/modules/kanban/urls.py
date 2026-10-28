@@ -42,6 +42,16 @@ urlpatterns = [
         name="sector-detail",
     ),
     path(
+        "sectors/<uuid:sector_id>/favorite/",
+        sector.SectorFavoriteView.as_view(),
+        name="sector-favorite",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/archive/",
+        sector.SectorArchiveView.as_view(),
+        name="sector-archive",
+    ),
+    path(
         "sectors/<uuid:sector_id>/progress/",
         sector.SectorProgressView.as_view(),
         name="sector-progress",
@@ -88,6 +98,11 @@ urlpatterns = [
     ),
     path("tasks/<uuid:task_id>/", task.TaskDetailView.as_view(), name="task-detail"),
     path("tasks/<uuid:task_id>/move/", task.TaskMoveView.as_view(), name="task-move"),
+    path(
+        "tasks/<uuid:task_id>/activity/",
+        task.TaskActivityListView.as_view(),
+        name="task-activity",
+    ),
     path(
         "tasks/<uuid:task_id>/checklist/",
         item.ChecklistListCreateView.as_view(),

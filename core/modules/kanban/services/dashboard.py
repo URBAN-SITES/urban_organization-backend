@@ -4,10 +4,13 @@ from django.db.models import Count
 from django.utils import timezone
 
 from core.modules.kanban.models.task import Status, Task
+from core.modules.kanban.services.activity import ActivityService
 from core.modules.kanban.services.sector import SectorService
 
 WEEKS = 6
 TODAY_LIMIT = 8
+ACTIVITY_LIMIT = 8
+FAVORITES_LIMIT = 6
 
 
 def _week_start(day):
@@ -52,7 +55,38 @@ class DashboardService:
         due_soon = mine.filter(due_date__lte=today + timedelta(days=1)).order_by(
             "due_date"
         )
+        favorites = SectorService.with_progress(
+            sectors.filter(favorites__user=user)
+        ).order_by("name")[:FAVORITES_LIMIT]
         return {
+            "active_projects": sectors.count(),
+            "in_progress": mine.filter(
+                status__category=Status.Category.IN_PROGRESS
+            ).count(),
+            "favorites": [
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "color": s.color,
+                    "task_total": s.task_total,
+                    "task_done": s.task_done,
+                }
+                for s in favorites
+            ],
+            "recent_activity": [
+                {
+                    "id": a.id,
+                    "action": a.action,
+                    "changes": a.changes,
+                    "actor_name": a.actor.name if a.actor_id else None,
+                    "task_id": a.task_id,
+                    "task_title": a.task.title,
+                    "sector_id": a.task.sector_id,
+                    "sector_name": a.task.sector.name,
+                    "created_at": a.created_at,
+                }
+                for a in ActivityService.recent(sectors, ACTIVITY_LIMIT)
+            ],
             "open_tasks": mine.count(),
             "due_this_week": mine.filter(
                 due_date__gte=week, due_date__lt=week_end
