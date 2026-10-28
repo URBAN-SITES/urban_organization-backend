@@ -10,7 +10,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 CSRF_TRUSTED_ORIGINS += [  # noqa: F405
     origin for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin
 ]
-if os.getenv("POSTGRES_HOST"):
+# "db" is the Compose service name and only resolves inside a container; a .env
+# written for Docker must not break `runserver` on the host.
+_postgres_host = os.getenv("POSTGRES_HOST")
+_in_docker = os.path.exists("/.dockerenv")
+if _postgres_host and (_in_docker or _postgres_host != "db"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
