@@ -176,12 +176,13 @@ class DomainDeliveryTests(TestCase):
         self.assertEqual(Notification.objects.count(), 1)
         self.send.assert_called_once()
 
-    def test_chat_message_without_mentions_does_not_create_push(self):
+    def test_chat_message_without_mentions_notifies_other_members(self):
+        # Since 881bd89 every channel recipient is notified, not only mentions.
         with self.captureOnCommitCallbacks(execute=True):
             ChatService.send(self.owner, self.channel.pk, "Hello")
         self.assertTrue(ChatMessage.objects.exists())
-        self.assertFalse(Notification.objects.exists())
-        self.send.assert_not_called()
+        self.assertFalse(Notification.objects.filter(user=self.owner).exists())
+        self.assertTrue(Notification.objects.filter(user=self.member).exists())
 
     def test_chat_message_and_notification_are_atomic(self):
         with patch.object(

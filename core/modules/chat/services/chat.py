@@ -270,10 +270,11 @@ class ChatService:
                     defaults={"last_read_at": timezone.now()},
                 )
                 ChatService._broadcast(channel, "chat.message", message)
+                # Same transaction: a failed notification must not leave the message.
+                ChatService._notify_recipients(user, channel, message, mentioned)
         except Exception:
             AttachmentService.discard(stored)
             raise
-        ChatService._notify_recipients(user, channel, message, mentioned)
         return message
 
     @staticmethod
