@@ -6,11 +6,11 @@ import re
 import time
 import uuid
 
+import httpx
 from django.core.cache import cache
 from django.utils import timezone
 from google.genai import types
 from google.genai.errors import APIError
-import httpx
 from rest_framework import exceptions
 
 from core.modules.ai.prompts.assistant import ASSISTANT_INSTRUCTIONS
@@ -22,10 +22,10 @@ from core.modules.ai.response_messages import (
     MSG_AI_CONFIRMED_ALL,
     MSG_AI_CONFIRMED_PARTIAL,
     MSG_AI_DECLINED,
-    MSG_AI_STUCK,
     MSG_AI_INVALID_ARGUMENTS,
     MSG_AI_INVALID_CONFIRMATION,
     MSG_AI_INVALID_CONVERSATION,
+    MSG_AI_STUCK,
     MSG_AI_UNAVAILABLE,
     MSG_AI_UNVERIFIED,
 )
@@ -82,9 +82,7 @@ def split_choices(answer):
     if not lines or not lines[-1].startswith(CHOICES_MARKER):
         return answer, []
     options = [
-        o.strip()[:80]
-        for o in lines[-1][len(CHOICES_MARKER) :].split("|")
-        if o.strip()
+        o.strip()[:80] for o in lines[-1][len(CHOICES_MARKER) :].split("|") if o.strip()
     ]
     return "\n".join(lines[:-1]).rstrip(), options[:MAX_CHOICES]
 
@@ -102,7 +100,9 @@ def compact_actions(actions):
     compact = []
     for receipt in actions:
         entry = {
-            key: receipt[key] for key in ("action", "status", "targets") if key in receipt
+            key: receipt[key]
+            for key in ("action", "status", "targets")
+            if key in receipt
         }
         result = receipt.get("result")
         if isinstance(result, dict):
@@ -265,7 +265,9 @@ class AssistantService:
             )
             cls._tool(user, call, actions, seen, [], confirmed=True)
         done = sum(1 for a in actions if a["status"] == "succeeded")
-        message = MSG_AI_CONFIRMED_ALL if done == len(actions) else MSG_AI_CONFIRMED_PARTIAL
+        message = (
+            MSG_AI_CONFIRMED_ALL if done == len(actions) else MSG_AI_CONFIRMED_PARTIAL
+        )
         return {
             "answer": str(message) % {"done": done, "total": len(actions)},
             "actions": actions,
@@ -289,7 +291,11 @@ class AssistantService:
         for org in scope:
             for sector in SectorService.list_for(user, org["id"]):
                 sectors.append(
-                    {"id": str(sector.pk), "name": sector.name, "organization_id": org["id"]}
+                    {
+                        "id": str(sector.pk),
+                        "name": sector.name,
+                        "organization_id": org["id"],
+                    }
                 )
         snapshot["sectors"] = sectors[:30]
         if context.get("sector_id"):
@@ -369,7 +375,9 @@ class AssistantService:
                     and not any(a["writes"] for a in actions)
                     and (
                         isinstance(error, httpx.TimeoutException)
-                        or (isinstance(error, APIError) and error.code in FALLBACK_CODES)
+                        or (
+                            isinstance(error, APIError) and error.code in FALLBACK_CODES
+                        )
                     )
                 ):
                     logger.warning(

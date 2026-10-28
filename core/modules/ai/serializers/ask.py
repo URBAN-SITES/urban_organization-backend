@@ -42,7 +42,9 @@ class AITaskCreateSerializer(StrictSerializer):
     request_id = serializers.UUIDField()
     sector_id = serializers.UUIDField()
     title = serializers.CharField(max_length=255)
-    description = serializers.CharField(max_length=5000, required=False, allow_blank=True)
+    description = serializers.CharField(
+        max_length=5000, required=False, allow_blank=True
+    )
     priority = serializers.ChoiceField(
         choices=("low", "medium", "high", "urgent"), default="medium"
     )

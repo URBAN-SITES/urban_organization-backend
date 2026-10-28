@@ -5,13 +5,13 @@ from unittest.mock import PropertyMock, patch
 
 from django.core.cache import cache
 from django.test import override_settings
+from rest_framework.exceptions import ValidationError
 
 from core.modules.ai.services.assistant import AssistantService
 from core.modules.ai.services.quick_task import draft_task, find_person, quick_create
 from core.modules.ai.tests.test_assistant import action, reply
 from core.modules.kanban.models.task import Task
 from core.modules.kanban.tests.helpers import KanbanTestCase
-from rest_framework.exceptions import ValidationError
 
 
 @override_settings(
@@ -70,14 +70,23 @@ class QuickTaskTests(KanbanTestCase):
                 ),
                 reply("Montei o rascunho; ajuste e confirme no cartão."),
             ]
-            result = AssistantService.ask(self.owner, "crie uma tarefa para amanhã meio dia")
+            result = AssistantService.ask(
+                self.owner, "crie uma tarefa para amanhã meio dia"
+            )
         receipt = result["actions"][0]
-        self.assertEqual((receipt["action"], receipt["status"]), ("task_draft", "succeeded"))
+        self.assertEqual(
+            (receipt["action"], receipt["status"]), ("task_draft", "succeeded")
+        )
         self.assertFalse(receipt["writes"])
         self.assertFalse(result["unverified"])
-        self.assertFalse(Task.objects.filter(title="Desenvolver fix do frontend").exists())
+        self.assertFalse(
+            Task.objects.filter(title="Desenvolver fix do frontend").exists()
+        )
         draft = receipt["result"]
-        self.assertEqual([p["name"] for p in draft["assignees"]], ["Matheus Michalski", "Nicole Souza"])
+        self.assertEqual(
+            [p["name"] for p in draft["assignees"]],
+            ["Matheus Michalski", "Nicole Souza"],
+        )
         self.assertEqual((draft["priority"], draft["due_time"]), ("high", "12:00"))
         self.assertEqual(draft["sector"]["id"], self.sector)
 
@@ -124,20 +133,27 @@ class QuickTaskTests(KanbanTestCase):
         response, body = self.confirm()
         self.assertEqual(response.status_code, 201, response.content)
         task = Task.objects.get(title="Desenvolver fix do frontend")
-        self.assertEqual((task.priority, task.due_date, task.assignee), ("high", self.tomorrow, self.matheus))
+        self.assertEqual(
+            (task.priority, task.due_date, task.assignee),
+            ("high", self.tomorrow, self.matheus),
+        )
         self.assertIn("12:00", task.description)
         self.assertIn("Nicole Souza", task.description)
         self.assertEqual(len(response.json()["notes"]), 2)
         with self.subscriber():
             again = self.client.post("/api/v1/ai/tasks/", body, format="json")
         self.assertEqual(again.status_code, 200)
-        self.assertEqual(Task.objects.filter(title="Desenvolver fix do frontend").count(), 1)
+        self.assertEqual(
+            Task.objects.filter(title="Desenvolver fix do frontend").count(), 1
+        )
 
     def test_confirming_rejects_people_without_access_and_non_subscribers(self):
         stranger = self.person("stranger@a.com", "Stranger")
         response, _ = self.confirm(assignee_ids=[str(stranger.pk)])
         self.assertEqual(response.status_code, 400)
-        self.assertFalse(Task.objects.filter(title="Desenvolver fix do frontend").exists())
+        self.assertFalse(
+            Task.objects.filter(title="Desenvolver fix do frontend").exists()
+        )
         denied = self.client.post("/api/v1/ai/tasks/", {}, format="json")
         self.assertEqual(denied.status_code, 403)
 
@@ -172,15 +188,21 @@ class QuickTaskTests(KanbanTestCase):
         text = json.dumps(error.exception.detail)
         self.assertIn("Matheus Michalski", text)
         self.assertIn("Matheus Silva", text)
-        self.assertFalse(Task.objects.filter(title="Desenvolver fix do frontend").exists())
+        self.assertFalse(
+            Task.objects.filter(title="Desenvolver fix do frontend").exists()
+        )
 
     def test_unknown_person_creates_nothing(self):
         with self.assertRaises(ValidationError):
             self.create(assignees=["zeca"])
-        self.assertFalse(Task.objects.filter(title="Desenvolver fix do frontend").exists())
+        self.assertFalse(
+            Task.objects.filter(title="Desenvolver fix do frontend").exists()
+        )
 
     def test_person_without_sector_access_is_explained(self):
         unshared = self.make_sector(name="Sem acesso")
         with self.assertRaises(ValidationError) as error:
             quick_create(self.owner, unshared, title="X", assignees=["nicole"])
-        self.assertIn("não tem acesso", json.dumps(error.exception.detail, ensure_ascii=False))
+        self.assertIn(
+            "não tem acesso", json.dumps(error.exception.detail, ensure_ascii=False)
+        )

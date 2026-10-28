@@ -142,7 +142,8 @@ class MentionAndTaskTests(ChatTestCase):
         )
         self.assertEqual(res.json()["mentions"], [])  # Bob is not in the team
         self.assertEqual(
-            list(Notification.objects.values_list("user_id", flat=True)), [self.owner.id]
+            list(Notification.objects.values_list("user_id", flat=True)),
+            [self.owner.id],
         )
 
     def test_cite_a_task_shows_a_card(self):

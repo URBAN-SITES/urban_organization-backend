@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
 from core.modules.ai.response_messages import MSG_AI_INVALID_ARGUMENTS
-from core.modules.kanban.models.task import Task
 from core.modules.chat.serializers.chat import ChatMessageWriteSerializer
+from core.modules.kanban.models.task import Task
 
 
 def validate_input(serializer_class, data, *, partial=False):
@@ -77,5 +77,6 @@ class QuickTaskSerializer(serializers.Serializer):
 
 class DraftTaskSerializer(QuickTaskSerializer):
     sector_id = serializers.UUIDField(
-        required=False, help_text="Sector UUID from workspace_snapshot; omit if unknown."
+        required=False,
+        help_text="Sector UUID from workspace_snapshot; omit if unknown.",
     )

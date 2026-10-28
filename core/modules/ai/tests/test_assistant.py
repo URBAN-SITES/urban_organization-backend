@@ -335,9 +335,12 @@ class AssistantTests(KanbanTestCase):
 
     def test_unknown_or_foreign_token_never_deletes(self, client):
         task = self.make_task(self.sector)
-        token = uuid.UUID(self.ask_delete(client, task)["confirmation_token"])
+        # A real pending deletion exists, but an unknown token must not confirm it.
+        self.ask_delete(client, task)
         with self.assertRaises(ValidationError):
-            AssistantService.ask(self.owner, "Confirmar", confirmation_token=uuid.uuid4())
+            AssistantService.ask(
+                self.owner, "Confirmar", confirmation_token=uuid.uuid4()
+            )
         self.assertTrue(Task.objects.get(pk=task["id"]).is_active)
 
     def test_new_message_cancels_pending_deletion(self, client):
@@ -354,9 +357,11 @@ class AssistantTests(KanbanTestCase):
         AssistantService.ask(
             self.owner, "Liste", context={"sector_id": uuid.UUID(self.sector)}
         )
-        text = client.return_value.models.generate_content.call_args.kwargs[
-            "contents"
-        ][0].parts[0].text
+        text = (
+            client.return_value.models.generate_content.call_args.kwargs["contents"][0]
+            .parts[0]
+            .text
+        )
         snapshot = json.loads(text)["workspace_snapshot"]
         self.assertTrue(snapshot["organizations"])
         self.assertTrue(snapshot["selected_sector_statuses"])
@@ -407,9 +412,11 @@ class AssistantTests(KanbanTestCase):
     def test_snapshot_lists_real_sectors(self, client):
         client.return_value.models.generate_content.return_value = reply("Ok")
         AssistantService.ask(self.owner, "Liste")
-        text = client.return_value.models.generate_content.call_args.kwargs[
-            "contents"
-        ][0].parts[0].text
+        text = (
+            client.return_value.models.generate_content.call_args.kwargs["contents"][0]
+            .parts[0]
+            .text
+        )
         ids = [s["id"] for s in json.loads(text)["workspace_snapshot"]["sectors"]]
         self.assertIn(self.sector, ids)
 
