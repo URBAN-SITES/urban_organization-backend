@@ -99,6 +99,7 @@ class DashboardService:
                 {
                     "id": t.id,
                     "title": t.title,
+                    "sector_id": t.sector_id,
                     "sector_name": t.sector.name,
                     "due_date": t.due_date,
                     "is_overdue": t.due_date < today,
