@@ -72,6 +72,10 @@ class SubscriberAccessTests(TestCase):
         )
         ask.assert_called_once()
         analyze.assert_not_called()
+        me = self.client.get("/api/v1/users/me/").data
+        self.assertTrue(me["has_assistant_access"])
+        self.assertFalse(me["is_subscriber"])
+        self.assertFalse(other.get("/api/v1/users/me/").data["has_assistant_access"])
 
     def test_only_confirmed_own_payment_grants_access(self):
         payment = self.payment(status="pending")
