@@ -9,11 +9,13 @@ from rest_framework.views import APIView
 
 from core.modules.kanban.models.task import Task
 from core.modules.kanban.serializers.task import (
+    TaskActivitySerializer,
     TaskCreateSerializer,
     TaskMoveSerializer,
     TaskSerializer,
     TaskUpdateSerializer,
 )
+from core.modules.kanban.services.activity import ActivityService
 from core.modules.kanban.services.sector import Role
 from core.modules.kanban.services.task import TaskService
 
@@ -128,3 +130,21 @@ class TaskMoveView(APIView):
             serializer.validated_data["position"],
         )
         return Response(TaskSerializer(task).data)
+
+
+@extend_schema(tags=["Tarefas"])
+class TaskActivityListView(ListAPIView):
+    """History of a task, newest first (paginated)."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = TaskActivitySerializer
+
+    @extend_schema(summary="List a task's change history")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        task, _sector, _role = TaskService.get_task(
+            self.request.user, self.kwargs["task_id"]
+        )
+        return ActivityService.for_task(task)

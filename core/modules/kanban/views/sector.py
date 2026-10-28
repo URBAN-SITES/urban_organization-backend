@@ -29,12 +29,23 @@ class SectorListCreateView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SectorSerializer
 
-    @extend_schema(summary="List the sectors I can see in an organization")
+    @extend_schema(
+        summary="List the sectors I can see in an organization",
+        parameters=[
+            OpenApiParameter("archived", bool, description="Only archived sectors")
+        ],
+    )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return SectorService.list_for(self.request.user, self.kwargs["organization_id"])
+        archived = self.request.query_params.get("archived") in ("1", "true")
+        sectors = SectorService.list_for(
+            self.request.user, self.kwargs["organization_id"], archived=archived
+        )
+        return SectorService.with_progress(
+            SectorService.with_favorite(sectors, self.request.user)
+        )
 
     @extend_schema(
         summary="Create a sector (organization member+); you become its manager",
@@ -59,6 +70,7 @@ class SectorDetailView(APIView):
     )
     def get(self, request, sector_id):
         sector, role = SectorService.get_sector(request.user, sector_id)
+        sector.is_favorite = sector.favorites.filter(user=request.user).exists()
         return Response({**SectorSerializer(sector).data, "my_role": role})
 
     @extend_schema(
@@ -300,3 +312,41 @@ class FileListView(APIView):
     @extend_schema(summary="Files and links attached anywhere in the organization")
     def get(self, request, organization_id):
         return Response(FileService.list_for(request.user, organization_id))
+
+
+@extend_schema(tags=["Setores"])
+class SectorFavoriteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Pin a sector for me", request=None, responses=SectorSerializer
+    )
+    def put(self, request, sector_id):
+        sector = SectorService.set_favorite(request.user, sector_id, True)
+        return Response(SectorSerializer(sector).data)
+
+    @extend_schema(summary="Unpin a sector", responses={204: None})
+    def delete(self, request, sector_id):
+        SectorService.set_favorite(request.user, sector_id, False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Setores"])
+class SectorArchiveView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Archive a sector (manager); it leaves lists but keeps its tasks",
+        request=None,
+        responses=SectorSerializer,
+    )
+    def put(self, request, sector_id):
+        sector = SectorService.set_archived(request.user, sector_id, True)
+        return Response(SectorSerializer(sector).data)
+
+    @extend_schema(
+        summary="Restore an archived sector (manager)", responses=SectorSerializer
+    )
+    def delete(self, request, sector_id):
+        sector = SectorService.set_archived(request.user, sector_id, False)
+        return Response(SectorSerializer(sector).data)

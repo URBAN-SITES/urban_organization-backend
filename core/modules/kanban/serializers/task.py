@@ -125,3 +125,12 @@ class ResourceLinkSerializer(serializers.ModelSerializer):
         model = ResourceLink
         fields = ("id", "title", "url", "created_by_id", "created_at")
         read_only_fields = ("id", "created_by_id", "created_at")
+
+
+class TaskActivitySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    action = serializers.CharField()
+    changes = serializers.JSONField()
+    actor_id = serializers.UUIDField(allow_null=True)
+    actor_name = serializers.CharField(source="actor.name", default=None)
+    created_at = serializers.DateTimeField()

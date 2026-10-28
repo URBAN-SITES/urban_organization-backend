@@ -13,6 +13,7 @@ from core.modules.crowdfunding.models.campaign import Contribution as Contributi
 from core.modules.invitations.models.invite import (
     OrganizationInvite as OrganizationInvite,
 )
+from core.modules.kanban.models.activity import TaskActivity as TaskActivity
 from core.modules.kanban.models.custom_field import CustomField as CustomField
 from core.modules.kanban.models.custom_field import (
     CustomFieldOption as CustomFieldOption,
@@ -22,6 +23,7 @@ from core.modules.kanban.models.resource_link import ResourceLink as ResourceLin
 from core.modules.kanban.models.saved_view import SavedView as SavedView
 from core.modules.kanban.models.saved_view import TaskDependency as TaskDependency
 from core.modules.kanban.models.sector import Sector as Sector
+from core.modules.kanban.models.sector import SectorFavorite as SectorFavorite
 from core.modules.kanban.models.sector import SectorMember as SectorMember
 from core.modules.kanban.models.task import ChecklistItem as ChecklistItem
 from core.modules.kanban.models.task import Comment as Comment

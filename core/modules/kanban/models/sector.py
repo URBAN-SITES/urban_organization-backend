@@ -26,6 +26,7 @@ class Sector(BaseModel):
             "False: every organization member sees it as viewer."
         ),
     )
+    archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
 
     class Meta(BaseModel.Meta):
         verbose_name = _("sector")
@@ -67,3 +68,33 @@ class SectorMember(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} @ {self.sector} ({self.role})"
+
+
+class SectorFavorite(models.Model):
+    """A sector the user pinned; shown first in the sidebar and on the dashboard."""
+
+    sector = models.ForeignKey(
+        Sector,
+        on_delete=models.CASCADE,
+        related_name="favorites",
+        verbose_name=_("sector"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favorite_sectors",
+        verbose_name=_("user"),
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("favorite sector")
+        verbose_name_plural = _("favorite sectors")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sector", "user"], name="unique_sector_favorite"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} -> {self.sector_id}"

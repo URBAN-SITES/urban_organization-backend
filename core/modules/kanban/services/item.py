@@ -9,6 +9,7 @@ from core.modules.kanban.response_messages import (
     MSG_SECTOR_ROLE_REQUIRED,
     MSG_TASK_COMMENTED,
 )
+from core.modules.kanban.services.activity import Action, ActivityService
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.kanban.services.task import TaskService
 from core.modules.organizations.models.organization import OrganizationMember
@@ -61,6 +62,7 @@ class CommentService:
     def create(user: User, task_id, content: str) -> Comment:
         task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         comment = Comment.objects.create(task=task, author=user, content=content)
+        ActivityService.record(task, user, Action.COMMENTED, {"comment": content[:140]})
         TaskService._notify_assignee(
             user,
             task,
