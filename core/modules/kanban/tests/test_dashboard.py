@@ -38,6 +38,7 @@ class DashboardTests(KanbanTestCase):
         self.assertEqual(data["overdue_title"], "Late")
         self.assertEqual(data["done_this_week"], 1)
         self.assertEqual([t["id"] for t in data["today"]][0], late["id"])
+        self.assertEqual(data["today"][0]["sector_id"], sector)
         self.assertTrue(data["today"][0]["is_overdue"])
         self.assertEqual(data["weekly_done"][-1]["done"], 1)
         self.assertEqual(data["open_by_sector"], [{"sector": "Board", "open": 2}])
