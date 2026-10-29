@@ -13,7 +13,7 @@ Nada foi mesclado em `dev` nem em `main`, nenhum PR foi aberto e não houve depl
 | Repositório | `Resenha-Coders-Hackathon/frontend-resenha` | `Resenha-Coders-Hackathon/backend-resenha` |
 | Branch de trabalho | `feat/alteracoes-pos-hackathon` | `feat/alteracoes-pos-hackathon` |
 | Criada a partir de | `dev` @ `583b6fa` (24/10/2026) | `dev` @ `881bd89` (24/10/2026) |
-| Commits na branch | 21 | 21 |
+| Commits na branch | 21 | 21 (com o do relatório e esta correção) |
 
 Todos os commits têm você (Pauloartur-23) como autor, como foi pedido em 28/10/2026.
 
