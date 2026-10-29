@@ -2,6 +2,19 @@
 
 Consulta feita em 29/10/2026. **Regra: nada pago, nem cartão cadastrado.** Os limites dos planos grátis mudam: confira de novo antes de usar.
 
+## Decisão (29/10/2026): tudo no servidor
+
+Foi escolhida a opção privada: **faster-whisper** transcreve e o **Ollama** resume, os dois no nosso servidor. Nenhum áudio ou texto sai da máquina e não há conta nem chave externa. A recomendação abaixo (Groq e Gemini) ficou registrada só como comparação.
+
+Como ligar:
+
+1. `MEETING_AI_ENABLED=true` no `.env` do worker (ver o bloco no `.env.example`).
+2. O `Dockerfile` já instala o ffmpeg. O `docker-compose.yml` sobe o serviço `ollama` e guarda os modelos em volumes.
+3. Baixe o modelo de resumo uma vez: `docker compose exec ollama ollama pull qwen2.5:7b`. O Whisper (`large-v3-turbo`) é baixado sozinho na primeira transcrição.
+4. Máquina sugerida: 4 núcleos e 12 GB de RAM livres para os dois modelos. Em máquinas menores, use `WHISPER_MODEL=small` e `OLLAMA_MODEL=qwen2.5:3b`, com resultado pior.
+
+Sem falantes por enquanto: a transcrição tem texto e horário. O `deployment/compose.prod.yml` ainda não tem o serviço `ollama`; isso entra quando o deploy for aprovado.
+
 ## O que precisamos
 
 - Transcrever as gravações da Fase 4 em **português do Brasil**.
