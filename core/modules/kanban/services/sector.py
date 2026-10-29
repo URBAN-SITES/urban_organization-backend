@@ -1,5 +1,5 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q, Value
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -88,7 +88,14 @@ class SectorService:
         return sector, role
 
     @staticmethod
-    def list_for(user: User, organization_id, archived: bool = False):
+    def list_for(
+        user: User,
+        organization_id,
+        archived: bool = False,
+        search: str = "",
+        favorite: bool = False,
+        ordering: str = "name",
+    ):
         """Sectors the user can see; archived ones only when asked for."""
         membership = OrganizationService.get_membership(user, organization_id)
         sectors = Sector.objects.filter(
@@ -102,7 +109,36 @@ class SectorService:
                 | Q(members__user=user)
                 | Q(teams__team__is_active=True, teams__team__members__user=user)
             ).distinct()
-        return sectors.order_by("name")
+        if search:
+            sectors = sectors.filter(
+                Q(name__icontains=search) | Q(description__icontains=search)
+            )
+        if favorite:
+            sectors = sectors.filter(favorites__user=user)
+        return sectors.order_by(ordering, "id")
+
+    @staticmethod
+    def with_can_manage(queryset, user: User, organization_id):
+        """Whether the user is a manager of each sector (direct, via team or org admin)."""
+        if OrganizationMember.objects.filter(
+            organization_id=organization_id, user=user, role__in=ORG_ADMINS
+        ).exists():
+            return queryset.annotate(can_manage=Value(True))
+        return queryset.annotate(
+            can_manage=Exists(
+                SectorMember.objects.filter(
+                    sector=OuterRef("pk"), user=user, role=Role.MANAGER
+                )
+            )
+            | Exists(
+                SectorTeam.objects.filter(
+                    sector=OuterRef("pk"),
+                    role=Role.MANAGER,
+                    team__is_active=True,
+                    team__members__user=user,
+                )
+            )
+        )
 
     @staticmethod
     @transaction.atomic
