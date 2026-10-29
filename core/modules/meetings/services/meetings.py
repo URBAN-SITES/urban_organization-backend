@@ -246,7 +246,7 @@ class RecordingService:
         access = MeetingService.access(user, meeting_id)
         if not access.join:
             raise PermissionDenied(MSG_MEETING_NOT_INVITED)
-        return access, access.meeting.recordings.select_related("started_by")
+        return access, access.meeting.recordings.select_related("started_by", "insight")
 
     @staticmethod
     def links(access: Access, recording: MeetingRecording) -> dict:
@@ -349,6 +349,7 @@ class LiveKitWebhookService:
         if recording is None:
             return
         state = info.get("status")
+        became_ready = False
         if state in EGRESS_ACTIVE:
             if recording.status == Status.STARTING:
                 recording.status = Status.RECORDING
@@ -363,11 +364,16 @@ class LiveKitWebhookService:
             recording.ended_at = timezone.now()
             if state in EGRESS_LIMIT:
                 recording.error = "limit_reached"
+            became_ready = True
         else:  # failed or aborted
             recording.status = Status.FAILED
             recording.error = info.get("error") or "egress_failed"
             recording.ended_at = timezone.now()
         recording.save()
+        if became_ready:
+            from core.modules.meetings.services.insights import InsightPipeline
+
+            InsightPipeline.on_recording_ready(recording)
 
     @staticmethod
     @transaction.atomic

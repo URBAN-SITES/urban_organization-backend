@@ -17,3 +17,10 @@ MSG_RECORDING_NOT_ACTIVE = _("This recording is not running.")
 MSG_RECORDING_ROOM_EMPTY = _("Join the meeting before starting the recording.")
 MSG_RECORDING_NOT_READY = _("The recording is not ready yet.")
 MSG_LIVEKIT_SIGNATURE_INVALID = _("Invalid webhook signature.")
+MSG_INSIGHTS_NOT_CONFIGURED = _(
+    "Transcription and summaries are not configured on the server."
+)
+MSG_INSIGHT_ALREADY_RUNNING = _("This recording is already being processed.")
+MSG_INSIGHT_ALREADY_DONE = _("This recording already has a transcript and summary.")
+MSG_INSIGHT_NOT_DONE = _("The summary is not ready yet.")
+MSG_INSIGHT_ACTION_INVALID = _("This suggested action does not exist.")

@@ -60,11 +60,24 @@ services:
       REDIS_URL: redis://redis:6379/0
       ALLOWED_HOSTS: localhost,127.0.0.1
       USE_HTTPS: "False"
+      OLLAMA_URL: http://ollama:11434
+      WHISPER_MODEL_DIR: /models/whisper
+    volumes:
+      - whisper_models:/models/whisper
     depends_on:
       migrate:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
 
+  # local LLM for meeting summaries; pull the model once:
+  # docker compose exec ollama ollama pull qwen2.5:7b
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+
 volumes:
   postgres_data:
+  whisper_models:
+  ollama_models:

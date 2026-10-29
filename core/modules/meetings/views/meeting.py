@@ -1,5 +1,7 @@
 import json
+from urllib.parse import quote
 
+from django.http import HttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ParseError
@@ -7,6 +9,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.modules.meetings.serializers.insight import (
+    ActionTasksResultSerializer,
+    ActionTasksSerializer,
+    InsightSerializer,
+)
 from core.modules.meetings.serializers.meeting import (
     DownloadSerializer,
     JoinResultSerializer,
@@ -17,6 +24,7 @@ from core.modules.meetings.serializers.meeting import (
     RecordingSerializer,
 )
 from core.modules.meetings.services import livekit
+from core.modules.meetings.services.insights import InsightService
 from core.modules.meetings.services.meetings import (
     LiveKitWebhookService,
     MeetingService,
@@ -201,3 +209,68 @@ class LiveKitWebhookView(APIView):
             raise ParseError() from error
         LiveKitWebhookService.handle(event)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _insight_data(insight) -> dict:
+    return InsightSerializer(
+        insight, context={"tasks": InsightService.created_tasks(insight)}
+    ).data
+
+
+@extend_schema(tags=["Reuniões"])
+class MeetingInsightView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Transcript and summary of a recording (participants)",
+        responses={200: InsightSerializer},
+    )
+    def get(self, request, meeting_id, recording_id):
+        insight = InsightService.get(request.user, meeting_id, recording_id)
+        return Response(_insight_data(insight))
+
+    @extend_schema(
+        summary="Start or retry transcription and summary (organizer or manager)",
+        request=None,
+        responses={202: InsightSerializer},
+    )
+    def post(self, request, meeting_id, recording_id):
+        insight = InsightService.process(request.user, meeting_id, recording_id)
+        return Response(_insight_data(insight), status=status.HTTP_202_ACCEPTED)
+
+
+@extend_schema(tags=["Reuniões"])
+class MeetingInsightExportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Summary and transcript as Markdown",
+        responses={(200, "text/markdown"): str},
+    )
+    def get(self, request, meeting_id, recording_id):
+        text, filename = InsightService.markdown(request.user, meeting_id, recording_id)
+        response = HttpResponse(text, content_type="text/markdown; charset=utf-8")
+        safe = filename.replace('"', "")
+        response["Content-Disposition"] = (
+            f'attachment; filename="{safe.encode("ascii", "ignore").decode()}"; '
+            f"filename*=UTF-8''{quote(safe)}"
+        )
+        return response
+
+
+@extend_schema(tags=["Reuniões"])
+class MeetingInsightTasksView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Create reviewed actions as tasks (editor); never twice",
+        request=ActionTasksSerializer,
+        responses={201: ActionTasksResultSerializer},
+    )
+    def post(self, request, meeting_id, recording_id):
+        body = ActionTasksSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        result = InsightService.create_tasks(
+            request.user, meeting_id, recording_id, body.validated_data["items"]
+        )
+        return Response(result, status=status.HTTP_201_CREATED)
