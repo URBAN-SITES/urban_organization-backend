@@ -1,7 +1,7 @@
 import logging
 
 from django.conf import settings
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from firebase_admin.exceptions import FirebaseError
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -14,6 +14,7 @@ from core.modules.notifications.models.notification import Notification
 from core.modules.notifications.response_messages import MSG_PUSH_NOT_CONFIGURED
 from core.modules.notifications.serializers.notification import (
     DeviceTokenSerializer,
+    NotificationListQuerySerializer,
     NotificationSerializer,
     SendPushSerializer,
 )
@@ -29,14 +30,19 @@ class NotificationListView(ListAPIView):
 
     @extend_schema(
         summary="List my notifications",
-        parameters=[OpenApiParameter("unread", bool, description="Only unread")],
+        parameters=[NotificationListQuerySerializer],
     )
     def get(self, request, *args, **kwargs):
+        query = NotificationListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        self.filters = query.validated_data
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        unread_only = self.request.query_params.get("unread") == "true"
-        return NotificationService.list_for(self.request.user, unread_only)
+        filters = getattr(self, "filters", {})
+        return NotificationService.list_for(
+            self.request.user, filters.get("unread", False), filters.get("kind")
+        )
 
 
 @extend_schema(tags=["Notificações"])

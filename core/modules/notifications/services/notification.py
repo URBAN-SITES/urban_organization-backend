@@ -4,6 +4,7 @@ from threading import Lock
 import firebase_admin
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from firebase_admin import credentials, messaging
 from firebase_admin.exceptions import FirebaseError
 from rest_framework.exceptions import PermissionDenied
@@ -31,6 +32,16 @@ def _firebase_app():
             return firebase_admin.initialize_app(
                 credentials.Certificate(settings.FIREBASE_CREDENTIALS)
             )
+
+
+# tipos da central de notificações, pelo "event" que cada domínio grava em data
+KIND_FILTERS = {
+    "mention": Q(data__event__in=["task.mentioned", "chat.mentioned"]),
+    "task": Q(
+        data__event__in=["task.assigned", "task.commented", "task.status_changed"]
+    ),
+    "organization": Q(data__event__startswith="organization."),
+}
 
 
 class NotificationService:
@@ -189,9 +200,13 @@ class NotificationService:
         DeviceToken.objects.filter(user=user, token=token).delete()
 
     @staticmethod
-    def list_for(user: User, unread_only: bool = False):
+    def list_for(user: User, unread_only: bool = False, kind: str | None = None):
         notifications = Notification.objects.filter(user=user)
-        return notifications.filter(is_read=False) if unread_only else notifications
+        if unread_only:
+            notifications = notifications.filter(is_read=False)
+        if kind:
+            notifications = notifications.filter(KIND_FILTERS[kind])
+        return notifications
 
     @staticmethod
     def mark_as_read(user: User, notification_id: int) -> None:

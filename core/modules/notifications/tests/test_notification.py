@@ -49,6 +49,25 @@ class NotificationApiTests(TestCase):
             self.client.get("/api/v1/notifications/?unread=true").json()["results"], []
         )
 
+    def test_filter_by_kind_server_side(self):
+        notify = NotificationService.notify
+        notify(self.user, "m", data={"event": "task.mentioned"})
+        notify(self.user, "c", data={"event": "chat.mentioned"})
+        notify(self.user, "a", data={"event": "task.assigned"})
+        notify(self.user, "o", data={"event": "organization.role_changed"})
+        notify(self.other, "x", data={"event": "task.mentioned"})
+
+        def titles(kind):
+            res = self.client.get("/api/v1/notifications/", {"kind": kind})
+            self.assertEqual(res.status_code, 200)
+            return sorted(row["title"] for row in res.json()["results"])
+
+        self.assertEqual(titles("mention"), ["c", "m"])
+        self.assertEqual(titles("task"), ["a"])
+        self.assertEqual(titles("organization"), ["o"])
+        bad = self.client.get("/api/v1/notifications/", {"kind": "spam"})
+        self.assertEqual(bad.status_code, 400)
+
     def test_register_and_unregister_device(self):
         url = "/api/v1/notifications/devices/"
         self.assertEqual(self.client.post(url, {"token": "t1"}).status_code, 204)
