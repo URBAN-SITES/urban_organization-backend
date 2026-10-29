@@ -282,6 +282,8 @@ class TaskGitHubSearchView(APIView):
 class GitHubWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    # every event comes from the provider's few IPs; the signature is the guard
+    throttle_classes = []
 
     @extend_schema(
         summary="GitHub App webhook (HMAC-SHA256 signed)",

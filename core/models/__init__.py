@@ -36,6 +36,11 @@ from core.modules.kanban.models.task import ChecklistItem as ChecklistItem
 from core.modules.kanban.models.task import Comment as Comment
 from core.modules.kanban.models.task import Status as Status
 from core.modules.kanban.models.task import Task as Task
+from core.modules.meetings.models.meeting import Meeting as Meeting
+from core.modules.meetings.models.meeting import MeetingConsent as MeetingConsent
+from core.modules.meetings.models.meeting import (
+    MeetingRecording as MeetingRecording,
+)
 from core.modules.notifications.models.notification import (
     DeviceToken as DeviceToken,
 )
