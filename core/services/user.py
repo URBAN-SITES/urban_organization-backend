@@ -126,17 +126,18 @@ class AuthService:
 class UserService:
     @staticmethod
     def get_user_by_id(target_user_id, requesting_user: User) -> User:
-        if requesting_user.is_staff or requesting_user.is_superuser:
-            return User.objects.get(pk=target_user_id)
-        return User.objects.get(
-            Q(pk=target_user_id) & (Q(is_active=True) | Q(pk=requesting_user.pk))
-        )
+        return UserService.list_users(requesting_user).get(pk=target_user_id)
 
     @staticmethod
     def list_users(requesting_user: User):
+        """Yourself and the active people who share an organization with you (staff see all)."""
         if requesting_user.is_staff or requesting_user.is_superuser:
             return User.objects.all()
-        return User.objects.filter(is_active=True)
+        shared = requesting_user.organization_memberships.values("organization_id")
+        return User.objects.filter(
+            Q(pk=requesting_user.pk)
+            | Q(is_active=True, organization_memberships__organization_id__in=shared)
+        ).distinct()
 
     @staticmethod
     def deactivate_user(requesting_user: User):

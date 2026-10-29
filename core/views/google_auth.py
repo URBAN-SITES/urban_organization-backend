@@ -19,6 +19,7 @@ from core.utils.cookies import set_auth_cookies
 class GoogleLoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_scope = "auth"
 
     @extend_schema(
         summary="Log in or sign up with Google",

@@ -16,6 +16,7 @@ dependencies = [
   "django-auditlog>=3.4.1",
   "google-genai>=2.32.0",
   "faster-whisper>=1.2.1",
+  "channels-redis>=4.3.0",
   "cloudinary>=1.46.3",
   "pandas>=3.0.6",
   "scikit-learn>=1.9.1",

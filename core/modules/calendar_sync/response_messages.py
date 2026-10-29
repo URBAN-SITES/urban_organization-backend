@@ -15,3 +15,4 @@ MSG_DRIVE_NOT_FOUND = _("File not found in your Google Drive.")
 MSG_CALENDAR_NO_DUE_DATE = _(
     "Set a due date on the task before adding it to Google Calendar."
 )
+MSG_DRIVE_FILE_TOO_LARGE = _("File too large for Drive upload (max 20 MB).")

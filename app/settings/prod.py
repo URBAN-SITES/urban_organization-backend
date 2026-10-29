@@ -25,6 +25,16 @@ DATABASES = {
     }
 }
 
+# The web process and the Celery worker are separate processes: events sent by the worker
+# (notifications, meeting updates) only reach open sockets through a shared Redis layer.
+if os.getenv("REDIS_URL"):
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [os.environ["REDIS_URL"]]},
+        }
+    }
+
 # static files served by the app itself (no nginx needed)
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")  # noqa: F405
 STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
