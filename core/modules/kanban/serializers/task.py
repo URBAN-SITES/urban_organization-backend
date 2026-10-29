@@ -170,7 +170,7 @@ class CommentSerializer(serializers.ModelSerializer):
 class CommentWriteSerializer(serializers.Serializer):
     content = serializers.CharField(max_length=5000)
     mentions = serializers.ListField(
-        child=serializers.UUIDField(), required=False, default=list, max_length=20
+        child=serializers.UUIDField(), required=False, max_length=20
     )
 
 

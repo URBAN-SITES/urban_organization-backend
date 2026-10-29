@@ -108,7 +108,11 @@ class CommentDetailView(APIView):
         serializer = CommentWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         comment = CommentService.update(
-            request.user, task_id, comment_id, serializer.validated_data["content"]
+            request.user,
+            task_id,
+            comment_id,
+            serializer.validated_data["content"],
+            serializer.validated_data.get("mentions"),
         )
         return Response(CommentSerializer(comment).data)
 

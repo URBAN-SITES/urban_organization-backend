@@ -110,13 +110,22 @@ class CommentService:
             )
 
     @staticmethod
-    def update(user: User, task_id, comment_id, content: str) -> Comment:
-        task, _sector, _role = TaskService.get_task(user, task_id)
+    @transaction.atomic
+    def update(user: User, task_id, comment_id, content: str, mentions=None) -> Comment:
+        task, sector, _role = TaskService.get_task(user, task_id)
         comment = CommentService._get(task, comment_id)
         if comment.author_id != user.pk:
             raise PermissionDenied(MSG_SECTOR_ROLE_REQUIRED)
         comment.content = content
         comment.save(update_fields=["content"])
+        if mentions is not None:
+            mentioned = set(mentions)
+            if mentioned - SectorService.participant_ids(sector):
+                raise ValidationError({"mentions": [MSG_COMMENT_MENTION_INVALID]})
+            before = set(comment.mentions.values_list("id", flat=True))
+            comment.mentions.set(mentioned)
+            # só quem entrou agora recebe aviso
+            CommentService._notify_mentions(user, task, comment, mentioned - before)
         return comment
 
     @staticmethod

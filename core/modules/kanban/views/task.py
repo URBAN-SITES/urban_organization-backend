@@ -31,8 +31,9 @@ class TaskFilter(django_filters.FilterSet):
         model = Task
         fields = {
             "status": ["exact"],
-            "assignee": ["exact"],
-            "priority": ["exact"],
+            "assignee": ["exact", "isnull"],
+            "priority": ["exact", "in"],
+            "due_date": ["isnull"],
             "parent": ["exact", "isnull"],
         }
 
@@ -60,7 +61,8 @@ class TaskListCreateView(ListAPIView):
     @extend_schema(
         summary="List/search/filter the tasks of a sector",
         description=(
-            "Filters: status, assignee, priority, label, parent, parent__isnull, "
+            "Filters: status, assignee, assignee__isnull, priority, priority__in "
+            "(comma separated), label, parent, parent__isnull, due_date__isnull, "
             "due_before, due_after, overdue, completed. `search` matches title and "
             "description."
         ),
