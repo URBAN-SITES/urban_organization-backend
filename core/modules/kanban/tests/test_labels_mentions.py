@@ -126,6 +126,20 @@ class MentionTests(KanbanTestCase):
         self.assertEqual(res.status_code, 201)
         self.assertFalse(Notification.objects.filter(user=self.owner).exists())
 
+    def test_edit_keeps_mentions_unless_sent_and_notifies_only_new(self):
+        sector = self.make_sector()
+        self.share_sector(sector, self.member, "viewer")
+        task = self.make_task(sector)
+        member = [str(self.member.id)]
+        comment = self.comment(task["id"], content="@User", mentions=member).json()
+        url = f"{API}tasks/{task['id']}/comments/{comment['id']}/"
+        res = self.client.patch(url, {"content": "@User ok"}, format="json")
+        self.assertEqual(len(res.json()["mentions"]), 1)
+        self.client.patch(url, {"content": "@User", "mentions": member}, format="json")
+        self.assertEqual(Notification.objects.filter(user=self.member).count(), 1)
+        res = self.client.patch(url, {"content": "x", "mentions": []}, format="json")
+        self.assertEqual(res.json()["mentions"], [])
+
 
 class SectorPeopleTests(KanbanTestCase):
     def test_lists_everyone_with_access(self):
@@ -142,4 +156,26 @@ class SectorPeopleTests(KanbanTestCase):
         outsider = client_for(make_user("out@a.com"))
         self.assertEqual(
             outsider.get(f"{API}sectors/{sector}/people/").status_code, 404
+        )
+
+
+class TaskServerFilterTests(KanbanTestCase):
+    def titles(self, sector, **params):
+        res = self.client.get(f"{API}sectors/{sector}/tasks/", params)
+        self.assertEqual(res.status_code, 200, res.content)
+        return sorted(t["title"] for t in res.json()["results"])
+
+    def test_unassigned_undated_and_priority_set(self):
+        sector = self.make_sector()
+        self.make_task(
+            sector, title="Mine", assignee=str(self.owner.id), due_date="2030-01-01"
+        )
+        self.make_task(sector, title="Loose", priority="urgent")
+        self.make_task(sector, title="High", priority="high", due_date="2030-01-02")
+        self.assertEqual(
+            self.titles(sector, assignee__isnull="true"), ["High", "Loose"]
+        )
+        self.assertEqual(self.titles(sector, due_date__isnull="true"), ["Loose"])
+        self.assertEqual(
+            self.titles(sector, priority__in="high,urgent"), ["High", "Loose"]
         )
