@@ -5,7 +5,7 @@
 groups = ["default", "dev", "lint", "types"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.1"
-content_hash = "sha256:d1e708bcf3bf26e4f1716ac567e4bded5f0d553fe5dd045fff389677224da082"
+content_hash = "sha256:4b19992095ba800912d4aaaeaa4a0357b21aaf905a28d68c236b7c681fc0e123"
 
 [[metadata.targets]]
 requires_python = ">=3.14"
@@ -325,6 +325,23 @@ dependencies = [
 files = [
     {file = "channels-4.3.2-py3-none-any.whl", hash = "sha256:fef47e9055a603900cf16cef85f050d522d9ac4b3daccf24835bd9580705c176"},
     {file = "channels-4.3.2.tar.gz", hash = "sha256:f2bb6bfb73ad7fb4705041d07613c7b4e69528f01ef8cb9fb6c21d9295f15667"},
+]
+
+[[package]]
+name = "channels-redis"
+version = "4.3.0"
+requires_python = ">=3.9"
+summary = "Redis-backed ASGI channel layer implementation"
+groups = ["default"]
+dependencies = [
+    "asgiref<4,>=3.9.1",
+    "channels>=4.2.2",
+    "msgpack~=1.0",
+    "redis>=4.6",
+]
+files = [
+    {file = "channels_redis-4.3.0-py3-none-any.whl", hash = "sha256:48f3e902ae2d5fef7080215524f3b4a1d3cea4e304150678f867a1a822c0d9f5"},
+    {file = "channels_redis-4.3.0.tar.gz", hash = "sha256:740ee7b54f0e28cf2264a940a24453d3f00526a96931f911fcb69228ef245dd2"},
 ]
 
 [[package]]

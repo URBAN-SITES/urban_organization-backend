@@ -4,6 +4,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from core.modules.payments.models.payment import Payment
@@ -83,6 +84,9 @@ class PaymentCardCreateView(APIView):
 class PaymentWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    # its own generous bucket: the provider's few IPs must not share the anonymous limit
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "webhook"
 
     @extend_schema(summary="Mercado Pago webhook", request=None, responses={200: None})
     def post(self, request):

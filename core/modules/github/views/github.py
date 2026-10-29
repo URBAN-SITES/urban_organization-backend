@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from core.modules.github.models.github import GitHubConnection, GitHubIdentity
@@ -282,8 +283,9 @@ class TaskGitHubSearchView(APIView):
 class GitHubWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
-    # every event comes from the provider's few IPs; the signature is the guard
-    throttle_classes = []
+    # its own generous bucket: the provider's few IPs must not share the anonymous limit
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "webhook"
 
     @extend_schema(
         summary="GitHub App webhook (HMAC-SHA256 signed)",

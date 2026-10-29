@@ -158,6 +158,8 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "core.authenticate.CustomAuthentication",
     ],
+    # public endpoints (login, webhooks, docs...) opt out with AllowAny explicitly
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # request.version comes from the URL namespace ("v1"); add "v2" when needed
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
@@ -177,9 +179,12 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
-        "user": "1000/hour",
+        # one open meeting summary polls every 5 s (720/h); 1000/h blocked normal use
+        "user": "5000/hour",
         # login and one-time-code endpoints (brute-force protection)
         "auth": "10/minute",
+        # signed provider callbacks; caps floods of forged calls per IP
+        "webhook": "600/minute",
     },
 }
 SIMPLE_JWT = {
