@@ -1,19 +1,23 @@
 from django.db import transaction
 from django.db.models import Max
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.task import ChecklistItem, Comment
 from core.modules.kanban.response_messages import (
+    MSG_COMMENT_MENTION_INVALID,
     MSG_SECTOR_ROLE_REQUIRED,
     MSG_TASK_COMMENTED,
+    MSG_TASK_MENTIONED,
 )
 from core.modules.kanban.services.activity import Action, ActivityService
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.kanban.services.task import TaskService
+from core.modules.notifications.services.notification import NotificationService
 from core.modules.organizations.models.organization import OrganizationMember
 from core.modules.organizations.services.organization import OrganizationService
+from core.modules.user_settings.models.user_settings import UserSettings
 
 
 class ChecklistService:
@@ -55,13 +59,23 @@ class CommentService:
     @staticmethod
     def list_for(user: User, task_id):
         task, _sector, _role = TaskService.get_task(user, task_id)
-        return Comment.objects.filter(task=task).select_related("author")
+        return (
+            Comment.objects.filter(task=task)
+            .select_related("author")
+            .prefetch_related("mentions")
+        )
 
     @staticmethod
     @transaction.atomic
-    def create(user: User, task_id, content: str) -> Comment:
-        task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
+    def create(user: User, task_id, content: str, mentions=()) -> Comment:
+        task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
+        mentioned = set(mentions)
+        if mentioned - SectorService.participant_ids(sector):
+            raise ValidationError({"mentions": [MSG_COMMENT_MENTION_INVALID]})
         comment = Comment.objects.create(task=task, author=user, content=content)
+        if mentioned:
+            comment.mentions.set(mentioned)
+            CommentService._notify_mentions(user, task, comment, mentioned)
         ActivityService.record(task, user, Action.COMMENTED, {"comment": content[:140]})
         TaskService._notify_assignee(
             user,
@@ -72,6 +86,28 @@ class CommentService:
             preference="app_comments",
         )
         return comment
+
+    @staticmethod
+    def _notify_mentions(author: User, task, comment: Comment, user_ids: set) -> None:
+        muted = set(
+            UserSettings.objects.filter(
+                user_id__in=user_ids, app_comments=False
+            ).values_list("user_id", flat=True)
+        )
+        for person in User.objects.filter(id__in=user_ids - muted, is_active=True):
+            if person.pk == author.pk:
+                continue
+            NotificationService.notify(
+                person,
+                str(MSG_TASK_MENTIONED),
+                comment.content[:200],
+                {
+                    "event": "task.mentioned",
+                    "task_id": str(task.pk),
+                    "sector_id": str(task.sector_id),
+                    "organization_id": str(task.sector.organization_id),
+                },
+            )
 
     @staticmethod
     def update(user: User, task_id, comment_id, content: str) -> Comment:

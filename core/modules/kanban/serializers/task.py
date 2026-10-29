@@ -2,8 +2,26 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from core.models.user import User
+from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.task import ChecklistItem, Comment, Status, Task
+
+
+class LabelSerializer(serializers.ModelSerializer):
+    color = serializers.RegexField(
+        r"^#[0-9a-fA-F]{6}$", max_length=7, required=False, allow_blank=True
+    )
+
+    class Meta:
+        model = Label
+        fields = ("id", "name", "color")
+        read_only_fields = ("id",)
+
+
+class PersonSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    email = serializers.EmailField()
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -21,6 +39,9 @@ class TaskSerializer(serializers.ModelSerializer):
     checklist_total = serializers.SerializerMethodField()
     checklist_done = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
+    subtask_total = serializers.SerializerMethodField()
+    subtask_done = serializers.SerializerMethodField()
+    labels = LabelSerializer(many=True, read_only=True)
 
     class Meta:
         model = Task
@@ -42,6 +63,9 @@ class TaskSerializer(serializers.ModelSerializer):
             "checklist_total",
             "checklist_done",
             "comment_count",
+            "subtask_total",
+            "subtask_done",
+            "labels",
             "created_at",
         )
         read_only_fields = fields
@@ -61,6 +85,18 @@ class TaskSerializer(serializers.ModelSerializer):
         count = getattr(task, "comment_count", None)
         return task.comments.count() if count is None else count
 
+    def get_subtask_total(self, task) -> int:
+        total = getattr(task, "subtask_total", None)
+        return task.subtasks.filter(is_active=True).count() if total is None else total
+
+    def get_subtask_done(self, task) -> int:
+        done = getattr(task, "subtask_done", None)
+        if done is None:
+            return task.subtasks.filter(
+                is_active=True, completed_at__isnull=False
+            ).count()
+        return done
+
     def get_is_overdue(self, task) -> bool:
         return bool(
             task.due_date
@@ -74,9 +110,20 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         queryset=User.objects.filter(is_active=True), allow_null=True, required=False
     )
 
+    label_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, max_length=20
+    )
+
     class Meta:
         model = Task
-        fields = ("title", "description", "priority", "due_date", "assignee")
+        fields = (
+            "title",
+            "description",
+            "priority",
+            "due_date",
+            "assignee",
+            "label_ids",
+        )
 
 
 class TaskCreateSerializer(TaskUpdateSerializer):
@@ -104,18 +151,27 @@ class ChecklistItemSerializer(serializers.ModelSerializer):
         extra_kwargs = {"position": {"required": False}}
 
 
+class CommentMentionSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+
+
 class CommentSerializer(serializers.ModelSerializer):
     author_id = serializers.UUIDField(read_only=True)
     author_name = serializers.CharField(source="author.name", read_only=True)
+    mentions = CommentMentionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Comment
-        fields = ("id", "author_id", "author_name", "content", "created_at")
-        read_only_fields = ("id", "author_id", "author_name", "created_at")
+        fields = ("id", "author_id", "author_name", "content", "mentions", "created_at")
+        read_only_fields = fields
 
 
 class CommentWriteSerializer(serializers.Serializer):
-    content = serializers.CharField()
+    content = serializers.CharField(max_length=5000)
+    mentions = serializers.ListField(
+        child=serializers.UUIDField(), required=False, default=list, max_length=20
+    )
 
 
 class ResourceLinkSerializer(serializers.ModelSerializer):

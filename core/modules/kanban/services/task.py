@@ -19,6 +19,7 @@ from core.modules.kanban.services.activity import (
     ActivityService,
     snapshot,
 )
+from core.modules.kanban.services.label import LabelService
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.notifications.services.notification import NotificationService
 from core.modules.user_settings.models.user_settings import UserSettings
@@ -44,7 +45,18 @@ class TaskService:
         return (
             Task.objects.filter(sector=sector, is_active=True)
             .select_related("status", "assignee", "owner")
+            .prefetch_related("labels")
             .annotate(
+                subtask_total=Count(
+                    "subtasks", filter=Q(subtasks__is_active=True), distinct=True
+                ),
+                subtask_done=Count(
+                    "subtasks",
+                    filter=Q(
+                        subtasks__is_active=True, subtasks__completed_at__isnull=False
+                    ),
+                    distinct=True,
+                ),
                 checklist_total=Count("checklist_items", distinct=True),
                 checklist_done=Count(
                     "checklist_items",
@@ -59,6 +71,8 @@ class TaskService:
     @transaction.atomic
     def create(user: User, sector_id, data: dict) -> Task:
         sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
+        label_ids = data.pop("label_ids", None)
+        labels = LabelService.resolve(sector, label_ids) if label_ids else []
         status = data.pop("status", None) or TaskService._default_status(sector)
         TaskService._check_status(sector, status)
         TaskService._check_assignee(sector, data.get("assignee"))
@@ -79,6 +93,8 @@ class TaskService:
         )
         TaskService._apply_status(task, status)
         task.save()
+        if labels:
+            task.labels.set(labels)
         ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
         return task
@@ -89,12 +105,16 @@ class TaskService:
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         old_assignee = task.assignee_id
         before, before_display = snapshot(task), ActivityService.display(task)
+        label_ids = data.pop("label_ids", None)
+        labels = None if label_ids is None else LabelService.resolve(sector, label_ids)
         if "assignee" in data:
             TaskService._check_assignee(sector, data["assignee"])
         for field, value in data.items():
             setattr(task, field, value)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
+        if labels is not None:
+            TaskService._set_labels(task, user, labels)
         if task.assignee_id != old_assignee:
             TaskService._notify_assignee(user, task)
         return task
@@ -173,6 +193,20 @@ class TaskService:
             in_column = in_column.exclude(pk=task.pk)
         if in_column.count() >= status.wip_limit:
             raise ValidationError(MSG_STATUS_WIP_LIMIT)
+
+    @staticmethod
+    def _set_labels(task: Task, user: User, labels: list) -> None:
+        before = sorted(label.name for label in task.labels.all())
+        after = sorted(label.name for label in labels)
+        if before == after:
+            return
+        task.labels.set(labels)
+        ActivityService.record(
+            task,
+            user,
+            Action.UPDATED,
+            {"labels": [", ".join(before) or None, ", ".join(after) or None]},
+        )
 
     @staticmethod
     def _check_assignee(sector: Sector, assignee: User | None) -> None:

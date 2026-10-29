@@ -20,3 +20,7 @@ MSG_TASK_STATUS_CHANGED = _("Your task changed status")
 MSG_CALENDAR_RANGE_INVALID = _(
     "The end date must not be before the start date and the range is limited to 62 days."
 )
+MSG_LABEL_NAME_TAKEN = _("This project already has a label with this name.")
+MSG_LABEL_INVALID = _("Every label must belong to the task's project.")
+MSG_COMMENT_MENTION_INVALID = _("You can only mention people who can see this project.")
+MSG_TASK_MENTIONED = _("You were mentioned in a comment")

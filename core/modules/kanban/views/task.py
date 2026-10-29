@@ -25,6 +25,7 @@ class TaskFilter(django_filters.FilterSet):
     due_after = django_filters.DateFilter("due_date", lookup_expr="gte")
     overdue = django_filters.BooleanFilter(method="filter_overdue")
     completed = django_filters.BooleanFilter(method="filter_completed")
+    label = django_filters.UUIDFilter(field_name="labels__id", distinct=True)
 
     class Meta:
         model = Task
@@ -59,8 +60,9 @@ class TaskListCreateView(ListAPIView):
     @extend_schema(
         summary="List/search/filter the tasks of a sector",
         description=(
-            "Filters: status, assignee, priority, parent, parent__isnull, due_before, "
-            "due_after, overdue, completed. `search` matches title and description."
+            "Filters: status, assignee, priority, label, parent, parent__isnull, "
+            "due_before, due_after, overdue, completed. `search` matches title and "
+            "description."
         ),
     )
     def get(self, request, *args, **kwargs):
