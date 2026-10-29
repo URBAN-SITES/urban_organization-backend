@@ -18,3 +18,10 @@ class SendPushSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=512)
     title = serializers.CharField(max_length=255)
     body = serializers.CharField(allow_blank=True, default="")
+
+
+class NotificationListQuerySerializer(serializers.Serializer):
+    unread = serializers.BooleanField(required=False, default=False)
+    kind = serializers.ChoiceField(
+        choices=("mention", "task", "organization"), required=False
+    )
