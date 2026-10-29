@@ -94,6 +94,7 @@ class RecordingSerializer(serializers.ModelSerializer):
     play_url = serializers.SerializerMethodField()
     download_url = serializers.SerializerMethodField()
     expires_at = serializers.SerializerMethodField()
+    insight_status = serializers.SerializerMethodField()
 
     class Meta:
         model = MeetingRecording
@@ -110,6 +111,7 @@ class RecordingSerializer(serializers.ModelSerializer):
             "play_url",
             "download_url",
             "expires_at",
+            "insight_status",
         )
 
     def _links(self, recording) -> dict:
@@ -124,6 +126,10 @@ class RecordingSerializer(serializers.ModelSerializer):
     def get_expires_at(self, recording) -> str:
         """When the retention policy deletes it (MEETING_RECORDING_RETENTION_DAYS)."""
         return (recording.started_at + timedelta(days=retention_days())).isoformat()
+
+    def get_insight_status(self, recording) -> str | None:
+        insight = getattr(recording, "insight", None)
+        return insight.status if insight else None
 
 
 class DownloadSerializer(serializers.Serializer):

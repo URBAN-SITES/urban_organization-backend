@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from core.modules.meetings.models.insight import MeetingInsight
 from core.modules.meetings.models.meeting import Meeting, MeetingRecording
 
 
@@ -17,3 +18,11 @@ class MeetingRecordingAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     raw_id_fields = ("meeting", "started_by")
     readonly_fields = ("egress_id", "file_key", "participants", "error")
+
+
+@admin.register(MeetingInsight)
+class MeetingInsightAdmin(admin.ModelAdmin):
+    list_display = ("recording", "status", "attempts", "updated_at")
+    list_filter = ("status",)
+    raw_id_fields = ("recording",)
+    readonly_fields = ("source_key", "segments", "summary", "error")

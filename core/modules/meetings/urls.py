@@ -3,6 +3,9 @@ from django.urls import path
 from core.modules.meetings.views.meeting import (
     LiveKitWebhookView,
     MeetingDetailView,
+    MeetingInsightExportView,
+    MeetingInsightTasksView,
+    MeetingInsightView,
     MeetingJoinView,
     MeetingRecordingDetailView,
     MeetingRecordingDownloadView,
@@ -41,5 +44,20 @@ urlpatterns = [
         "meetings/<uuid:meeting_id>/recordings/<uuid:recording_id>/download/",
         MeetingRecordingDownloadView.as_view(),
         name="recording-download",
+    ),
+    path(
+        "meetings/<uuid:meeting_id>/recordings/<uuid:recording_id>/insight/",
+        MeetingInsightView.as_view(),
+        name="insight",
+    ),
+    path(
+        "meetings/<uuid:meeting_id>/recordings/<uuid:recording_id>/insight/export/",
+        MeetingInsightExportView.as_view(),
+        name="insight-export",
+    ),
+    path(
+        "meetings/<uuid:meeting_id>/recordings/<uuid:recording_id>/insight/tasks/",
+        MeetingInsightTasksView.as_view(),
+        name="insight-tasks",
     ),
 ]
