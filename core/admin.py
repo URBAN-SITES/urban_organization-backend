@@ -12,6 +12,7 @@ from core.modules.crowdfunding import admin as _crowdfunding_admin  # noqa: F401
 from core.modules.github import admin as _github_admin  # noqa: F401
 from core.modules.invitations import admin as _invitations_admin  # noqa: F401
 from core.modules.kanban import admin as _kanban_admin  # noqa: F401
+from core.modules.meetings import admin as _meetings_admin  # noqa: F401
 from core.modules.notifications import admin as _notifications_admin  # noqa: F401
 from core.modules.organizations import admin as _organizations_admin  # noqa: F401
 from core.modules.payments import admin as _payments_admin  # noqa: F401
