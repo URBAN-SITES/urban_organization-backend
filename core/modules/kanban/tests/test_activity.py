@@ -117,3 +117,61 @@ class SectorFavoriteArchiveTests(KanbanTestCase):
         self.share_sector(sector, self.member, "editor")
         res = self.member_client.put(f"{API}sectors/{sector}/archive/")
         self.assertEqual(res.status_code, 403)
+
+
+class SectorListFilterTests(KanbanTestCase):
+    def names(self, client=None, **params):
+        res = (client or self.client).get(
+            f"{API}organizations/{self.org.id}/sectors/", params
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertIn("count", res.json())  # paginated by the server
+        return [s["name"] for s in res.json()["results"]]
+
+    def test_search_favorite_and_ordering_run_on_the_server(self):
+        self.make_sector(name="Marketing", description="campanhas")
+        site = self.make_sector(name="Site")
+        self.make_sector(name="Design")
+        self.assertEqual(self.names(), ["Design", "Marketing", "Site"])
+        self.assertEqual(self.names(ordering="-name"), ["Site", "Marketing", "Design"])
+        self.assertEqual(self.names(ordering="-created_at")[0], "Design")
+        self.assertEqual(self.names(search="CAMPAN"), ["Marketing"])
+        self.client.put(f"{API}sectors/{site}/favorite/")
+        self.assertEqual(self.names(favorite="true"), ["Site"])
+
+    def test_rejects_unknown_ordering(self):
+        res = self.client.get(
+            f"{API}organizations/{self.org.id}/sectors/", {"ordering": "owner__email"}
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_can_manage_follows_the_effective_role(self):
+        mine = self.make_sector(name="Mine", client=self.member_client)
+        shared = self.make_sector(name="Shared")
+        self.share_sector(shared, self.member, "editor")
+        rows = {
+            s["name"]: s["can_manage"]
+            for s in self.member_client.get(
+                f"{API}organizations/{self.org.id}/sectors/"
+            ).json()["results"]
+        }
+        self.assertEqual(rows, {"Mine": True, "Shared": False})
+        owner_rows = self.client.get(
+            f"{API}organizations/{self.org.id}/sectors/"
+        ).json()["results"]
+        self.assertTrue(all(s["can_manage"] for s in owner_rows))  # org owner
+        detail = self.member_client.get(f"{API}sectors/{mine}/").json()
+        self.assertTrue(detail["can_manage"])
+
+    def test_outsiders_cannot_list(self):
+        outsider = client_for(make_user("out@a.com"))
+        res = outsider.get(f"{API}organizations/{self.org.id}/sectors/")
+        self.assertIn(res.status_code, (403, 404))
+
+    def test_color_and_icon_are_validated(self):
+        url = f"{API}organizations/{self.org.id}/sectors/"
+        for bad in ({"color": "red"}, {"color": "#12345"}, {"icon": "<svg>"}):
+            res = self.client.post(url, {"name": "X", **bad})
+            self.assertEqual(res.status_code, 400, bad)
+        res = self.client.post(url, {"name": "X", "color": "#0EA5E9", "icon": "rocket"})
+        self.assertEqual(res.status_code, 201, res.content)

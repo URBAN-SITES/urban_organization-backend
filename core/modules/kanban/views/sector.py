@@ -5,8 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.modules.kanban.models.sector import SectorMember
 from core.modules.kanban.response_messages import MSG_CALENDAR_RANGE_INVALID
 from core.modules.kanban.serializers.sector import (
+    SectorListQuerySerializer,
     SectorMemberAddSerializer,
     SectorMemberRoleSerializer,
     SectorMemberSerializer,
@@ -31,21 +33,20 @@ class SectorListCreateView(ListAPIView):
 
     @extend_schema(
         summary="List the sectors I can see in an organization",
-        parameters=[
-            OpenApiParameter("archived", bool, description="Only archived sectors")
-        ],
+        parameters=[SectorListQuerySerializer],
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        archived = self.request.query_params.get("archived") in ("1", "true")
-        sectors = SectorService.list_for(
-            self.request.user, self.kwargs["organization_id"], archived=archived
-        )
-        return SectorService.with_progress(
-            SectorService.with_favorite(sectors, self.request.user)
-        )
+        query = SectorListQuerySerializer(data=self.request.query_params)
+        query.is_valid(raise_exception=True)
+        user = self.request.user
+        organization_id = self.kwargs["organization_id"]
+        sectors = SectorService.list_for(user, organization_id, **query.validated_data)
+        sectors = SectorService.with_favorite(sectors, user)
+        sectors = SectorService.with_can_manage(sectors, user, organization_id)
+        return SectorService.with_progress(sectors)
 
     @extend_schema(
         summary="Create a sector (organization member+); you become its manager",
@@ -71,6 +72,7 @@ class SectorDetailView(APIView):
     def get(self, request, sector_id):
         sector, role = SectorService.get_sector(request.user, sector_id)
         sector.is_favorite = sector.favorites.filter(user=request.user).exists()
+        sector.can_manage = role == SectorMember.Role.MANAGER
         return Response({**SectorSerializer(sector).data, "my_role": role})
 
     @extend_schema(

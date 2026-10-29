@@ -13,6 +13,13 @@ class SectorSerializer(serializers.ModelSerializer):
     is_favorite = serializers.SerializerMethodField()
     task_total = serializers.SerializerMethodField()
     task_done = serializers.SerializerMethodField()
+    can_manage = serializers.SerializerMethodField()
+    color = serializers.RegexField(
+        r"^#[0-9a-fA-F]{6}$", max_length=7, required=False, allow_blank=True
+    )
+    icon = serializers.RegexField(
+        r"^[a-z0-9_-]+$", max_length=50, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Sector
@@ -28,6 +35,7 @@ class SectorSerializer(serializers.ModelSerializer):
             "is_favorite",
             "task_total",
             "task_done",
+            "can_manage",
             "created_at",
         )
         read_only_fields = ("id", "organization_id", "archived_at", "created_at")
@@ -40,6 +48,18 @@ class SectorSerializer(serializers.ModelSerializer):
 
     def get_task_done(self, obj) -> int | None:
         return getattr(obj, "task_done", None)
+
+    def get_can_manage(self, obj) -> bool:
+        return bool(getattr(obj, "can_manage", False))
+
+
+class SectorListQuerySerializer(serializers.Serializer):
+    archived = serializers.BooleanField(default=False)
+    favorite = serializers.BooleanField(default=False)
+    search = serializers.CharField(max_length=100, required=False, default="")
+    ordering = serializers.ChoiceField(
+        choices=("name", "-name", "created_at", "-created_at"), default="name"
+    )
 
 
 class SectorMemberSerializer(serializers.ModelSerializer):
