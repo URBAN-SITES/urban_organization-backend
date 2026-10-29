@@ -90,7 +90,7 @@ class CommentListCreateView(ListAPIView):
         serializer = CommentWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         comment = CommentService.create(
-            request.user, task_id, serializer.validated_data["content"]
+            request.user, task_id, **serializer.validated_data
         )
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 

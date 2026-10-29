@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
+from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.sector import Sector
 
 
@@ -93,6 +94,9 @@ class Task(BaseModel):
         verbose_name=_("assignee"),
     )
     position = models.PositiveIntegerField(_("position"), default=0)
+    labels = models.ManyToManyField(
+        Label, blank=True, related_name="tasks", verbose_name=_("labels")
+    )
 
     objects = TaskQuerySet.as_manager()
 
@@ -149,6 +153,13 @@ class Comment(models.Model):
         verbose_name=_("author"),
     )
     content = models.TextField(_("content"))
+    # people @mentioned in the comment (notified once, on creation)
+    mentions = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="+",
+        verbose_name=_("mentions"),
+    )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
 
     class Meta:
