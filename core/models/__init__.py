@@ -10,6 +10,12 @@ from core.modules.chat.models.chat import ChatChannelMember as ChatChannelMember
 from core.modules.chat.models.chat import ChatMessage as ChatMessage
 from core.modules.crowdfunding.models.campaign import Campaign as Campaign
 from core.modules.crowdfunding.models.campaign import Contribution as Contribution
+from core.modules.github.models.github import GitHubConnection as GitHubConnection
+from core.modules.github.models.github import GitHubIdentity as GitHubIdentity
+from core.modules.github.models.github import (
+    ProjectRepository as ProjectRepository,
+)
+from core.modules.github.models.github import TaskGitHubLink as TaskGitHubLink
 from core.modules.invitations.models.invite import (
     OrganizationInvite as OrganizationInvite,
 )
