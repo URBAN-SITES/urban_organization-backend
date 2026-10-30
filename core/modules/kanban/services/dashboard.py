@@ -6,11 +6,18 @@ from django.utils import timezone
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.services.activity import ActivityService
 from core.modules.kanban.services.sector import SectorService
+from core.modules.meetings.models.insight import MeetingInsight
+from core.modules.meetings.models.meeting import Meeting
+from core.modules.organizations.models.organization import OrganizationMember
 
 WEEKS = 6
 TODAY_LIMIT = 8
 ACTIVITY_LIMIT = 8
 FAVORITES_LIMIT = 6
+MEETINGS_LIMIT = 5
+INSIGHTS_LIMIT = 4
+PARTICIPANTS_SHOWN = 4
+EXCERPT_CHARS = 220
 
 
 def _week_start(day):
@@ -28,6 +35,62 @@ def weekly_done(done, week_start):
         ).count()
         series.append({"week_start": start, "done": count})
     return series
+
+
+def upcoming_meetings(sectors, now) -> list[dict]:
+    """Meetings not over yet in the visible sectors, soonest first."""
+    meetings = (
+        Meeting.objects.filter(sector__in=sectors, ends_at__gte=now)
+        .select_related("sector")
+        .prefetch_related("participants")
+        .order_by("starts_at")[:MEETINGS_LIMIT]
+    )
+    return [
+        {
+            "id": m.id,
+            "title": m.title,
+            "starts_at": m.starts_at,
+            "ends_at": m.ends_at,
+            "sector_id": m.sector_id,
+            "sector_name": m.sector.name,
+            "participant_count": len(m.participants.all()),
+            "participants": [p.name for p in m.participants.all()][:PARTICIPANTS_SHOWN],
+        }
+        for m in meetings
+    ]
+
+
+def recent_insights(sectors) -> list[dict]:
+    """Finished AI summaries of recordings in the visible sectors, newest first."""
+    insights = (
+        MeetingInsight.objects.filter(
+            recording__meeting__sector__in=sectors,
+            status=MeetingInsight.Status.DONE,
+            summary__isnull=False,
+        )
+        .select_related("recording__meeting__sector")
+        .order_by("-finished_at")[:INSIGHTS_LIMIT]
+    )
+    rows = []
+    for insight in insights:
+        recording = insight.recording
+        meeting = recording.meeting
+        summary = insight.summary or {}
+        text = (summary.get("executive_summary") or "").strip()
+        rows.append(
+            {
+                "meeting_id": meeting.id,
+                "recording_id": recording.id,
+                "meeting_title": meeting.title,
+                "sector_name": meeting.sector.name,
+                "finished_at": insight.finished_at,
+                "duration_seconds": recording.duration_seconds,
+                "excerpt": text[:EXCERPT_CHARS],
+                "action_count": len(summary.get("actions") or []),
+                "decision_count": len(summary.get("decisions") or []),
+            }
+        )
+    return rows
 
 
 class DashboardService:
@@ -60,6 +123,11 @@ class DashboardService:
         ).order_by("name")[:FAVORITES_LIMIT]
         return {
             "active_projects": sectors.count(),
+            "members": OrganizationMember.objects.filter(
+                organization_id=organization_id
+            ).count(),
+            "upcoming_meetings": upcoming_meetings(sectors, timezone.now()),
+            "recent_insights": recent_insights(sectors),
             "in_progress": mine.filter(
                 status__category=Status.Category.IN_PROGRESS
             ).count(),
