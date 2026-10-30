@@ -71,6 +71,8 @@ class LoginSerializer(serializers.Serializer):
         required=True,
         style={"input_type": "password"},
     )
+    # "remember me": false keeps the auth cookies only until the browser closes
+    remember = serializers.BooleanField(write_only=True, required=False, default=True)
 
 
 class LogoutSerializer(serializers.Serializer):

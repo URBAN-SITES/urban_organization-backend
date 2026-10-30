@@ -51,8 +51,11 @@ from core.spectacular_serializers import (
     UserSessionNotFoundSerializer,
 )
 from core.utils.cookies import (
+    SESSION_ONLY_COOKIE,
     get_auth_cookie_kwargs,
     get_auth_cookie_name,
+    get_delete_cookie_kwargs,
+    is_persistent_session,
     set_auth_cookies,
 )
 
@@ -97,7 +100,9 @@ class LoginView(APIView):
 
         # tokens travel only in the HttpOnly cookies, never in the body
         response = Response({"detail": MSG_LOGIN_SUCCESSFUL}, status.HTTP_200_OK)
-        set_auth_cookies(response, token_data)
+        set_auth_cookies(
+            response, token_data, persistent=serializer.validated_data["remember"]
+        )
         csrf.get_token(request)
 
         return response
@@ -156,17 +161,18 @@ class CustomTokenRefreshView(TokenRefreshView):
         response = Response(
             {"detail": MSG_REFRESH_TOKENS_SUCCESSFUL}, status.HTTP_200_OK
         )
+        persistent = is_persistent_session(request)
         if new_access_token:
             response.set_cookie(
                 get_auth_cookie_name(),
                 new_access_token,
-                **get_auth_cookie_kwargs(is_refresh=False),
+                **get_auth_cookie_kwargs(is_refresh=False, persistent=persistent),
             )
         if new_refresh_token:
             response.set_cookie(
                 "refresh_token",
                 new_refresh_token,
-                **get_auth_cookie_kwargs(is_refresh=True),
+                **get_auth_cookie_kwargs(is_refresh=True, persistent=persistent),
             )
 
         return response
@@ -194,14 +200,10 @@ class LogoutView(APIView):
             except TokenError:
                 pass
         response = Response({"detail": MSG_LOGOUT_SUCCESSFUL}, status.HTTP_200_OK)
-        cookie_kwargs = get_auth_cookie_kwargs()
-        delete_kwargs = {
-            "path": cookie_kwargs.get("path", "/"),
-            "domain": cookie_kwargs.get("domain", None),
-            "samesite": cookie_kwargs.get("samesite", "Lax"),
-        }
+        delete_kwargs = get_delete_cookie_kwargs()
         response.delete_cookie(get_auth_cookie_name(), **delete_kwargs)
         response.delete_cookie("refresh_token", **delete_kwargs)
+        response.delete_cookie(SESSION_ONLY_COOKIE, **delete_kwargs)
         return response
 
 
