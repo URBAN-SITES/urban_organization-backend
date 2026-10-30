@@ -93,6 +93,24 @@ def recent_insights(sectors) -> list[dict]:
     return rows
 
 
+def task_rows(tasks, today) -> list[dict]:
+    return [
+        {
+            "id": t.id,
+            "title": t.title,
+            "sector_id": t.sector_id,
+            "sector_name": t.sector.name,
+            "due_date": t.due_date,
+            "is_overdue": bool(
+                t.due_date and t.due_date < today and not t.completed_at
+            ),
+            "priority": t.priority,
+            "completed_at": t.completed_at,
+        }
+        for t in tasks.select_related("sector")[:TODAY_LIMIT]
+    ]
+
+
 class DashboardService:
     @staticmethod
     def summary(user, organization_id) -> dict:
@@ -174,6 +192,15 @@ class DashboardService:
                 }
                 for t in due_soon.select_related("sector")[:TODAY_LIMIT]
             ],
+            "my_in_progress": task_rows(
+                mine.filter(status__category=Status.Category.IN_PROGRESS).order_by(
+                    "due_date", "-updated_at"
+                ),
+                today,
+            ),
+            "my_done": task_rows(
+                done.filter(assignee=user).order_by("-completed_at"), today
+            ),
             "weekly_done": weekly_done(done, week),
             "open_by_sector": [
                 {"sector": row["sector__name"], "open": row["open"]}

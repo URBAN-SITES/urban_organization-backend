@@ -105,6 +105,27 @@ class TaskActivityTests(KanbanTestCase):
         self.assertEqual(data["recent_insights"][0]["excerpt"], "Resumo.")
         self.assertEqual(data["recent_insights"][0]["action_count"], 2)
         self.assertEqual(data["members"], 2)
+        self.assertEqual(data["my_in_progress"], [])
+        self.assertEqual(data["my_done"], [])
+
+    def test_dashboard_lists_my_tasks_in_progress_and_done(self):
+        sector = self.make_sector()
+        statuses = self.status_ids(sector)
+        mine = str(self.owner.id)
+        doing = self.make_task(sector, title="Doing", assignee=mine)
+        finished = self.make_task(sector, title="Finished", assignee=mine)
+        self.make_task(sector, title="Not mine")
+        self.client.post(
+            f"{API}tasks/{doing['id']}/move/", {"status": statuses["Em andamento"]}
+        )
+        self.client.post(
+            f"{API}tasks/{finished['id']}/move/", {"status": statuses["Concluído"]}
+        )
+
+        data = self.client.get(f"{API}organizations/{self.org.id}/dashboard/").json()
+        self.assertEqual([t["title"] for t in data["my_in_progress"]], ["Doing"])
+        self.assertEqual([t["title"] for t in data["my_done"]], ["Finished"])
+        self.assertIsNotNone(data["my_done"][0]["completed_at"])
 
 
 class SectorFavoriteArchiveTests(KanbanTestCase):
