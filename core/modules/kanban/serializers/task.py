@@ -65,6 +65,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "cycle_id",
             "is_blocked",
             "estimate",
+            "recurrence",
             "archived_at",
             "assignee_id",
             "assignee_name",
@@ -156,10 +157,16 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             "label_ids",
             "cycle",
             "estimate",
+            "recurrence",
         )
 
 
 class TaskCreateSerializer(TaskUpdateSerializer):
+    checklist = serializers.ListField(
+        child=serializers.CharField(max_length=255),
+        required=False,
+        max_length=50,
+    )
     status = serializers.PrimaryKeyRelatedField(
         queryset=Status.objects.all(), required=False
     )
@@ -168,7 +175,7 @@ class TaskCreateSerializer(TaskUpdateSerializer):
     )
 
     class Meta(TaskUpdateSerializer.Meta):
-        fields = (*TaskUpdateSerializer.Meta.fields, "status", "parent")
+        fields = (*TaskUpdateSerializer.Meta.fields, "status", "parent", "checklist")
 
 
 class TaskMoveSerializer(serializers.Serializer):

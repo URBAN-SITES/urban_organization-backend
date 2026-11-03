@@ -1,4 +1,5 @@
-from datetime import timedelta
+import calendar
+from datetime import date, timedelta
 
 from django.db import transaction
 from django.db.models import Count, Exists, F, Max, OuterRef, Q
@@ -9,7 +10,7 @@ from core.models.user import User
 from core.modules.kanban.models.follow import TaskSubscriber
 from core.modules.kanban.models.saved_view import TaskDependency
 from core.modules.kanban.models.sector import Sector
-from core.modules.kanban.models.task import Status, Task
+from core.modules.kanban.models.task import ChecklistItem, Status, Task
 from core.modules.kanban.response_messages import (
     MSG_CYCLE_INVALID,
     MSG_FOLLOWED_STATUS,
@@ -84,6 +85,7 @@ class TaskService:
     def create(user: User, sector_id, data: dict) -> Task:
         sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
         label_ids = data.pop("label_ids", None)
+        checklist = data.pop("checklist", None) or []
         labels = LabelService.resolve(sector, label_ids) if label_ids else []
         status = data.pop("status", None) or TaskService._default_status(sector)
         TaskService._check_status(sector, status)
@@ -111,6 +113,11 @@ class TaskService:
         task.save()
         if labels:
             task.labels.set(labels)
+        if checklist:
+            ChecklistItem.objects.bulk_create(
+                ChecklistItem(task=task, content=content[:255], position=index)
+                for index, content in enumerate(checklist)
+            )
         TaskSubscriber.objects.get_or_create(task=task, user=user)
         ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
@@ -213,6 +220,7 @@ class TaskService:
         if status_changed:
             TaskService._check_wip(status, task)
         before, before_display = snapshot(task), ActivityService.display(task)
+        was_open = task.completed_at is None
         TaskService._apply_status(task, status)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
@@ -227,6 +235,8 @@ class TaskService:
         for order, sibling in enumerate(siblings):
             sibling.position = order
         Task.objects.bulk_update(siblings, ["position"])
+        if was_open and task.completed_at and task.recurrence:
+            TaskService._spawn_next(user, task)
         if status_changed:
             TaskService._notify_assignee(
                 user,
@@ -293,6 +303,62 @@ class TaskService:
             )
 
     # helpers ------------------------------------------------------------
+
+    @staticmethod
+    def next_date(day: date, recurrence: str) -> date:
+        if recurrence == Task.Recurrence.DAILY:
+            return day + timedelta(days=1)
+        if recurrence == Task.Recurrence.WEEKLY:
+            return day + timedelta(days=7)
+        year, month = (
+            (day.year + 1, 1) if day.month == 12 else (day.year, day.month + 1)
+        )
+        return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+    @staticmethod
+    def _spawn_next(user: User, task: Task) -> Task:
+        """A repeating task was completed: the next one starts open, with the dates
+        moved one period ahead (from today when it had no due date)."""
+        sector = task.sector
+        base = task.due_date or timezone.localdate()
+        due = TaskService.next_date(base, task.recurrence)
+        start = (
+            task.start_date + (due - base)
+            if task.start_date and task.due_date
+            else None
+        )
+        status = TaskService._default_status(sector)
+        last = Task.objects.filter(status=status, is_active=True).aggregate(
+            last=Max("position")
+        )["last"]
+        nxt = Task.objects.create(
+            sector=sector,
+            owner=user,
+            status=status,
+            parent=task.parent,
+            title=task.title,
+            description=task.description,
+            priority=task.priority,
+            assignee=task.assignee,
+            estimate=task.estimate,
+            start_date=start,
+            due_date=due,
+            recurrence=task.recurrence,
+            position=0 if last is None else last + 1,
+            sequence=TaskService._next_number(sector),
+        )
+        nxt.labels.set(task.labels.all())
+        ChecklistItem.objects.bulk_create(
+            ChecklistItem(task=nxt, content=item.content, position=item.position)
+            for item in task.checklist_items.all()
+        )
+        # the series continues on the new task only
+        Task.objects.filter(pk=task.pk).update(recurrence="")
+        task.recurrence = ""
+        ActivityService.record(
+            nxt, user, Action.CREATED, {"repeats": [None, task.title]}
+        )
+        return nxt
 
     @staticmethod
     def _next_number(sector: Sector) -> int:
