@@ -1,16 +1,19 @@
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Exists, Max, OuterRef, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.models.saved_view import TaskDependency
 from core.modules.kanban.models.sector import Sector
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.response_messages import (
+    MSG_CYCLE_INVALID,
     MSG_STATUS_INVALID,
     MSG_STATUS_WIP_LIMIT,
     MSG_TASK_ASSIGNED,
     MSG_TASK_ASSIGNEE_INVALID,
+    MSG_TASK_DATES_INVALID,
     MSG_TASK_PARENT_INVALID,
     MSG_TASK_STATUS_CHANGED,
 )
@@ -47,6 +50,7 @@ class TaskService:
             .select_related("status", "assignee", "owner")
             .prefetch_related("labels")
             .annotate(
+                is_blocked=TaskService.blocked_expression(),
                 subtask_total=Count(
                     "subtasks", filter=Q(subtasks__is_active=True), distinct=True
                 ),
@@ -76,6 +80,9 @@ class TaskService:
         status = data.pop("status", None) or TaskService._default_status(sector)
         TaskService._check_status(sector, status)
         TaskService._check_assignee(sector, data.get("assignee"))
+        TaskService._check_plan(
+            sector, data.get("cycle"), data.get("start_date"), data.get("due_date")
+        )
         parent = data.get("parent")
         if parent and (parent.sector_id != sector.pk or not parent.is_active):
             raise ValidationError(MSG_TASK_PARENT_INVALID)
@@ -111,6 +118,8 @@ class TaskService:
             TaskService._check_assignee(sector, data["assignee"])
         for field, value in data.items():
             setattr(task, field, value)
+        if {"cycle", "start_date", "due_date"} & data.keys():
+            TaskService._check_plan(sector, task.cycle, task.start_date, task.due_date)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
         if labels is not None:
@@ -162,7 +171,25 @@ class TaskService:
             )
         return task
 
+    @staticmethod
+    def blocked_expression():
+        """True while some active blocker of the task is still open."""
+        return Exists(
+            TaskDependency.objects.filter(
+                task=OuterRef("pk"),
+                depends_on__is_active=True,
+                depends_on__completed_at__isnull=True,
+            )
+        )
+
     # helpers ------------------------------------------------------------
+
+    @staticmethod
+    def _check_plan(sector: Sector, cycle, start_date, due_date) -> None:
+        if cycle is not None and cycle.sector_id != sector.pk:
+            raise ValidationError({"cycle": [MSG_CYCLE_INVALID]})
+        if start_date and due_date and start_date > due_date:
+            raise ValidationError({"start_date": [MSG_TASK_DATES_INVALID]})
 
     @staticmethod
     def _apply_status(task: Task, status: Status) -> None:

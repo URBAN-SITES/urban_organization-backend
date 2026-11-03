@@ -4,7 +4,16 @@ from core.modules.kanban.models.task import Task
 
 Action = TaskActivity.Action
 # fields shown in the history; description only says "changed" (it can be long)
-TRACKED = ("title", "description", "priority", "due_date", "assignee", "status")
+TRACKED = (
+    "title",
+    "description",
+    "priority",
+    "start_date",
+    "due_date",
+    "assignee",
+    "status",
+    "cycle",
+)
 
 
 def _display(task: Task, field: str):
@@ -12,6 +21,8 @@ def _display(task: Task, field: str):
         return task.assignee.name if task.assignee_id else None
     if field == "status":
         return task.status.name if task.status_id else None
+    if field == "cycle":
+        return task.cycle.name if task.cycle_id else None
     if field == "description":
         return None
     value = getattr(task, field)
@@ -24,9 +35,11 @@ def snapshot(task: Task) -> dict:
         "title": task.title,
         "description": task.description,
         "priority": task.priority,
+        "start_date": task.start_date,
         "due_date": task.due_date,
         "assignee": task.assignee_id,
         "status": task.status_id,
+        "cycle": task.cycle_id,
     }
 
 

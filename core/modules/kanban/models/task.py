@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
+from core.modules.kanban.models.cycle import Cycle
 from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.sector import Sector
 
@@ -83,6 +84,7 @@ class Task(BaseModel):
     priority = models.CharField(
         _("priority"), max_length=10, choices=Priority, default=Priority.MEDIUM
     )
+    start_date = models.DateField(_("start date"), null=True, blank=True)
     due_date = models.DateField(_("due date"), null=True, blank=True, db_index=True)
     completed_at = models.DateTimeField(_("completed at"), null=True, blank=True)
     assignee = models.ForeignKey(
@@ -96,6 +98,14 @@ class Task(BaseModel):
     position = models.PositiveIntegerField(_("position"), default=0)
     labels = models.ManyToManyField(
         Label, blank=True, related_name="tasks", verbose_name=_("labels")
+    )
+    cycle = models.ForeignKey(
+        Cycle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
+        verbose_name=_("cycle"),
     )
 
     objects = TaskQuerySet.as_manager()
