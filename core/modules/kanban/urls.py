@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.modules.kanban.views import cycle, item, label, sector, task
+from core.modules.kanban.views import cycle, extras, item, label, sector, task
 
 app_name = "kanban"
 
@@ -108,6 +108,16 @@ urlpatterns = [
         "cycles/<uuid:cycle_id>/", cycle.CycleDetailView.as_view(), name="cycle-detail"
     ),
     path(
+        "cycles/<uuid:cycle_id>/burndown/",
+        extras.CycleBurndownView.as_view(),
+        name="cycle-burndown",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/trash/",
+        extras.TrashListView.as_view(),
+        name="task-trash",
+    ),
+    path(
         "sectors/<uuid:sector_id>/tasks/",
         task.TaskListCreateView.as_view(),
         name="task-list",
@@ -119,6 +129,21 @@ urlpatterns = [
     ),
     path("tasks/<uuid:task_id>/", task.TaskDetailView.as_view(), name="task-detail"),
     path("tasks/<uuid:task_id>/move/", task.TaskMoveView.as_view(), name="task-move"),
+    path(
+        "tasks/<uuid:task_id>/restore/",
+        extras.TaskRestoreView.as_view(),
+        name="task-restore",
+    ),
+    path(
+        "tasks/<uuid:task_id>/archive/",
+        extras.TaskArchiveView.as_view(),
+        name="task-archive",
+    ),
+    path(
+        "tasks/<uuid:task_id>/follow/",
+        extras.TaskFollowView.as_view(),
+        name="task-follow",
+    ),
     path(
         "tasks/<uuid:task_id>/activity/",
         task.TaskActivityListView.as_view(),
