@@ -35,6 +35,7 @@ class TaskFilter(django_filters.FilterSet):
             "priority": ["exact", "in"],
             "due_date": ["isnull"],
             "parent": ["exact", "isnull"],
+            "cycle": ["exact", "isnull"],
         }
 
     def filter_overdue(self, queryset, name, value):
@@ -56,13 +57,21 @@ class TaskListCreateView(ListAPIView):
     ]
     filterset_class = TaskFilter
     search_fields = ("title", "description")
-    ordering_fields = ("position", "due_date", "priority", "created_at", "completed_at")
+    ordering_fields = (
+        "position",
+        "start_date",
+        "due_date",
+        "priority",
+        "created_at",
+        "completed_at",
+    )
 
     @extend_schema(
         summary="List/search/filter the tasks of a sector",
         description=(
             "Filters: status, assignee, assignee__isnull, priority, priority__in "
-            "(comma separated), label, parent, parent__isnull, due_date__isnull, "
+            "(comma separated), label, parent, parent__isnull, cycle, cycle__isnull, "
+            "due_date__isnull, "
             "due_before, due_after, overdue, completed. `search` matches title and "
             "description."
         ),
