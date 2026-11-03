@@ -185,6 +185,8 @@ REST_FRAMEWORK = {
         "auth": "10/minute",
         # signed provider callbacks; caps floods of forged calls per IP
         "webhook": "600/minute",
+        # IA liberada para todos: limite por usuário para não esgotar a cota gratuita do modelo
+        "ai": "60/hour",
     },
 }
 SIMPLE_JWT = {
