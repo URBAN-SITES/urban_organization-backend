@@ -2,9 +2,11 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from core.models.user import User
+from core.modules.kanban.models.cycle import Cycle
 from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.task import ChecklistItem, Comment, Status, Task
+from core.modules.kanban.services.cycle import cycle_state
 
 
 class LabelSerializer(serializers.ModelSerializer):
@@ -29,6 +31,8 @@ class TaskSerializer(serializers.ModelSerializer):
     status_id = serializers.UUIDField(read_only=True)
     parent_id = serializers.UUIDField(read_only=True)
     assignee_id = serializers.UUIDField(read_only=True)
+    cycle_id = serializers.UUIDField(read_only=True)
+    is_blocked = serializers.SerializerMethodField()
     assignee_name = serializers.CharField(
         source="assignee.name", read_only=True, default=None
     )
@@ -53,8 +57,11 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "priority",
+            "start_date",
             "due_date",
             "completed_at",
+            "cycle_id",
+            "is_blocked",
             "assignee_id",
             "assignee_name",
             "position",
@@ -97,6 +104,14 @@ class TaskSerializer(serializers.ModelSerializer):
             ).count()
         return done
 
+    def get_is_blocked(self, task) -> bool:
+        blocked = getattr(task, "is_blocked", None)
+        if blocked is None:
+            return task.dependencies.filter(
+                depends_on__is_active=True, depends_on__completed_at__isnull=True
+            ).exists()
+        return blocked
+
     def get_is_overdue(self, task) -> bool:
         return bool(
             task.due_date
@@ -113,6 +128,9 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     label_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, max_length=20
     )
+    cycle = serializers.PrimaryKeyRelatedField(
+        queryset=Cycle.objects.all(), allow_null=True, required=False
+    )
 
     class Meta:
         model = Task
@@ -120,9 +138,11 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "priority",
+            "start_date",
             "due_date",
             "assignee",
             "label_ids",
+            "cycle",
         )
 
 
@@ -190,3 +210,46 @@ class TaskActivitySerializer(serializers.Serializer):
     actor_id = serializers.UUIDField(allow_null=True)
     actor_name = serializers.CharField(source="actor.name", default=None)
     created_at = serializers.DateTimeField()
+
+
+class CycleSerializer(serializers.ModelSerializer):
+    sector_id = serializers.UUIDField(read_only=True)
+    task_total = serializers.IntegerField(read_only=True, default=0)
+    task_done = serializers.IntegerField(read_only=True, default=0)
+    state = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cycle
+        fields = (
+            "id",
+            "sector_id",
+            "name",
+            "description",
+            "start_date",
+            "end_date",
+            "state",
+            "task_total",
+            "task_done",
+            "created_at",
+        )
+        read_only_fields = ("id", "sector_id", "created_at")
+
+    def get_state(self, cycle) -> str:
+        return cycle_state(cycle)
+
+
+class RelatedTaskSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    status_name = serializers.CharField()
+    is_done = serializers.BooleanField()
+
+
+class TaskRelationsSerializer(serializers.Serializer):
+    blocked_by = RelatedTaskSerializer(many=True)
+    blocking = RelatedTaskSerializer(many=True)
+
+
+class TaskRelationWriteSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=("blocked_by", "blocking"))
+    task = serializers.UUIDField()

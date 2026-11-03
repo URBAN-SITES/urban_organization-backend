@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.modules.kanban.views import item, label, sector, task
+from core.modules.kanban.views import cycle, item, label, sector, task
 
 app_name = "kanban"
 
@@ -100,6 +100,14 @@ urlpatterns = [
         name="sector-people",
     ),
     path(
+        "sectors/<uuid:sector_id>/cycles/",
+        cycle.CycleListCreateView.as_view(),
+        name="cycle-list",
+    ),
+    path(
+        "cycles/<uuid:cycle_id>/", cycle.CycleDetailView.as_view(), name="cycle-detail"
+    ),
+    path(
         "sectors/<uuid:sector_id>/tasks/",
         task.TaskListCreateView.as_view(),
         name="task-list",
@@ -115,6 +123,16 @@ urlpatterns = [
         "tasks/<uuid:task_id>/activity/",
         task.TaskActivityListView.as_view(),
         name="task-activity",
+    ),
+    path(
+        "tasks/<uuid:task_id>/relations/",
+        cycle.TaskRelationListCreateView.as_view(),
+        name="task-relation-list",
+    ),
+    path(
+        "tasks/<uuid:task_id>/relations/<uuid:other_id>/",
+        cycle.TaskRelationDetailView.as_view(),
+        name="task-relation-detail",
     ),
     path(
         "tasks/<uuid:task_id>/checklist/",
