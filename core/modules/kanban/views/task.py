@@ -25,6 +25,9 @@ class TaskFilter(django_filters.FilterSet):
     due_after = django_filters.DateFilter("due_date", lookup_expr="gte")
     overdue = django_filters.BooleanFilter(method="filter_overdue")
     completed = django_filters.BooleanFilter(method="filter_completed")
+    # without this filter archived tasks are left out (see get_queryset)
+    archived = django_filters.BooleanFilter(method="filter_archived")
+    key = django_filters.CharFilter(method="filter_key")
     label = django_filters.UUIDFilter(field_name="labels__id", distinct=True)
 
     class Meta:
@@ -44,6 +47,14 @@ class TaskFilter(django_filters.FilterSet):
 
     def filter_completed(self, queryset, name, value):
         return queryset.filter(completed_at__isnull=not value)
+
+    def filter_archived(self, queryset, name, value):
+        return queryset.filter(archived_at__isnull=not value)
+
+    def filter_key(self, queryset, name, value):
+        # "DEV-12" or just "12"
+        number = value.rsplit("-", 1)[-1]
+        return queryset.filter(sequence=number) if number.isdigit() else queryset.none()
 
 
 @extend_schema(tags=["Tarefas"])
@@ -71,7 +82,7 @@ class TaskListCreateView(ListAPIView):
         description=(
             "Filters: status, assignee, assignee__isnull, priority, priority__in "
             "(comma separated), label, parent, parent__isnull, cycle, cycle__isnull, "
-            "due_date__isnull, "
+            "due_date__isnull, archived (default: hidden), key (DEV-12), "
             "due_before, due_after, overdue, completed. `search` matches title and "
             "description."
         ),
@@ -80,7 +91,10 @@ class TaskListCreateView(ListAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return TaskService.list_for(self.request.user, self.kwargs["sector_id"])
+        tasks = TaskService.list_for(self.request.user, self.kwargs["sector_id"])
+        if "archived" not in self.request.query_params:
+            tasks = tasks.filter(archived_at__isnull=True)
+        return tasks
 
     @extend_schema(
         summary="Create a task (editor+); defaults to the first to-do column",

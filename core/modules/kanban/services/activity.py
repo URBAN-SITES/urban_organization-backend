@@ -13,6 +13,7 @@ TRACKED = (
     "assignee",
     "status",
     "cycle",
+    "estimate",
 )
 
 
@@ -40,6 +41,7 @@ def snapshot(task: Task) -> dict:
         "assignee": task.assignee_id,
         "status": task.status_id,
         "cycle": task.cycle_id,
+        "estimate": task.estimate,
     }
 
 
