@@ -1,20 +1,25 @@
+from datetime import timedelta
+
 from django.db import transaction
-from django.db.models import Count, Exists, Max, OuterRef, Q
+from django.db.models import Count, Exists, F, Max, OuterRef, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.models.follow import TaskSubscriber
 from core.modules.kanban.models.saved_view import TaskDependency
 from core.modules.kanban.models.sector import Sector
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.response_messages import (
     MSG_CYCLE_INVALID,
+    MSG_FOLLOWED_STATUS,
     MSG_STATUS_INVALID,
     MSG_STATUS_WIP_LIMIT,
     MSG_TASK_ASSIGNED,
     MSG_TASK_ASSIGNEE_INVALID,
     MSG_TASK_DATES_INVALID,
     MSG_TASK_PARENT_INVALID,
+    MSG_TASK_RESTORE_PARENT,
     MSG_TASK_STATUS_CHANGED,
 )
 from core.modules.kanban.services.activity import (
@@ -33,7 +38,9 @@ class TaskService:
     def get_task(user: User, task_id, minimum: str = Role.VIEWER):
         """Returns (task, sector, role); 404 when the task is not visible."""
         task = (
-            Task.objects.select_related("sector", "status", "assignee", "owner")
+            Task.objects.select_related(
+                "sector", "status", "assignee", "owner", "cycle"
+            )
             .filter(id=task_id, is_active=True)
             .first()
         )
@@ -45,9 +52,10 @@ class TaskService:
     @staticmethod
     def list_for(user: User, sector_id):
         sector, _role = SectorService.get_sector(user, sector_id)
+        TaskService.auto_archive(sector)
         return (
             Task.objects.filter(sector=sector, is_active=True)
-            .select_related("status", "assignee", "owner")
+            .select_related("sector", "status", "assignee", "owner")
             .prefetch_related("labels")
             .annotate(
                 is_blocked=TaskService.blocked_expression(),
@@ -96,12 +104,14 @@ class TaskService:
             owner=user,
             status=status,
             position=0 if last is None else last + 1,
+            sequence=TaskService._next_number(sector),
             **data,
         )
         TaskService._apply_status(task, status)
         task.save()
         if labels:
             task.labels.set(labels)
+        TaskSubscriber.objects.get_or_create(task=task, user=user)
         ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
         return task
@@ -133,8 +143,65 @@ class TaskService:
     def delete(user: User, task_id) -> None:
         task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         ActivityService.record(task, user, Action.DELETED)
-        task.soft_delete()
-        Task.objects.filter(parent=task).update(is_active=False)
+        now = timezone.now()
+        task.is_active, task.deleted_at = False, now
+        task.save(update_fields=["is_active", "deleted_at", "updated_at"])
+        Task.objects.filter(parent=task, is_active=True).update(
+            is_active=False, deleted_at=now
+        )
+
+    @staticmethod
+    def trash(user: User, sector_id):
+        """Deleted tasks of the last 30 days (subtasks come back with their parent)."""
+        sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
+        since = timezone.now() - timedelta(days=30)
+        return (
+            Task.objects.filter(sector=sector, is_active=False, deleted_at__gte=since)
+            .exclude(parent__is_active=False, parent__deleted_at=F("deleted_at"))
+            .select_related("sector", "status", "assignee", "owner")
+            .order_by("-deleted_at")
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def restore(user: User, task_id) -> Task:
+        task = (
+            Task.objects.select_related("sector", "parent")
+            .filter(id=task_id, is_active=False, deleted_at__isnull=False)
+            .first()
+        )
+        if task is None:
+            raise NotFound()
+        SectorService.get_sector(user, task.sector_id, Role.EDITOR)
+        if task.parent_id and not task.parent.is_active:
+            raise ValidationError(MSG_TASK_RESTORE_PARENT)
+        Task.objects.filter(parent=task, deleted_at=task.deleted_at).update(
+            is_active=True, deleted_at=None
+        )
+        task.is_active, task.deleted_at = True, None
+        task.save(update_fields=["is_active", "deleted_at", "updated_at"])
+        ActivityService.record(task, user, Action.UPDATED, {"restored": [None, "sim"]})
+        return task
+
+    @staticmethod
+    def set_archived(user: User, task_id, archived: bool) -> Task:
+        task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
+        task.archived_at = timezone.now() if archived else None
+        task.save(update_fields=["archived_at", "updated_at"])
+        return task
+
+    @staticmethod
+    def auto_archive(sector: Sector) -> None:
+        """Done tasks older than the project's limit leave the board (lazy and on beat)."""
+        if not sector.auto_archive_days:
+            return
+        cutoff = timezone.now() - timedelta(days=sector.auto_archive_days)
+        Task.objects.filter(
+            sector=sector,
+            is_active=True,
+            archived_at__isnull=True,
+            completed_at__lt=cutoff,
+        ).update(archived_at=timezone.now())
 
     @staticmethod
     @transaction.atomic
@@ -169,6 +236,15 @@ class TaskService:
                 event="task.status_changed",
                 preference="app_status",
             )
+            TaskService.notify_followers(
+                user,
+                task,
+                title=MSG_FOLLOWED_STATUS,
+                message=f"{task.title}: {status.name}",
+                event="task.status_changed",
+                preference="app_status",
+                skip={task.assignee_id},
+            )
         return task
 
     @staticmethod
@@ -182,7 +258,49 @@ class TaskService:
             )
         )
 
+    @staticmethod
+    def notify_followers(
+        actor: User,
+        task: Task,
+        *,
+        title,
+        message: str,
+        event: str,
+        preference: str,
+        skip=(),
+    ) -> None:
+        skipped = {actor.pk, *skip}
+        muted = UserSettings.objects.filter(**{preference: False}).values("user_id")
+        people = (
+            User.objects.filter(followed_tasks__task=task, is_active=True)
+            .exclude(pk__in=[pk for pk in skipped if pk])
+            .exclude(pk__in=muted)
+        )
+        allowed = SectorService.participant_ids(task.sector)
+        for person in people:
+            if person.pk not in allowed:
+                continue
+            NotificationService.notify(
+                person,
+                str(title),
+                message,
+                {
+                    "event": event,
+                    "task_id": str(task.pk),
+                    "sector_id": str(task.sector_id),
+                    "organization_id": str(task.sector.organization_id),
+                },
+            )
+
     # helpers ------------------------------------------------------------
+
+    @staticmethod
+    def _next_number(sector: Sector) -> int:
+        locked = Sector.objects.select_for_update().get(pk=sector.pk)
+        locked.task_counter += 1
+        locked.save(update_fields=["task_counter"])
+        sector.task_counter = locked.task_counter
+        return locked.task_counter
 
     @staticmethod
     def _check_plan(sector: Sector, cycle, start_date, due_date) -> None:

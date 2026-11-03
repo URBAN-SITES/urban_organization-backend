@@ -99,6 +99,10 @@ class Task(BaseModel):
     labels = models.ManyToManyField(
         Label, blank=True, related_name="tasks", verbose_name=_("labels")
     )
+    sequence = models.PositiveIntegerField(_("number"), null=True, blank=True)
+    estimate = models.PositiveSmallIntegerField(_("estimate"), null=True, blank=True)
+    archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
+    deleted_at = models.DateTimeField(_("deleted at"), null=True, blank=True)
     cycle = models.ForeignKey(
         Cycle,
         on_delete=models.SET_NULL,

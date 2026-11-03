@@ -17,6 +17,12 @@ class SectorSerializer(serializers.ModelSerializer):
     color = serializers.RegexField(
         r"^#[0-9a-fA-F]{6}$", max_length=7, required=False, allow_blank=True
     )
+    identifier = serializers.RegexField(
+        r"^[A-Za-z0-9]{1,6}$", max_length=6, required=False, allow_blank=True
+    )
+    auto_archive_days = serializers.IntegerField(
+        min_value=1, max_value=365, required=False, allow_null=True
+    )
     icon = serializers.RegexField(
         r"^[a-z0-9_-]+$", max_length=50, required=False, allow_blank=True
     )
@@ -31,6 +37,8 @@ class SectorSerializer(serializers.ModelSerializer):
             "icon",
             "color",
             "is_private",
+            "identifier",
+            "auto_archive_days",
             "archived_at",
             "is_favorite",
             "task_total",
@@ -39,6 +47,9 @@ class SectorSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = ("id", "organization_id", "archived_at", "created_at")
+
+    def validate_identifier(self, value: str) -> str:
+        return value.upper()
 
     def get_is_favorite(self, obj) -> bool:
         return bool(getattr(obj, "is_favorite", False))
