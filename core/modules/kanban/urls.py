@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.modules.kanban.views import cycle, extras, item, label, sector, task
+from core.modules.kanban.views import cycle, extras, item, label, sector, task, workflow
 
 app_name = "kanban"
 
@@ -116,6 +116,51 @@ urlpatterns = [
         "sectors/<uuid:sector_id>/trash/",
         extras.TrashListView.as_view(),
         name="task-trash",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/views/",
+        workflow.SavedViewListCreateView.as_view(),
+        name="saved-view-list",
+    ),
+    path(
+        "views/<uuid:pk>/",
+        workflow.SavedViewDetailView.as_view(),
+        name="saved-view-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/fields/",
+        workflow.CustomFieldListCreateView.as_view(),
+        name="custom-field-list",
+    ),
+    path(
+        "fields/<uuid:pk>/",
+        workflow.CustomFieldDetailView.as_view(),
+        name="custom-field-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/templates/",
+        workflow.TemplateListCreateView.as_view(),
+        name="template-list",
+    ),
+    path(
+        "templates/<uuid:pk>/",
+        workflow.TemplateDetailView.as_view(),
+        name="template-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/tasks/bulk/",
+        workflow.TaskBulkView.as_view(),
+        name="task-bulk",
+    ),
+    path(
+        "tasks/<uuid:task_id>/fields/",
+        workflow.TaskFieldValuesView.as_view(),
+        name="task-field-list",
+    ),
+    path(
+        "tasks/<uuid:task_id>/fields/<uuid:field_id>/",
+        workflow.TaskFieldValueView.as_view(),
+        name="task-field-detail",
     ),
     path(
         "sectors/<uuid:sector_id>/tasks/",
