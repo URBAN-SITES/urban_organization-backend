@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -13,7 +14,9 @@ from core.modules.kanban.models.task import Task
 class SavedView(models.Model):
     class Layout(models.TextChoices):
         BOARD = "board", _("board")
+        LIST = "list", _("list")
         TABLE = "table", _("table")
+        TIMELINE = "timeline", _("timeline")
         CALENDAR = "calendar", _("calendar")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -38,6 +41,18 @@ class SavedView(models.Model):
     filters = models.JSONField(_("filters"), default=dict, blank=True)
     sort = models.JSONField(_("sort"), default=list, blank=True)
     position = models.PositiveIntegerField(_("position"), default=0)
+    search = models.CharField(_("search"), max_length=100, blank=True)
+    # null owner: legacy rows; shared views show for everyone in the project
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("owner"),
+    )
+    is_shared = models.BooleanField(_("shared"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True, null=True)
 
     class Meta:
         verbose_name = _("saved view")

@@ -99,7 +99,18 @@ class Task(BaseModel):
     labels = models.ManyToManyField(
         Label, blank=True, related_name="tasks", verbose_name=_("labels")
     )
+
+    class Recurrence(models.TextChoices):
+        NONE = "", _("never")
+        DAILY = "daily", _("daily")
+        WEEKLY = "weekly", _("weekly")
+        MONTHLY = "monthly", _("monthly")
+
     sequence = models.PositiveIntegerField(_("number"), null=True, blank=True)
+    # when completed, a copy is created for the next period
+    recurrence = models.CharField(
+        _("repeats"), max_length=10, choices=Recurrence, blank=True, default=""
+    )
     estimate = models.PositiveSmallIntegerField(_("estimate"), null=True, blank=True)
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
     deleted_at = models.DateTimeField(_("deleted at"), null=True, blank=True)
