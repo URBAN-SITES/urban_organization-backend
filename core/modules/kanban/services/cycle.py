@@ -1,4 +1,7 @@
-from django.db.models import Count, Q
+from datetime import timedelta
+
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -53,7 +56,48 @@ class CycleService:
             task_done=Count(
                 "tasks", filter=ACTIVE_TASKS & Q(tasks__completed_at__isnull=False)
             ),
+            points_total=Coalesce(Sum("tasks__estimate", filter=ACTIVE_TASKS), 0),
+            points_done=Coalesce(
+                Sum(
+                    "tasks__estimate",
+                    filter=ACTIVE_TASKS & Q(tasks__completed_at__isnull=False),
+                ),
+                0,
+            ),
         )
+
+    @staticmethod
+    def burndown(user: User, cycle_id) -> dict:
+        """What was still open at the end of each day of the cycle (up to today)."""
+        cycle = CycleService._get(user, cycle_id, Role.VIEWER)
+        rows = list(
+            cycle.tasks.filter(is_active=True).values("completed_at", "estimate")
+        )
+        today = timezone.localdate()
+        last = min(cycle.end_date, today)
+        days, day = [], cycle.start_date
+        while day <= last:
+            open_rows = [
+                row
+                for row in rows
+                if row["completed_at"] is None
+                or timezone.localtime(row["completed_at"]).date() > day
+            ]
+            days.append(
+                {
+                    "date": day,
+                    "remaining": len(open_rows),
+                    "remaining_points": sum(r["estimate"] or 0 for r in open_rows),
+                }
+            )
+            day += timedelta(days=1)
+        return {
+            "start_date": cycle.start_date,
+            "end_date": cycle.end_date,
+            "total": len(rows),
+            "total_points": sum(r["estimate"] or 0 for r in rows),
+            "days": days,
+        }
 
     @staticmethod
     def _reload(cycle: Cycle) -> Cycle:

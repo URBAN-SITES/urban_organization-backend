@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.identifiers import make_identifier
 from core.modules.kanban.models.sector import Sector, SectorFavorite, SectorMember
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.response_messages import (
@@ -146,6 +147,8 @@ class SectorService:
         OrganizationService.require_role(
             user, organization_id, OrganizationMember.Role.MEMBER
         )
+        data.setdefault("identifier", "")
+        data["identifier"] = data["identifier"] or make_identifier(data["name"])
         sector = Sector.objects.create(
             organization_id=organization_id, owner=user, **data
         )
@@ -159,6 +162,8 @@ class SectorService:
     @staticmethod
     def update(user: User, sector_id, data: dict) -> Sector:
         sector, _role = SectorService.get_sector(user, sector_id, Role.MANAGER)
+        if "identifier" in data and not data["identifier"]:
+            data["identifier"] = make_identifier(data.get("name", sector.name))
         for field, value in data.items():
             setattr(sector, field, value)
         sector.save()

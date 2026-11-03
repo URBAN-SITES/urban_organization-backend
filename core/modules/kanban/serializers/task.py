@@ -33,6 +33,7 @@ class TaskSerializer(serializers.ModelSerializer):
     assignee_id = serializers.UUIDField(read_only=True)
     cycle_id = serializers.UUIDField(read_only=True)
     is_blocked = serializers.SerializerMethodField()
+    key = serializers.SerializerMethodField()
     assignee_name = serializers.CharField(
         source="assignee.name", read_only=True, default=None
     )
@@ -51,6 +52,7 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = (
             "id",
+            "key",
             "sector_id",
             "status_id",
             "parent_id",
@@ -62,6 +64,8 @@ class TaskSerializer(serializers.ModelSerializer):
             "completed_at",
             "cycle_id",
             "is_blocked",
+            "estimate",
+            "archived_at",
             "assignee_id",
             "assignee_name",
             "position",
@@ -104,6 +108,11 @@ class TaskSerializer(serializers.ModelSerializer):
             ).count()
         return done
 
+    def get_key(self, task) -> str | None:
+        if not task.sequence:
+            return None
+        return f"{task.sector.identifier or 'PRJ'}-{task.sequence}"
+
     def get_is_blocked(self, task) -> bool:
         blocked = getattr(task, "is_blocked", None)
         if blocked is None:
@@ -131,6 +140,9 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     cycle = serializers.PrimaryKeyRelatedField(
         queryset=Cycle.objects.all(), allow_null=True, required=False
     )
+    estimate = serializers.IntegerField(
+        min_value=0, max_value=100, required=False, allow_null=True
+    )
 
     class Meta:
         model = Task
@@ -143,6 +155,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             "assignee",
             "label_ids",
             "cycle",
+            "estimate",
         )
 
 
@@ -216,6 +229,8 @@ class CycleSerializer(serializers.ModelSerializer):
     sector_id = serializers.UUIDField(read_only=True)
     task_total = serializers.IntegerField(read_only=True, default=0)
     task_done = serializers.IntegerField(read_only=True, default=0)
+    points_total = serializers.IntegerField(read_only=True, default=0)
+    points_done = serializers.IntegerField(read_only=True, default=0)
     state = serializers.SerializerMethodField()
 
     class Meta:
@@ -230,6 +245,8 @@ class CycleSerializer(serializers.ModelSerializer):
             "state",
             "task_total",
             "task_done",
+            "points_total",
+            "points_done",
             "created_at",
         )
         read_only_fields = ("id", "sector_id", "created_at")
@@ -253,3 +270,29 @@ class TaskRelationsSerializer(serializers.Serializer):
 class TaskRelationWriteSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=("blocked_by", "blocking"))
     task = serializers.UUIDField()
+
+
+class TrashedTaskSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    deleted_at = serializers.DateTimeField()
+    subtask_count = serializers.IntegerField(default=0)
+
+
+class FollowSerializer(serializers.Serializer):
+    following = serializers.BooleanField()
+    followers = serializers.IntegerField()
+
+
+class BurndownDaySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    remaining = serializers.IntegerField()
+    remaining_points = serializers.IntegerField()
+
+
+class BurndownSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    total = serializers.IntegerField()
+    total_points = serializers.IntegerField()
+    days = BurndownDaySerializer(many=True)
