@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.modules.ai.permissions import HasAssistantAccess
 from core.modules.ai.response_messages import MSG_AI_BUSY
 from core.modules.ai.serializers.ask import (
     AITaskCreateSerializer,
@@ -25,7 +24,7 @@ REQUEST_TTL = 86400
 class AITaskOptionsView(APIView):
     """People who can be assigned in a sector; feeds the draft card selectors."""
 
-    permission_classes = [IsAuthenticated, HasAssistantAccess]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary="List assignable people of a sector",
@@ -47,7 +46,7 @@ class AITaskOptionsView(APIView):
 class AITaskCreateView(APIView):
     """Create the task the user confirmed in the draft card (no model involved)."""
 
-    permission_classes = [IsAuthenticated, HasAssistantAccess]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary="Create a task from a confirmed assistant draft",
