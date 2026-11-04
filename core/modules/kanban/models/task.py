@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
 from core.modules.kanban.models.cycle import Cycle
+from core.modules.kanban.models.epic import Epic
 from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.sector import Sector
 
@@ -121,6 +122,14 @@ class Task(BaseModel):
         blank=True,
         related_name="tasks",
         verbose_name=_("cycle"),
+    )
+    epic = models.ForeignKey(
+        Epic,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
+        verbose_name=_("epic"),
     )
 
     objects = TaskQuerySet.as_manager()
