@@ -34,6 +34,10 @@ class Sector(BaseModel):
     auto_archive_days = models.PositiveSmallIntegerField(
         _("auto archive after (days)"), null=True, blank=True
     )
+    # read-only public link (/p/<token>); null while sharing is off
+    public_token = models.CharField(
+        _("public link token"), max_length=64, null=True, blank=True, unique=True
+    )
 
     class Meta(BaseModel.Meta):
         verbose_name = _("sector")

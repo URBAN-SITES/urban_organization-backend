@@ -20,6 +20,8 @@ from core.modules.invitations.models.invite import (
     OrganizationInvite as OrganizationInvite,
 )
 from core.modules.kanban.models.activity import TaskActivity as TaskActivity
+from core.modules.kanban.models.automation import AutomationRule as AutomationRule
+from core.modules.kanban.models.automation import AutomationRun as AutomationRun
 from core.modules.kanban.models.custom_field import CustomField as CustomField
 from core.modules.kanban.models.custom_field import (
     CustomFieldOption as CustomFieldOption,

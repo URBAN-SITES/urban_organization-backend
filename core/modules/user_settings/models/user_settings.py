@@ -35,6 +35,7 @@ class UserSettings(models.Model):
     push_enabled = models.BooleanField(_("push enabled"), default=True)
     email_product = models.BooleanField(_("product e-mails"), default=True)
     email_weekly_digest = models.BooleanField(_("weekly digest"), default=False)
+    email_daily_digest = models.BooleanField(_("daily digest"), default=False)
     email_security = models.BooleanField(_("security e-mails"), default=True)
     email_assigned = models.BooleanField(_("assignment e-mails"), default=True)
     email_mentions = models.BooleanField(_("mention e-mails"), default=True)

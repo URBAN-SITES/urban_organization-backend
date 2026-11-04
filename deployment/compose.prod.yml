@@ -72,7 +72,7 @@ services:
     secrets:
       - firebase_admin
     environment: *backend_environment
-    command: ["celery", "-A", "app", "worker", "--loglevel=info", "--concurrency=2"]
+    command: ["celery", "-A", "app", "worker", "--beat", "--schedule", "/tmp/celerybeat-schedule", "--loglevel=info", "--concurrency=2"]
     volumes:
       - media_data:/app/media
     depends_on:

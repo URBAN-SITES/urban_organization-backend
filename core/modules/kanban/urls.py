@@ -1,6 +1,7 @@
 from django.urls import path
 
 from core.modules.kanban.views import (
+    automation,
     cycle,
     extras,
     item,
@@ -131,6 +132,31 @@ urlpatterns = [
         "organizations/<uuid:organization_id>/reports/pdf/",
         tracking.ReportPdfView.as_view(),
         name="reports-pdf",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/automations/",
+        automation.AutomationListCreateView.as_view(),
+        name="sector-automations",
+    ),
+    path(
+        "automations/<uuid:pk>/",
+        automation.AutomationDetailView.as_view(),
+        name="automation-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/import/",
+        automation.TaskImportView.as_view(),
+        name="task-import",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/public-link/",
+        automation.PublicLinkView.as_view(),
+        name="sector-public-link",
+    ),
+    path(
+        "public/projects/<str:token>/",
+        automation.PublicBoardView.as_view(),
+        name="public-board",
     ),
     path("me/timer/", tracking.MyTimerView.as_view(), name="my-timer"),
     path(

@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.models.automation import AutomationRule
 from core.modules.kanban.models.follow import TaskSubscriber
 from core.modules.kanban.models.saved_view import TaskDependency
 from core.modules.kanban.models.sector import Sector
@@ -29,6 +30,7 @@ from core.modules.kanban.services.activity import (
     ActivityService,
     snapshot,
 )
+from core.modules.kanban.services.automation import AutomationService
 from core.modules.kanban.services.label import LabelService
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.notifications.services.notification import NotificationService
@@ -123,13 +125,14 @@ class TaskService:
         TaskSubscriber.objects.get_or_create(task=task, user=user)
         ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
+        AutomationService.run(task, AutomationRule.Trigger.CREATED, user)
         return task
 
     @staticmethod
     @transaction.atomic
     def update(user: User, task_id, data: dict) -> Task:
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
-        old_assignee = task.assignee_id
+        old_assignee, old_priority = task.assignee_id, task.priority
         before, before_display = snapshot(task), ActivityService.display(task)
         label_ids = data.pop("label_ids", None)
         labels = None if label_ids is None else LabelService.resolve(sector, label_ids)
@@ -147,6 +150,12 @@ class TaskService:
             TaskService._set_labels(task, user, labels)
         if task.assignee_id != old_assignee:
             TaskService._notify_assignee(user, task)
+            if task.assignee_id:
+                AutomationService.run(task, AutomationRule.Trigger.ASSIGNED, user)
+        if task.priority != old_priority:
+            AutomationService.run(
+                task, AutomationRule.Trigger.PRIORITY, user, task.priority
+            )
         return task
 
     @staticmethod
@@ -258,6 +267,9 @@ class TaskService:
                 event="task.status_changed",
                 preference="app_status",
                 skip={task.assignee_id},
+            )
+            AutomationService.run(
+                task, AutomationRule.Trigger.MOVED, user, str(status.pk)
             )
         return task
 
