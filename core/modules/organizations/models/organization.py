@@ -59,6 +59,8 @@ class OrganizationMember(models.Model):
         ADMIN = "admin", _("admin")
         MEMBER = "member", _("member")
         VIEWER = "viewer", _("viewer")
+        # external guest: sees only the projects they were added to
+        GUEST = "guest", _("guest")
 
     organization = models.ForeignKey(
         Organization,

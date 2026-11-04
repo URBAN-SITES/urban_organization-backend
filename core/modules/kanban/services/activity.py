@@ -57,8 +57,15 @@ class ActivityService:
         )
 
     @staticmethod
-    def record_changes(task: Task, actor: User, before: dict, before_display: dict):
-        """Logs an update with only the fields that really changed."""
+    def record_changes(
+        task: Task,
+        actor: User,
+        before: dict,
+        before_display: dict,
+        extra: dict | None = None,
+    ):
+        """Logs an update with only the fields that really changed (extra notes,
+        such as the automation that made it, ride along only with a change)."""
         after = snapshot(task)
         changes = {
             field: [before_display[field], _display(task, field)]
@@ -68,7 +75,7 @@ class ActivityService:
         if not changes:
             return None
         action = Action.MOVED if set(changes) == {"status"} else Action.UPDATED
-        return ActivityService.record(task, actor, action, changes)
+        return ActivityService.record(task, actor, action, {**changes, **(extra or {})})
 
     @staticmethod
     def display(task: Task) -> dict:

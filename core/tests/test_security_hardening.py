@@ -38,6 +38,8 @@ PUBLIC = {
     "api/v1/integrations/github/callback/",
     "api/v1/integrations/github/webhook/",
     "api/v1/meetings/livekit/webhook/",
+    # read-only board behind a project's public link (token in the path)
+    "api/v1/public/projects/<str:token>/",
 }
 
 

@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 # from django.contrib import messages
+from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
@@ -132,6 +133,17 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TIME_LIMIT = 5 * 60
+# periodic jobs (the worker runs with --beat): e-mail digests and project rules
+CELERY_BEAT_SCHEDULE = {
+    "send-digests": {
+        "task": "core.tasks.digest.send_digests",
+        "schedule": crontab(hour=8, minute=0),
+    },
+    "run-scheduled-rules": {
+        "task": "core.tasks.digest.run_scheduled_rules",
+        "schedule": crontab(minute=5),
+    },
+}
 WSGI_APPLICATION = "app.wsgi.application"
 ASGI_APPLICATION = "app.asgi.application"
 # single process only; use channels_redis.core.RedisChannelLayer in production
@@ -187,6 +199,8 @@ REST_FRAMEWORK = {
         "webhook": "600/minute",
         # IA liberada para todos: limite por usuário para não esgotar a cota gratuita do modelo
         "ai": "60/hour",
+        # read-only public project links (no login)
+        "public": "120/hour",
     },
 }
 SIMPLE_JWT = {
