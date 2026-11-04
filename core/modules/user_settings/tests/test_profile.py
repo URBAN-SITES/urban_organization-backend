@@ -53,6 +53,7 @@ class ProfileSettingsTests(TestCase):
             "push_enabled": False,
             "email_product": False,
             "email_weekly_digest": True,
+            "email_daily_digest": True,
             "email_security": False,
             "email_assigned": True,
             "email_mentions": False,
