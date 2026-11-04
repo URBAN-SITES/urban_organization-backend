@@ -2,7 +2,7 @@ import os
 
 from celery import Celery
 
-# worker: celery -A app worker -l info
+# worker (with the periodic jobs): celery -A app worker --beat -l info
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings.dev")
 
 app = Celery("app")

@@ -25,6 +25,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "push_enabled",
             "email_product",
             "email_weekly_digest",
+            "email_daily_digest",
             "email_security",
             "email_assigned",
             "email_mentions",

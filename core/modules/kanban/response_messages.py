@@ -47,3 +47,11 @@ MSG_INTAKE_ACCEPTED = _("Your request was accepted")
 MSG_INTAKE_DECLINED = _("Your request was declined")
 MSG_TIMER_RUNNING = _("You already have a timer running.")
 MSG_TIME_NOT_YOURS = _("Only who logged this time can remove it.")
+MSG_AUTOMATION_VALUE_INVALID = _("This rule points to something outside the project.")
+MSG_AUTOMATION_NOTICE = _("Automation")
+MSG_IMPORT_FILE_INVALID = _(
+    "We could not read this file. Check the format and try again."
+)
+MSG_IMPORT_TOO_LARGE = _("The file is too large (limit 5 MB, 2000 tasks).")
+MSG_IMPORT_EMPTY = _("No tasks were found in this file.")
+MSG_AUTOMATION_LIMIT = _("A project can have up to 50 automation rules.")
