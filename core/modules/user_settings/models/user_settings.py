@@ -53,6 +53,8 @@ class UserSettings(models.Model):
     )
     compact_cards = models.BooleanField(_("compact cards"), default=False)
     show_completed = models.BooleanField(_("show completed tasks"), default=True)
+    # keys of the home dashboard panels the user chose to hide
+    hidden_widgets = models.JSONField(_("hidden home panels"), default=list, blank=True)
 
     class Meta:
         verbose_name = _("user settings")

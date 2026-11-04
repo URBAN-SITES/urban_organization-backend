@@ -8,6 +8,7 @@ from core.modules.kanban.views import (
     planning,
     sector,
     task,
+    tracking,
     workflow,
 )
 
@@ -125,6 +126,35 @@ urlpatterns = [
         "sectors/<uuid:sector_id>/trash/",
         extras.TrashListView.as_view(),
         name="task-trash",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/reports/pdf/",
+        tracking.ReportPdfView.as_view(),
+        name="reports-pdf",
+    ),
+    path("me/timer/", tracking.MyTimerView.as_view(), name="my-timer"),
+    path(
+        "tasks/<uuid:task_id>/timer/",
+        tracking.TaskTimerView.as_view(),
+        name="task-timer",
+    ),
+    path(
+        "tasks/<uuid:task_id>/time/", tracking.TaskTimeView.as_view(), name="task-time"
+    ),
+    path(
+        "time/<uuid:entry_id>/",
+        tracking.TimeEntryDetailView.as_view(),
+        name="time-entry-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/workload/",
+        tracking.WorkloadView.as_view(),
+        name="sector-workload",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/tasks/export/",
+        tracking.TaskExportView.as_view(),
+        name="task-export",
     ),
     path(
         "sectors/<uuid:sector_id>/epics/",
