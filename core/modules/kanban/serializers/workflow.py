@@ -3,6 +3,7 @@ from rest_framework import serializers
 from core.models.user import User
 from core.modules.kanban.models.custom_field import CustomField, CustomFieldOption
 from core.modules.kanban.models.cycle import Cycle
+from core.modules.kanban.models.epic import Epic
 from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.saved_view import SavedView
 from core.modules.kanban.models.task import Status, Task
@@ -108,6 +109,9 @@ class BulkSerializer(serializers.Serializer):
     )
     cycle = serializers.PrimaryKeyRelatedField(
         queryset=Cycle.objects.all(), allow_null=True, required=False
+    )
+    epic = serializers.PrimaryKeyRelatedField(
+        queryset=Epic.objects.all(), allow_null=True, required=False
     )
     priority = serializers.ChoiceField(choices=Task.Priority, required=False)
     due_date = serializers.DateField(allow_null=True, required=False)

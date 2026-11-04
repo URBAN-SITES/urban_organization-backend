@@ -13,6 +13,7 @@ from core.modules.kanban.models.sector import Sector
 from core.modules.kanban.models.task import ChecklistItem, Status, Task
 from core.modules.kanban.response_messages import (
     MSG_CYCLE_INVALID,
+    MSG_EPIC_INVALID,
     MSG_FOLLOWED_STATUS,
     MSG_STATUS_INVALID,
     MSG_STATUS_WIP_LIMIT,
@@ -40,7 +41,7 @@ class TaskService:
         """Returns (task, sector, role); 404 when the task is not visible."""
         task = (
             Task.objects.select_related(
-                "sector", "status", "assignee", "owner", "cycle"
+                "sector", "status", "assignee", "owner", "cycle", "epic"
             )
             .filter(id=task_id, is_active=True)
             .first()
@@ -93,6 +94,7 @@ class TaskService:
         TaskService._check_plan(
             sector, data.get("cycle"), data.get("start_date"), data.get("due_date")
         )
+        TaskService._check_epic(sector, data.get("epic"))
         parent = data.get("parent")
         if parent and (parent.sector_id != sector.pk or not parent.is_active):
             raise ValidationError(MSG_TASK_PARENT_INVALID)
@@ -137,6 +139,8 @@ class TaskService:
             setattr(task, field, value)
         if {"cycle", "start_date", "due_date"} & data.keys():
             TaskService._check_plan(sector, task.cycle, task.start_date, task.due_date)
+        if "epic" in data:
+            TaskService._check_epic(sector, task.epic)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
         if labels is not None:
@@ -341,6 +345,8 @@ class TaskService:
             priority=task.priority,
             assignee=task.assignee,
             estimate=task.estimate,
+            cycle=None,
+            epic=task.epic,
             start_date=start,
             due_date=due,
             recurrence=task.recurrence,
@@ -374,6 +380,11 @@ class TaskService:
             raise ValidationError({"cycle": [MSG_CYCLE_INVALID]})
         if start_date and due_date and start_date > due_date:
             raise ValidationError({"start_date": [MSG_TASK_DATES_INVALID]})
+
+    @staticmethod
+    def _check_epic(sector: Sector, epic) -> None:
+        if epic is not None and epic.sector_id != sector.pk:
+            raise ValidationError({"epic": [MSG_EPIC_INVALID]})
 
     @staticmethod
     def _apply_status(task: Task, status: Status) -> None:

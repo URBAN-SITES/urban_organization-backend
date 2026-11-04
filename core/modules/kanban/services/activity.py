@@ -13,6 +13,7 @@ TRACKED = (
     "assignee",
     "status",
     "cycle",
+    "epic",
     "estimate",
 )
 
@@ -24,6 +25,8 @@ def _display(task: Task, field: str):
         return task.status.name if task.status_id else None
     if field == "cycle":
         return task.cycle.name if task.cycle_id else None
+    if field == "epic":
+        return task.epic.name if task.epic_id else None
     if field == "description":
         return None
     value = getattr(task, field)
@@ -41,6 +44,7 @@ def snapshot(task: Task) -> dict:
         "assignee": task.assignee_id,
         "status": task.status_id,
         "cycle": task.cycle_id,
+        "epic": task.epic_id,
         "estimate": task.estimate,
     }
 

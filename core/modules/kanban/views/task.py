@@ -39,6 +39,7 @@ class TaskFilter(django_filters.FilterSet):
             "due_date": ["isnull"],
             "parent": ["exact", "isnull"],
             "cycle": ["exact", "isnull"],
+            "epic": ["exact", "isnull"],
         }
 
     def filter_overdue(self, queryset, name, value):
