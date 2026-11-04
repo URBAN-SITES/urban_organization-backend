@@ -249,7 +249,7 @@ class TemplateService:
 
 
 class BulkService:
-    UPDATE_KEYS = ("assignee", "cycle", "priority", "due_date", "estimate")
+    UPDATE_KEYS = ("assignee", "cycle", "epic", "priority", "due_date", "estimate")
 
     @staticmethod
     @transaction.atomic

@@ -26,8 +26,11 @@ from core.modules.kanban.models.custom_field import (
 )
 from core.modules.kanban.models.custom_field import TaskFieldValue as TaskFieldValue
 from core.modules.kanban.models.cycle import Cycle as Cycle
+from core.modules.kanban.models.epic import Epic as Epic
 from core.modules.kanban.models.follow import TaskSubscriber as TaskSubscriber
+from core.modules.kanban.models.intake import IntakeRequest as IntakeRequest
 from core.modules.kanban.models.label import Label as Label
+from core.modules.kanban.models.page import Page as Page
 from core.modules.kanban.models.resource_link import ResourceLink as ResourceLink
 from core.modules.kanban.models.saved_view import SavedView as SavedView
 from core.modules.kanban.models.saved_view import TaskDependency as TaskDependency

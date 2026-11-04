@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from core.models.user import User
 from core.modules.kanban.models.cycle import Cycle
+from core.modules.kanban.models.epic import Epic
 from core.modules.kanban.models.label import Label
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.task import ChecklistItem, Comment, Status, Task
@@ -32,6 +33,7 @@ class TaskSerializer(serializers.ModelSerializer):
     parent_id = serializers.UUIDField(read_only=True)
     assignee_id = serializers.UUIDField(read_only=True)
     cycle_id = serializers.UUIDField(read_only=True)
+    epic_id = serializers.UUIDField(read_only=True)
     is_blocked = serializers.SerializerMethodField()
     key = serializers.SerializerMethodField()
     assignee_name = serializers.CharField(
@@ -63,6 +65,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "due_date",
             "completed_at",
             "cycle_id",
+            "epic_id",
             "is_blocked",
             "estimate",
             "recurrence",
@@ -141,6 +144,9 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
     cycle = serializers.PrimaryKeyRelatedField(
         queryset=Cycle.objects.all(), allow_null=True, required=False
     )
+    epic = serializers.PrimaryKeyRelatedField(
+        queryset=Epic.objects.all(), allow_null=True, required=False
+    )
     estimate = serializers.IntegerField(
         min_value=0, max_value=100, required=False, allow_null=True
     )
@@ -156,6 +162,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             "assignee",
             "label_ids",
             "cycle",
+            "epic",
             "estimate",
             "recurrence",
         )
