@@ -42,6 +42,7 @@ from core.modules.kanban.models.task import Comment as Comment
 from core.modules.kanban.models.task import Status as Status
 from core.modules.kanban.models.task import Task as Task
 from core.modules.kanban.models.template import TaskTemplate as TaskTemplate
+from core.modules.kanban.models.time_entry import TimeEntry as TimeEntry
 from core.modules.meetings.models.insight import (
     MeetingActionTask as MeetingActionTask,
 )
