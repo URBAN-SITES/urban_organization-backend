@@ -12,6 +12,7 @@ from core.views.email_change import (
     EmailChangeVerifyView,
 )
 from core.views.google_auth import GoogleLoginView
+from core.views.ws_ticket import WebSocketTicketView
 from core.views.password_reset import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -51,6 +52,7 @@ route_core = [
     path("login/", LoginView.as_view(), name="login"),
     path("login/google/", GoogleLoginView.as_view(), name="login-google"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
+    path("ws-ticket/", WebSocketTicketView.as_view(), name="ws-ticket"),
     path("me/deactivate/", DeactivateSelfView.as_view(), name="deactivate-self"),
     path(
         "me/revoke-sessions/", RevokeAllSessionsView.as_view(), name="revoke-sessions"
