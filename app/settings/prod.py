@@ -20,10 +20,15 @@ DATABASES = {
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
         "HOST": _postgres_host,
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
-        "CONN_MAX_AGE": 60,
+        "CONN_MAX_AGE": int(os.getenv("POSTGRES_CONN_MAX_AGE", "60")),
         "CONN_HEALTH_CHECKS": True,
     }
 }
+# A transaction-mode pooler (Supabase on port 6543) hands each transaction a different
+# server connection: prepared statements and server-side cursors would break there.
+if os.getenv("POSTGRES_TRANSACTION_POOLER", "False") == "True":
+    DATABASES["default"]["OPTIONS"] = {"prepare_threshold": None}
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 # The web process and the Celery worker are separate processes: events sent by the worker
 # (notifications, meeting updates) only reach open sockets through a shared Redis layer.
