@@ -56,3 +56,7 @@ SECURE_HSTS_SECONDS = 3600 if USE_HTTPS else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = USE_HTTPS
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+
+# Free hosting has no separate Celery worker: CELERY_TASK_ALWAYS_EAGER=True runs each task
+# inside the web request instead of queueing it. Scheduled jobs (beat) need a worker.
+CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "False") == "True"
