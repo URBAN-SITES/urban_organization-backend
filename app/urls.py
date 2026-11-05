@@ -12,7 +12,6 @@ from core.views.email_change import (
     EmailChangeVerifyView,
 )
 from core.views.google_auth import GoogleLoginView
-from core.views.ws_ticket import WebSocketTicketView
 from core.views.password_reset import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -37,6 +36,7 @@ from core.views.user import (
     UserSessionsGetView,
     UserUpdateSelfView,
 )
+from core.views.ws_ticket import WebSocketTicketView
 
 route_docs = [
     path(
