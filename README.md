@@ -81,7 +81,7 @@ Secrets live only in `.env` (never committed). `.env.example` lists every key.
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT` | prod | PostgreSQL; empty host means SQLite in dev |
 | `REDIS_URL` | prod | Celery broker and the realtime channel layer |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL` | prod | SMTP for one-time codes and invitations |
-| `CLOUDINARY_URL` | for uploads | File and image uploads |
+| `CLOUDINARY_URL` | optional | File and image uploads; without it files are kept in the database and served by the API |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` | optional | Google sign-in, Calendar and Drive |
 | `FIREBASE_CREDENTIALS` | optional | Path to the Firebase service-account JSON; empty disables push |
 | `MP_ACCESS_TOKEN` | optional | Mercado Pago (task charges) |
