@@ -7,6 +7,7 @@ from django.urls import URLResolver, get_resolver
 from django.utils import timezone
 
 from core.models import (
+    Call,
     ChatChannel,
     ChatMessage,
     ChecklistItem,
@@ -91,6 +92,7 @@ class CrossTenantTest(KanbanTestCase):
                 user=self.owner, title="Oi"
             ).id,
             "user_id": self.member.id,
+            "call_id": Call.objects.create(channel=channel, started_by=self.owner).id,
         }
         self.members = {
             "teams": TeamMember.objects.create(team=team, user=self.member).id,

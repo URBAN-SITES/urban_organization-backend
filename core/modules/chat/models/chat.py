@@ -184,6 +184,15 @@ class ChatMessage(models.Model):
         related_name="chat_mentions",
         verbose_name=_("mentions"),
     )
+    call = models.ForeignKey(
+        "core.Call",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chat_messages",
+        verbose_name=_("call"),
+        help_text=_("Set on the summary message posted when a call ends."),
+    )
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     edited_at = models.DateTimeField(_("edited at"), null=True, blank=True)
     deleted_at = models.DateTimeField(_("deleted at"), null=True, blank=True)
@@ -196,3 +205,35 @@ class ChatMessage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.author}: {self.content[:30]}"
+
+
+class ChatMessageReaction(models.Model):
+    """One emoji of one person on a message; sending the same emoji again removes it."""
+
+    message = models.ForeignKey(
+        ChatMessage,
+        on_delete=models.CASCADE,
+        related_name="reactions",
+        verbose_name=_("message"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chat_reactions",
+        verbose_name=_("user"),
+    )
+    emoji = models.CharField(_("emoji"), max_length=16)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("chat reaction")
+        verbose_name_plural = _("chat reactions")
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["message", "user", "emoji"], name="unique_chat_reaction"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.emoji} {self.user}"
