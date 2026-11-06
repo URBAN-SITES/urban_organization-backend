@@ -147,3 +147,37 @@ class TaskGitHubLink(models.Model):
 
     def __str__(self):
         return f"{self.kind}:{self.ref}"
+
+
+class GitHubProjectItem(models.Model):
+    """A card of a GitHub Project (v2) imported as a task; importing again updates it."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sector = models.ForeignKey(
+        Sector,
+        on_delete=models.CASCADE,
+        related_name="github_project_items",
+        verbose_name=_("project"),
+    )
+    task = models.OneToOneField(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="github_project_item",
+        verbose_name=_("task"),
+    )
+    project_id = models.CharField(_("GitHub project id"), max_length=100)
+    item_id = models.CharField(_("GitHub item id"), max_length=100)
+    html_url = models.URLField(_("url"), blank=True)
+    imported_at = models.DateTimeField(_("imported at"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("imported GitHub project item")
+        verbose_name_plural = _("imported GitHub project items")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sector", "item_id"], name="unique_github_item_per_project"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.item_id
