@@ -38,6 +38,8 @@ PUBLIC = {
     "api/v1/integrations/github/callback/",
     "api/v1/integrations/github/webhook/",
     "api/v1/meetings/livekit/webhook/",
+    # uploads kept in the database: the random id is the key, like a Cloudinary URL
+    "api/v1/uploads/files/<uuid:file_id>/",
     # read-only board behind a project's public link (token in the path)
     "api/v1/public/projects/<str:token>/",
 }
@@ -85,13 +87,17 @@ class UploadTypeTest(TestCase):
         upload.assert_not_called()
 
     @patch(
+        "core.modules.uploads.services.upload.UploadService.cloudinary_ready",
+        return_value=True,
+    )
+    @patch(
         "cloudinary.uploader.upload",
         return_value={
             "secure_url": "https://res.cloudinary.com/x.png",
             "public_id": "x",
         },
     )
-    def test_regular_files_still_upload(self, upload):
+    def test_regular_files_still_upload(self, upload, _ready):
         self.assertEqual(self.post("foto.png", PNG, "image/png").status_code, 201)
         self.assertEqual(
             self.post("notas.pdf", b"%PDF-1.7\n", "application/pdf").status_code, 201
