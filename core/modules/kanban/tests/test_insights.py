@@ -182,6 +182,8 @@ class FileTests(InsightsTestCase):
         )
         self.assertEqual(files["Assets"]["task_title"], "Landing")
         self.assertEqual(files["Assets"]["owner_name"], "User")
+        # the project's Documentos page filters by it, task files included
+        self.assertEqual(files["Assets"]["sector_id"], str(self.sector))
 
     def test_organization_level_links_are_included_and_private_sectors_hidden(self):
         task = self.task("Landing")
