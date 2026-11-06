@@ -18,6 +18,7 @@ from core.modules.organizations.models.organization import OrganizationMember
 
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class ActionTests(KanbanTestCase):
     def setUp(self):
         super().setUp()
