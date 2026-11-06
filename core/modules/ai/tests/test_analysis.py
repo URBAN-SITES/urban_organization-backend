@@ -3,6 +3,7 @@ import os
 from io import BytesIO
 from types import SimpleNamespace
 from unittest import mock
+from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -61,6 +62,7 @@ def provider_response(payload=None, finish_reason=types.FinishReason.STOP):
     )
 
 
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class AIAnalysisValidationTests(SimpleTestCase):
     def validate(self, files):
         serializer = AIAnalysisSerializer(data={"files": files})
@@ -158,6 +160,7 @@ class AIAnalysisValidationTests(SimpleTestCase):
 
 
 @mock.patch("core.modules.ai.services.gemini._client")
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class GeminiAnalysisClientTests(SimpleTestCase):
     def setUp(self):
         self.file = {
@@ -261,6 +264,7 @@ class GeminiAnalysisClientTests(SimpleTestCase):
         self.assertEqual(GeminiClient.analyze(self.file), result)
 
 
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class AIAnalysisReportTests(SimpleTestCase):
     def test_consolidates_files_and_preserves_portuguese_accents(self):
         results = [
@@ -325,6 +329,7 @@ class AIAnalysisReportTests(SimpleTestCase):
 
 @override_settings(ALLOWED_HOSTS=["testserver"])
 @mock.patch("core.modules.ai.services.gemini._client")
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class AIAnalysisEndpointTests(SimpleTestCase):
     def setUp(self):
         cache.clear()

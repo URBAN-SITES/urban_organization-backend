@@ -14,7 +14,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_UNAVAILABLE,
 )
 from core.modules.ai.serializers.analysis import AIFileAnalysisSerializer
-from core.modules.ai.services.ask import AI_MODEL, _client
+from core.modules.ai.services.ask import AI_MODEL, _client, require_key
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class GeminiClient:
     @staticmethod
     def analyze(file):
         """Reuse the chatbot's SDK client with independent analysis instructions."""
+        require_key()
         try:
             response = _client().models.generate_content(
                 model=os.getenv("AI_ANALYSIS_MODEL", AI_MODEL),

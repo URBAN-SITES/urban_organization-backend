@@ -1,4 +1,5 @@
 import logging
+import os
 from functools import cache
 
 from google import genai
@@ -9,6 +10,7 @@ from core.modules.ai.prompts.system import INCEPTUM_INSTRUCTIONS
 from core.modules.ai.response_messages import (
     MSG_AI_BUSY,
     MSG_AI_DECLINED,
+    MSG_AI_NOT_CONFIGURED,
     MSG_AI_UNAVAILABLE,
 )
 
@@ -17,6 +19,18 @@ logger = logging.getLogger(__name__)
 # gemini-flash-lite-latest is fast, free tier supported and responsive
 AI_MODEL = "gemini-flash-lite-latest"
 DEFAULT_SYSTEM_PROMPT = INCEPTUM_INSTRUCTIONS
+
+
+class AINotConfigured(exceptions.APIException):
+    status_code = 503
+    default_detail = MSG_AI_NOT_CONFIGURED
+    default_code = "ai_not_configured"
+
+
+def require_key() -> None:
+    """A clear 503 instead of a generic 500 when the server has no Gemini key."""
+    if not os.getenv("GEMINI_API_KEY", "").strip():
+        raise AINotConfigured()
 
 
 @cache
@@ -29,6 +43,7 @@ class AIService:
     @staticmethod
     def ask(prompt: str, system: str = DEFAULT_SYSTEM_PROMPT) -> str:
         """One-shot question to Gemini. Reuse it for summaries, classification, extraction..."""
+        require_key()
         try:
             client = _client()
             response = client.models.generate_content(
