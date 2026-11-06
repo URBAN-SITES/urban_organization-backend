@@ -14,6 +14,7 @@ from core.modules.github.serializers.github import (
     AuthorizeSerializer,
     CallbackResultSerializer,
     CallbackSerializer,
+    GitHubProjectImportSerializer,
     GitHubStatusSerializer,
     LinkRepositoriesSerializer,
     ProjectRepositorySerializer,
@@ -31,6 +32,7 @@ from core.modules.github.services.oauth import (
     LOGIN,
     GitHubOAuthService,
 )
+from core.modules.github.services.projects import GitHubProjectsService
 from core.modules.github.services.repos import GitHubRepoService
 from core.modules.github.services.webhook import GitHubWebhookService
 from core.response_messages import MSG_LOGIN_SUCCESSFUL
@@ -301,3 +303,34 @@ class GitHubWebhookView(APIView):
             request.headers.get("X-GitHub-Event", ""), request.data
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["GitHub"])
+class GitHubProjectsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="GitHub Projects (v2) the user can read: their own and their orgs'",
+        responses={200: dict},
+    )
+    def get(self, request):
+        return Response(GitHubProjectsService.available(request.user))
+
+
+@extend_schema(tags=["GitHub"])
+class ProjectGitHubImportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Import (or import again) a GitHub Project board into this project",
+        request=GitHubProjectImportSerializer,
+        responses={200: dict},
+    )
+    def post(self, request, sector_id):
+        serializer = GitHubProjectImportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            GitHubProjectsService.import_project(
+                request.user, sector_id, serializer.validated_data["project_id"]
+            )
+        )
