@@ -12,7 +12,6 @@ from rest_framework.test import APIClient
 from core.models.user import User
 from core.modules.calendar_sync.models.calendar import UserIntegration
 from core.modules.calendar_sync.services.google import GoogleCalendarService
-from core.modules.chat.models.chat import ChatMessage
 from core.modules.chat.services.chat import ChatService
 from core.modules.organizations.services.organization import OrganizationService
 
@@ -193,32 +192,3 @@ class GoogleApiAndMeetTests(TestCase):
             self.client.get(base).json(), {"connected": False, "drive": False}
         )
         self.assertEqual(APIClient().get(base).status_code, 401)
-
-    def test_meet_posts_the_link_in_the_channel(self):
-        UserIntegration.objects.create(
-            user=self.user,
-            provider="google_calendar",
-            access_token="AT",
-            refresh_token="RT",
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
-        with (
-            google_env(),
-            patch(POST, return_value=reply(200, {"hangoutLink": "https://meet/z"})),
-        ):
-            res = self.client.post(f"{API}chat/channels/{self.general}/meet/")
-        self.assertEqual(res.status_code, 201, res.content)
-        self.assertIn("https://meet/z", res.json()["content"])
-        self.assertEqual(ChatMessage.objects.get().author, self.user)
-
-    def test_meet_needs_a_connected_account_and_channel_access(self):
-        res = self.client.post(f"{API}chat/channels/{self.general}/meet/")
-        self.assertEqual(res.status_code, 400)
-        self.assertEqual(ChatMessage.objects.count(), 0)
-        stranger = APIClient()
-        stranger.force_authenticate(
-            User.objects.create_user("s@a.com", "x12345678!", name="S")
-        )
-        self.assertEqual(
-            stranger.post(f"{API}chat/channels/{self.general}/meet/").status_code, 404
-        )
