@@ -71,17 +71,22 @@ class GoogleServiceTests(TestCase):
             )
 
     def test_connect_stores_tokens_encrypted_at_rest(self):
-        integration = self.connect()
+        # a "." never appears in Fernet output (url-safe base64), so these tokens can
+        # only be found in the column if they were stored in plain text; "AT" could
+        # show up in random ciphertext and fail by chance
+        access, refresh = "plain.access.token", "plain.refresh.token"
+        integration = self.connect(access_token=access, refresh_token=refresh)
         self.assertEqual(
-            (integration.access_token, integration.refresh_token), ("AT", "RT")
+            (integration.access_token, integration.refresh_token), (access, refresh)
         )
         with connection.cursor() as cursor:
             cursor.execute(
                 "SELECT access_token, refresh_token FROM core_userintegration"
             )
             raw = cursor.fetchone()
-        self.assertNotIn("AT", raw[0])
-        self.assertNotIn("RT", raw[1])
+        self.assertNotIn(access, raw[0])
+        self.assertNotIn(refresh, raw[1])
+        self.assertNotIn(".", raw[0] + raw[1])
 
     def test_reconnecting_keeps_the_refresh_token_google_omits(self):
         self.connect()
