@@ -50,6 +50,9 @@ MSG_AI_CALENDAR_ACCESS = _(
     "Calendar access was denied. Check permissions or reconnect Google."
 )
 MSG_AI_UNAVAILABLE = _("AI service unavailable.")
+MSG_AI_NOT_CONFIGURED = _(
+    "A IA ainda não foi configurada no servidor (falta a chave GEMINI_API_KEY)."
+)
 MSG_AI_DECLINED = _("The AI declined this request.")
 MSG_AI_INVALID_FILE = _("Upload a valid JPEG, PNG, WebP image or PDF document.")
 MSG_AI_FILE_TOO_LARGE = _("A file exceeds the configured analysis size limit.")
