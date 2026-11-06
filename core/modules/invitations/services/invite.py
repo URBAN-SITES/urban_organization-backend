@@ -13,6 +13,7 @@ from core.modules.invitations.response_messages import (
     MSG_INVITE_ALREADY_MEMBER,
     MSG_INVITE_ALREADY_PENDING,
     MSG_INVITE_EXPIRED,
+    MSG_INVITE_GUEST_NEEDS_SECTOR,
     MSG_INVITE_INVALID,
     MSG_INVITE_NOT_PENDING,
     MSG_INVITE_RECEIVED,
@@ -62,6 +63,8 @@ class InviteService:
             raise ValidationError(
                 {"sector_ids": "Choose active sectors from this organization."}
             )
+        if role == OrganizationMember.Role.GUEST and not sectors:
+            raise ValidationError({"sector_ids": [MSG_INVITE_GUEST_NEEDS_SECTOR]})
         if OrganizationMember.objects.filter(
             organization=organization, user__email__iexact=email
         ).exists():

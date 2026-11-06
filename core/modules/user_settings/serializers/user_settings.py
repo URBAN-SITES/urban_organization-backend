@@ -7,6 +7,11 @@ from core.modules.user_settings.response_messages import MSG_INVALID_TIMEZONE
 
 
 class UserSettingsSerializer(serializers.ModelSerializer):
+    hidden_widgets = serializers.ListField(
+        child=serializers.RegexField(r"^[a-z][a-z0-9_-]{0,31}$"),
+        required=False,
+        max_length=30,
+    )
     locale = serializers.RegexField(
         r"^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$", max_length=10
     )
@@ -20,6 +25,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "push_enabled",
             "email_product",
             "email_weekly_digest",
+            "email_daily_digest",
             "email_security",
             "email_assigned",
             "email_mentions",
@@ -31,6 +37,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
             "week_start",
             "compact_cards",
             "show_completed",
+            "hidden_widgets",
         )
 
     def validate_timezone(self, value):

@@ -1,0 +1,16 @@
+{% autoescape off %}Olá, {{ name }}
+{% if weekly %}O que pede sua atenção nesta semana.{% else %}O que pede sua atenção hoje.{% endif %}
+{% if overdue %}
+Atrasadas ({{ overdue_count }}):
+{% for task in overdue %}- {{ task.title }} ({{ task.project }}{% if task.due %}, prazo {{ task.due }}{% endif %}): {{ task.link }}
+{% endfor %}{% endif %}{% if soon %}
+{% if weekly %}Vencem nos próximos 7 dias{% else %}Vencem hoje ou amanhã{% endif %} ({{ soon_count }}):
+{% for task in soon %}- {{ task.title }} ({{ task.project }}{% if task.due %}, prazo {{ task.due }}{% endif %}): {{ task.link }}
+{% endfor %}{% endif %}{% if handed %}
+Novas com você:
+{% for task in handed %}- {{ task.title }} ({{ task.project }}): {{ task.link }}
+{% endfor %}{% endif %}
+Para desligar este resumo: {{ settings_link }}
+
+Inceptum · Gestão de tarefas
+{% endautoescape %}

@@ -53,7 +53,9 @@ class OrganizationDetailView(APIView):
         summary="Get an organization", responses={200: OrganizationSerializer}
     )
     def get(self, request, organization_id):
-        membership = OrganizationService.get_membership(request.user, organization_id)
+        membership = OrganizationService.get_membership(
+            request.user, organization_id, allow_guest=True
+        )
         membership.organization.current_role = membership.role
         return Response(OrganizationSerializer(membership.organization).data)
 
@@ -92,7 +94,9 @@ class OrganizationBySlugView(APIView):
         organization = Organization.objects.filter(slug=slug, is_active=True).first()
         if organization is None:
             raise NotFound()
-        membership = OrganizationService.get_membership(request.user, organization.pk)
+        membership = OrganizationService.get_membership(
+            request.user, organization.pk, allow_guest=True
+        )
         organization.current_role = membership.role
         return Response(OrganizationSerializer(organization).data)
 

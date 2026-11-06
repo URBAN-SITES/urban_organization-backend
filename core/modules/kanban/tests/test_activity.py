@@ -1,4 +1,11 @@
+from datetime import timedelta
+
+from django.utils import timezone
+
+from core.modules.kanban.models.sector import Sector
 from core.modules.kanban.tests.helpers import API, KanbanTestCase, client_for, make_user
+from core.modules.meetings.models.insight import MeetingInsight
+from core.modules.meetings.models.meeting import Meeting, MeetingRecording
 
 
 class TaskActivityTests(KanbanTestCase):
@@ -55,6 +62,70 @@ class TaskActivityTests(KanbanTestCase):
         res = self.member_client.get(f"{API}organizations/{self.org.id}/dashboard/")
         titles = [a["task_title"] for a in res.json()["recent_activity"]]
         self.assertEqual(titles, ["Public task"])
+
+    def test_dashboard_lists_meetings_and_summaries_of_visible_projects(self):
+        visible = Sector.objects.get(id=self.make_sector(is_private=False))
+        hidden = Sector.objects.get(id=self.make_sector(name="Secret"))
+        now = timezone.now()
+
+        def meeting(sector, title, start):
+            m = Meeting.objects.create(
+                sector=sector,
+                title=title,
+                starts_at=start,
+                ends_at=start + timedelta(hours=1),
+                created_by=self.owner,
+            )
+            m.participants.add(self.owner, self.member)
+            return m
+
+        later = meeting(visible, "Later", now + timedelta(days=2))
+        meeting(visible, "Soon", now + timedelta(hours=1))
+        meeting(visible, "Past", now - timedelta(days=2))
+        meeting(hidden, "Hidden", now + timedelta(hours=2))
+        recording = MeetingRecording.objects.create(
+            meeting=later, egress_id="EG_dash", file_key="k", duration_seconds=90
+        )
+        MeetingInsight.objects.create(
+            recording=recording,
+            transcribe_model="m",
+            status=MeetingInsight.Status.DONE,
+            finished_at=now,
+            summary={"executive_summary": "Resumo.", "actions": [{}, {}]},
+        )
+
+        data = self.member_client.get(
+            f"{API}organizations/{self.org.id}/dashboard/"
+        ).json()
+        self.assertEqual(
+            [m["title"] for m in data["upcoming_meetings"]], ["Soon", "Later"]
+        )
+        self.assertEqual(data["upcoming_meetings"][0]["participant_count"], 2)
+        self.assertEqual(len(data["recent_insights"]), 1)
+        self.assertEqual(data["recent_insights"][0]["excerpt"], "Resumo.")
+        self.assertEqual(data["recent_insights"][0]["action_count"], 2)
+        self.assertEqual(data["members"], 2)
+        self.assertEqual(data["my_in_progress"], [])
+        self.assertEqual(data["my_done"], [])
+
+    def test_dashboard_lists_my_tasks_in_progress_and_done(self):
+        sector = self.make_sector()
+        statuses = self.status_ids(sector)
+        mine = str(self.owner.id)
+        doing = self.make_task(sector, title="Doing", assignee=mine)
+        finished = self.make_task(sector, title="Finished", assignee=mine)
+        self.make_task(sector, title="Not mine")
+        self.client.post(
+            f"{API}tasks/{doing['id']}/move/", {"status": statuses["Em andamento"]}
+        )
+        self.client.post(
+            f"{API}tasks/{finished['id']}/move/", {"status": statuses["Concluído"]}
+        )
+
+        data = self.client.get(f"{API}organizations/{self.org.id}/dashboard/").json()
+        self.assertEqual([t["title"] for t in data["my_in_progress"]], ["Doing"])
+        self.assertEqual([t["title"] for t in data["my_done"]], ["Finished"])
+        self.assertIsNotNone(data["my_done"][0]["completed_at"])
 
 
 class SectorFavoriteArchiveTests(KanbanTestCase):

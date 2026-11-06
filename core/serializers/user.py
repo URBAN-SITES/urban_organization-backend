@@ -15,28 +15,8 @@ class UserListRetrieveSerializer(BaseUserSerializer):
 
 
 class UserMeSerializer(UserListRetrieveSerializer):
-    is_subscriber = serializers.BooleanField(read_only=True)
-    has_assistant_access = serializers.SerializerMethodField()
-    subscription_price = serializers.SerializerMethodField()
-
     class Meta(UserListRetrieveSerializer.Meta):
-        fields = (
-            *UserListRetrieveSerializer.Meta.fields,
-            "is_subscriber",
-            "has_assistant_access",
-            "subscription_price",
-        )
-        read_only_fields = fields
-
-    def get_has_assistant_access(self, obj):
-        from core.modules.ai.permissions import has_temporary_access
-
-        return obj.is_subscriber or has_temporary_access(obj)
-
-    def get_subscription_price(self, obj):
-        from core.modules.payments.services.payment import PAYMENT_AMOUNT
-
-        return str(PAYMENT_AMOUNT)
+        read_only_fields = UserListRetrieveSerializer.Meta.fields
 
 
 class UserUpdateSelfSerializer(BaseUserSerializer):
@@ -50,9 +30,6 @@ class UserUpdateSelfSerializer(BaseUserSerializer):
             "is_active",
             "is_staff",
             "is_superuser",
-            "is_subscriber",
-            "has_assistant_access",
-            "subscription_price",
         }
         received_fields = set(self.initial_data.keys())
 
@@ -71,6 +48,8 @@ class LoginSerializer(serializers.Serializer):
         required=True,
         style={"input_type": "password"},
     )
+    # "remember me": false keeps the auth cookies only until the browser closes
+    remember = serializers.BooleanField(write_only=True, required=False, default=True)
 
 
 class LogoutSerializer(serializers.Serializer):

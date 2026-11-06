@@ -1,0 +1,31 @@
+{% extends "emails/base.html" %}
+{% block title %}{% if weekly %}Sua semana{% else %}Seu dia{% endif %} · Inceptum{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 8px; font-size:24px; line-height:32px; letter-spacing:-0.5px;">Olá, {{ name }}</h1>
+<p style="margin:0 0 24px; color:#525252;">{% if weekly %}O que pede sua atenção nesta semana.{% else %}O que pede sua atenção hoje.{% endif %}</p>
+{% if overdue %}
+<h2 style="margin:0 0 8px; font-size:16px; line-height:24px; color:#b42318;">Atrasadas ({{ overdue_count }})</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+  {% for task in overdue %}
+  <tr><td style="padding:8px 0; border-bottom:1px solid #eeeeee; font-size:14px; line-height:20px;"><a href="{{ task.link }}" style="color:#000000; text-decoration:none; font-weight:600;">{{ task.title }}</a><br><span style="color:#737373; font-size:12px;">{{ task.project }}{% if task.due %} · prazo {{ task.due }}{% endif %}</span></td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if soon %}
+<h2 style="margin:0 0 8px; font-size:16px; line-height:24px;">{% if weekly %}Vencem nos próximos 7 dias{% else %}Vencem hoje ou amanhã{% endif %} ({{ soon_count }})</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+  {% for task in soon %}
+  <tr><td style="padding:8px 0; border-bottom:1px solid #eeeeee; font-size:14px; line-height:20px;"><a href="{{ task.link }}" style="color:#000000; text-decoration:none; font-weight:600;">{{ task.title }}</a><br><span style="color:#737373; font-size:12px;">{{ task.project }}{% if task.due %} · prazo {{ task.due }}{% endif %}</span></td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if handed %}
+<h2 style="margin:0 0 8px; font-size:16px; line-height:24px;">Novas com você</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+  {% for task in handed %}
+  <tr><td style="padding:8px 0; border-bottom:1px solid #eeeeee; font-size:14px; line-height:20px;"><a href="{{ task.link }}" style="color:#000000; text-decoration:none; font-weight:600;">{{ task.title }}</a><br><span style="color:#737373; font-size:12px;">{{ task.project }}{% if task.due %} · prazo {{ task.due }}{% endif %}</span></td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+<p style="margin:0; color:#737373; font-size:12px; line-height:20px;">Você recebe este resumo porque ativou nas <a href="{{ settings_link }}" style="color:#525252;">configurações</a>. Lá também dá para desligar.</p>
+{% endblock %}

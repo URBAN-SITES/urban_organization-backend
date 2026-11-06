@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.identifiers import make_identifier
 from core.modules.kanban.models.sector import Sector, SectorFavorite, SectorMember
 from core.modules.kanban.models.task import Status, Task
 from core.modules.kanban.response_messages import (
@@ -43,6 +44,9 @@ class SectorService:
                 "role", flat=True
             )
         )
+        if org_member.role == OrganizationMember.Role.GUEST:
+            # guests: only the projects they were added to, never via teams/public
+            return max(roles, key=RANK.get, default=None)
         roles += SectorTeam.objects.filter(
             sector=sector, team__is_active=True, team__members__user=user
         ).values_list("role", flat=True)
@@ -57,18 +61,28 @@ class SectorService:
         org_members = OrganizationMember.objects.filter(
             organization_id=sector.organization_id
         )
+        direct = set(
+            SectorMember.objects.filter(sector=sector).values_list("user_id", flat=True)
+        )
+        guests = set(
+            org_members.filter(role=OrganizationMember.Role.GUEST).values_list(
+                "user_id", flat=True
+            )
+        )
         if not sector.is_private:
-            return set(org_members.values_list("user_id", flat=True))
+            everyone = set(org_members.values_list("user_id", flat=True))
+            return (everyone - guests) | (direct & guests)
         ids = set(
             org_members.filter(role__in=ORG_ADMINS).values_list("user_id", flat=True)
         )
-        ids |= set(
-            SectorMember.objects.filter(sector=sector).values_list("user_id", flat=True)
-        )
-        ids |= set(
-            TeamMember.objects.filter(
-                team__is_active=True, team__sectors__sector=sector
-            ).values_list("user_id", flat=True)
+        ids |= direct
+        ids |= (
+            set(
+                TeamMember.objects.filter(
+                    team__is_active=True, team__sectors__sector=sector
+                ).values_list("user_id", flat=True)
+            )
+            - guests
         )
         return ids & set(org_members.values_list("user_id", flat=True))
 
@@ -97,13 +111,17 @@ class SectorService:
         ordering: str = "name",
     ):
         """Sectors the user can see; archived ones only when asked for."""
-        membership = OrganizationService.get_membership(user, organization_id)
+        membership = OrganizationService.get_membership(
+            user, organization_id, allow_guest=True
+        )
         sectors = Sector.objects.filter(
             organization_id=organization_id,
             is_active=True,
             archived_at__isnull=not archived,
         )
-        if membership.role not in ORG_ADMINS:
+        if membership.role == OrganizationMember.Role.GUEST:
+            sectors = sectors.filter(members__user=user).distinct()
+        elif membership.role not in ORG_ADMINS:
             sectors = sectors.filter(
                 Q(is_private=False)
                 | Q(members__user=user)
@@ -146,6 +164,8 @@ class SectorService:
         OrganizationService.require_role(
             user, organization_id, OrganizationMember.Role.MEMBER
         )
+        data.setdefault("identifier", "")
+        data["identifier"] = data["identifier"] or make_identifier(data["name"])
         sector = Sector.objects.create(
             organization_id=organization_id, owner=user, **data
         )
@@ -159,6 +179,8 @@ class SectorService:
     @staticmethod
     def update(user: User, sector_id, data: dict) -> Sector:
         sector, _role = SectorService.get_sector(user, sector_id, Role.MANAGER)
+        if "identifier" in data and not data["identifier"]:
+            data["identifier"] = make_identifier(data.get("name", sector.name))
         for field, value in data.items():
             setattr(sector, field, value)
         sector.save()

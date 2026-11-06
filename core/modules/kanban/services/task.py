@@ -1,17 +1,28 @@
+import calendar
+from datetime import date, timedelta
+
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Exists, F, Max, OuterRef, Q
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.models.automation import AutomationRule
+from core.modules.kanban.models.follow import TaskSubscriber
+from core.modules.kanban.models.saved_view import TaskDependency
 from core.modules.kanban.models.sector import Sector
-from core.modules.kanban.models.task import Status, Task
+from core.modules.kanban.models.task import ChecklistItem, Status, Task
 from core.modules.kanban.response_messages import (
+    MSG_CYCLE_INVALID,
+    MSG_EPIC_INVALID,
+    MSG_FOLLOWED_STATUS,
     MSG_STATUS_INVALID,
     MSG_STATUS_WIP_LIMIT,
     MSG_TASK_ASSIGNED,
     MSG_TASK_ASSIGNEE_INVALID,
+    MSG_TASK_DATES_INVALID,
     MSG_TASK_PARENT_INVALID,
+    MSG_TASK_RESTORE_PARENT,
     MSG_TASK_STATUS_CHANGED,
 )
 from core.modules.kanban.services.activity import (
@@ -19,6 +30,7 @@ from core.modules.kanban.services.activity import (
     ActivityService,
     snapshot,
 )
+from core.modules.kanban.services.automation import AutomationService
 from core.modules.kanban.services.label import LabelService
 from core.modules.kanban.services.sector import Role, SectorService
 from core.modules.notifications.services.notification import NotificationService
@@ -30,7 +42,9 @@ class TaskService:
     def get_task(user: User, task_id, minimum: str = Role.VIEWER):
         """Returns (task, sector, role); 404 when the task is not visible."""
         task = (
-            Task.objects.select_related("sector", "status", "assignee", "owner")
+            Task.objects.select_related(
+                "sector", "status", "assignee", "owner", "cycle", "epic"
+            )
             .filter(id=task_id, is_active=True)
             .first()
         )
@@ -42,11 +56,13 @@ class TaskService:
     @staticmethod
     def list_for(user: User, sector_id):
         sector, _role = SectorService.get_sector(user, sector_id)
+        TaskService.auto_archive(sector)
         return (
             Task.objects.filter(sector=sector, is_active=True)
-            .select_related("status", "assignee", "owner")
+            .select_related("sector", "status", "assignee", "owner")
             .prefetch_related("labels")
             .annotate(
+                is_blocked=TaskService.blocked_expression(),
                 subtask_total=Count(
                     "subtasks", filter=Q(subtasks__is_active=True), distinct=True
                 ),
@@ -72,10 +88,15 @@ class TaskService:
     def create(user: User, sector_id, data: dict) -> Task:
         sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
         label_ids = data.pop("label_ids", None)
+        checklist = data.pop("checklist", None) or []
         labels = LabelService.resolve(sector, label_ids) if label_ids else []
         status = data.pop("status", None) or TaskService._default_status(sector)
         TaskService._check_status(sector, status)
         TaskService._check_assignee(sector, data.get("assignee"))
+        TaskService._check_plan(
+            sector, data.get("cycle"), data.get("start_date"), data.get("due_date")
+        )
+        TaskService._check_epic(sector, data.get("epic"))
         parent = data.get("parent")
         if parent and (parent.sector_id != sector.pk or not parent.is_active):
             raise ValidationError(MSG_TASK_PARENT_INVALID)
@@ -89,21 +110,29 @@ class TaskService:
             owner=user,
             status=status,
             position=0 if last is None else last + 1,
+            sequence=TaskService._next_number(sector),
             **data,
         )
         TaskService._apply_status(task, status)
         task.save()
         if labels:
             task.labels.set(labels)
+        if checklist:
+            ChecklistItem.objects.bulk_create(
+                ChecklistItem(task=task, content=content[:255], position=index)
+                for index, content in enumerate(checklist)
+            )
+        TaskSubscriber.objects.get_or_create(task=task, user=user)
         ActivityService.record(task, user, Action.CREATED)
         TaskService._notify_assignee(user, task)
+        AutomationService.run(task, AutomationRule.Trigger.CREATED, user)
         return task
 
     @staticmethod
     @transaction.atomic
     def update(user: User, task_id, data: dict) -> Task:
         task, sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
-        old_assignee = task.assignee_id
+        old_assignee, old_priority = task.assignee_id, task.priority
         before, before_display = snapshot(task), ActivityService.display(task)
         label_ids = data.pop("label_ids", None)
         labels = None if label_ids is None else LabelService.resolve(sector, label_ids)
@@ -111,12 +140,22 @@ class TaskService:
             TaskService._check_assignee(sector, data["assignee"])
         for field, value in data.items():
             setattr(task, field, value)
+        if {"cycle", "start_date", "due_date"} & data.keys():
+            TaskService._check_plan(sector, task.cycle, task.start_date, task.due_date)
+        if "epic" in data:
+            TaskService._check_epic(sector, task.epic)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
         if labels is not None:
             TaskService._set_labels(task, user, labels)
         if task.assignee_id != old_assignee:
             TaskService._notify_assignee(user, task)
+            if task.assignee_id:
+                AutomationService.run(task, AutomationRule.Trigger.ASSIGNED, user)
+        if task.priority != old_priority:
+            AutomationService.run(
+                task, AutomationRule.Trigger.PRIORITY, user, task.priority
+            )
         return task
 
     @staticmethod
@@ -124,8 +163,65 @@ class TaskService:
     def delete(user: User, task_id) -> None:
         task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
         ActivityService.record(task, user, Action.DELETED)
-        task.soft_delete()
-        Task.objects.filter(parent=task).update(is_active=False)
+        now = timezone.now()
+        task.is_active, task.deleted_at = False, now
+        task.save(update_fields=["is_active", "deleted_at", "updated_at"])
+        Task.objects.filter(parent=task, is_active=True).update(
+            is_active=False, deleted_at=now
+        )
+
+    @staticmethod
+    def trash(user: User, sector_id):
+        """Deleted tasks of the last 30 days (subtasks come back with their parent)."""
+        sector, _role = SectorService.get_sector(user, sector_id, Role.EDITOR)
+        since = timezone.now() - timedelta(days=30)
+        return (
+            Task.objects.filter(sector=sector, is_active=False, deleted_at__gte=since)
+            .exclude(parent__is_active=False, parent__deleted_at=F("deleted_at"))
+            .select_related("sector", "status", "assignee", "owner")
+            .order_by("-deleted_at")
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def restore(user: User, task_id) -> Task:
+        task = (
+            Task.objects.select_related("sector", "parent")
+            .filter(id=task_id, is_active=False, deleted_at__isnull=False)
+            .first()
+        )
+        if task is None:
+            raise NotFound()
+        SectorService.get_sector(user, task.sector_id, Role.EDITOR)
+        if task.parent_id and not task.parent.is_active:
+            raise ValidationError(MSG_TASK_RESTORE_PARENT)
+        Task.objects.filter(parent=task, deleted_at=task.deleted_at).update(
+            is_active=True, deleted_at=None
+        )
+        task.is_active, task.deleted_at = True, None
+        task.save(update_fields=["is_active", "deleted_at", "updated_at"])
+        ActivityService.record(task, user, Action.UPDATED, {"restored": [None, "sim"]})
+        return task
+
+    @staticmethod
+    def set_archived(user: User, task_id, archived: bool) -> Task:
+        task, _sector, _role = TaskService.get_task(user, task_id, Role.EDITOR)
+        task.archived_at = timezone.now() if archived else None
+        task.save(update_fields=["archived_at", "updated_at"])
+        return task
+
+    @staticmethod
+    def auto_archive(sector: Sector) -> None:
+        """Done tasks older than the project's limit leave the board (lazy and on beat)."""
+        if not sector.auto_archive_days:
+            return
+        cutoff = timezone.now() - timedelta(days=sector.auto_archive_days)
+        Task.objects.filter(
+            sector=sector,
+            is_active=True,
+            archived_at__isnull=True,
+            completed_at__lt=cutoff,
+        ).update(archived_at=timezone.now())
 
     @staticmethod
     @transaction.atomic
@@ -137,6 +233,7 @@ class TaskService:
         if status_changed:
             TaskService._check_wip(status, task)
         before, before_display = snapshot(task), ActivityService.display(task)
+        was_open = task.completed_at is None
         TaskService._apply_status(task, status)
         task.save()
         ActivityService.record_changes(task, user, before, before_display)
@@ -151,6 +248,8 @@ class TaskService:
         for order, sibling in enumerate(siblings):
             sibling.position = order
         Task.objects.bulk_update(siblings, ["position"])
+        if was_open and task.completed_at and task.recurrence:
+            TaskService._spawn_next(user, task)
         if status_changed:
             TaskService._notify_assignee(
                 user,
@@ -160,9 +259,144 @@ class TaskService:
                 event="task.status_changed",
                 preference="app_status",
             )
+            TaskService.notify_followers(
+                user,
+                task,
+                title=MSG_FOLLOWED_STATUS,
+                message=f"{task.title}: {status.name}",
+                event="task.status_changed",
+                preference="app_status",
+                skip={task.assignee_id},
+            )
+            AutomationService.run(
+                task, AutomationRule.Trigger.MOVED, user, str(status.pk)
+            )
         return task
 
+    @staticmethod
+    def blocked_expression():
+        """True while some active blocker of the task is still open."""
+        return Exists(
+            TaskDependency.objects.filter(
+                task=OuterRef("pk"),
+                depends_on__is_active=True,
+                depends_on__completed_at__isnull=True,
+            )
+        )
+
+    @staticmethod
+    def notify_followers(
+        actor: User,
+        task: Task,
+        *,
+        title,
+        message: str,
+        event: str,
+        preference: str,
+        skip=(),
+    ) -> None:
+        skipped = {actor.pk, *skip}
+        muted = UserSettings.objects.filter(**{preference: False}).values("user_id")
+        people = (
+            User.objects.filter(followed_tasks__task=task, is_active=True)
+            .exclude(pk__in=[pk for pk in skipped if pk])
+            .exclude(pk__in=muted)
+        )
+        allowed = SectorService.participant_ids(task.sector)
+        for person in people:
+            if person.pk not in allowed:
+                continue
+            NotificationService.notify(
+                person,
+                str(title),
+                message,
+                {
+                    "event": event,
+                    "task_id": str(task.pk),
+                    "sector_id": str(task.sector_id),
+                    "organization_id": str(task.sector.organization_id),
+                },
+            )
+
     # helpers ------------------------------------------------------------
+
+    @staticmethod
+    def next_date(day: date, recurrence: str) -> date:
+        if recurrence == Task.Recurrence.DAILY:
+            return day + timedelta(days=1)
+        if recurrence == Task.Recurrence.WEEKLY:
+            return day + timedelta(days=7)
+        year, month = (
+            (day.year + 1, 1) if day.month == 12 else (day.year, day.month + 1)
+        )
+        return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+    @staticmethod
+    def _spawn_next(user: User, task: Task) -> Task:
+        """A repeating task was completed: the next one starts open, with the dates
+        moved one period ahead (from today when it had no due date)."""
+        sector = task.sector
+        base = task.due_date or timezone.localdate()
+        due = TaskService.next_date(base, task.recurrence)
+        start = (
+            task.start_date + (due - base)
+            if task.start_date and task.due_date
+            else None
+        )
+        status = TaskService._default_status(sector)
+        last = Task.objects.filter(status=status, is_active=True).aggregate(
+            last=Max("position")
+        )["last"]
+        nxt = Task.objects.create(
+            sector=sector,
+            owner=user,
+            status=status,
+            parent=task.parent,
+            title=task.title,
+            description=task.description,
+            priority=task.priority,
+            assignee=task.assignee,
+            estimate=task.estimate,
+            cycle=None,
+            epic=task.epic,
+            start_date=start,
+            due_date=due,
+            recurrence=task.recurrence,
+            position=0 if last is None else last + 1,
+            sequence=TaskService._next_number(sector),
+        )
+        nxt.labels.set(task.labels.all())
+        ChecklistItem.objects.bulk_create(
+            ChecklistItem(task=nxt, content=item.content, position=item.position)
+            for item in task.checklist_items.all()
+        )
+        # the series continues on the new task only
+        Task.objects.filter(pk=task.pk).update(recurrence="")
+        task.recurrence = ""
+        ActivityService.record(
+            nxt, user, Action.CREATED, {"repeats": [None, task.title]}
+        )
+        return nxt
+
+    @staticmethod
+    def _next_number(sector: Sector) -> int:
+        locked = Sector.objects.select_for_update().get(pk=sector.pk)
+        locked.task_counter += 1
+        locked.save(update_fields=["task_counter"])
+        sector.task_counter = locked.task_counter
+        return locked.task_counter
+
+    @staticmethod
+    def _check_plan(sector: Sector, cycle, start_date, due_date) -> None:
+        if cycle is not None and cycle.sector_id != sector.pk:
+            raise ValidationError({"cycle": [MSG_CYCLE_INVALID]})
+        if start_date and due_date and start_date > due_date:
+            raise ValidationError({"start_date": [MSG_TASK_DATES_INVALID]})
+
+    @staticmethod
+    def _check_epic(sector: Sector, epic) -> None:
+        if epic is not None and epic.sector_id != sector.pk:
+            raise ValidationError({"epic": [MSG_EPIC_INVALID]})
 
     @staticmethod
     def _apply_status(task: Task, status: Status) -> None:

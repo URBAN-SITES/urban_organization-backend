@@ -5,9 +5,14 @@ from core.modules.calendar_sync.models.calendar import (
 from core.modules.calendar_sync.models.calendar import (
     UserIntegration as UserIntegration,
 )
+from core.modules.calls.models.call import Call as Call
+from core.modules.calls.models.call import CallParticipant as CallParticipant
 from core.modules.chat.models.chat import ChatChannel as ChatChannel
 from core.modules.chat.models.chat import ChatChannelMember as ChatChannelMember
 from core.modules.chat.models.chat import ChatMessage as ChatMessage
+from core.modules.chat.models.chat import (
+    ChatMessageReaction as ChatMessageReaction,
+)
 from core.modules.crowdfunding.models.campaign import Campaign as Campaign
 from core.modules.crowdfunding.models.campaign import Contribution as Contribution
 from core.modules.github.models.github import GitHubConnection as GitHubConnection
@@ -20,12 +25,19 @@ from core.modules.invitations.models.invite import (
     OrganizationInvite as OrganizationInvite,
 )
 from core.modules.kanban.models.activity import TaskActivity as TaskActivity
+from core.modules.kanban.models.automation import AutomationRule as AutomationRule
+from core.modules.kanban.models.automation import AutomationRun as AutomationRun
 from core.modules.kanban.models.custom_field import CustomField as CustomField
 from core.modules.kanban.models.custom_field import (
     CustomFieldOption as CustomFieldOption,
 )
 from core.modules.kanban.models.custom_field import TaskFieldValue as TaskFieldValue
+from core.modules.kanban.models.cycle import Cycle as Cycle
+from core.modules.kanban.models.epic import Epic as Epic
+from core.modules.kanban.models.follow import TaskSubscriber as TaskSubscriber
+from core.modules.kanban.models.intake import IntakeRequest as IntakeRequest
 from core.modules.kanban.models.label import Label as Label
+from core.modules.kanban.models.page import Page as Page
 from core.modules.kanban.models.resource_link import ResourceLink as ResourceLink
 from core.modules.kanban.models.saved_view import SavedView as SavedView
 from core.modules.kanban.models.saved_view import TaskDependency as TaskDependency
@@ -36,6 +48,8 @@ from core.modules.kanban.models.task import ChecklistItem as ChecklistItem
 from core.modules.kanban.models.task import Comment as Comment
 from core.modules.kanban.models.task import Status as Status
 from core.modules.kanban.models.task import Task as Task
+from core.modules.kanban.models.template import TaskTemplate as TaskTemplate
+from core.modules.kanban.models.time_entry import TimeEntry as TimeEntry
 from core.modules.meetings.models.insight import (
     MeetingActionTask as MeetingActionTask,
 )

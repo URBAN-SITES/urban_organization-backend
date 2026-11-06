@@ -4,7 +4,18 @@ from core.modules.kanban.models.task import Task
 
 Action = TaskActivity.Action
 # fields shown in the history; description only says "changed" (it can be long)
-TRACKED = ("title", "description", "priority", "due_date", "assignee", "status")
+TRACKED = (
+    "title",
+    "description",
+    "priority",
+    "start_date",
+    "due_date",
+    "assignee",
+    "status",
+    "cycle",
+    "epic",
+    "estimate",
+)
 
 
 def _display(task: Task, field: str):
@@ -12,6 +23,10 @@ def _display(task: Task, field: str):
         return task.assignee.name if task.assignee_id else None
     if field == "status":
         return task.status.name if task.status_id else None
+    if field == "cycle":
+        return task.cycle.name if task.cycle_id else None
+    if field == "epic":
+        return task.epic.name if task.epic_id else None
     if field == "description":
         return None
     value = getattr(task, field)
@@ -24,9 +39,13 @@ def snapshot(task: Task) -> dict:
         "title": task.title,
         "description": task.description,
         "priority": task.priority,
+        "start_date": task.start_date,
         "due_date": task.due_date,
         "assignee": task.assignee_id,
         "status": task.status_id,
+        "cycle": task.cycle_id,
+        "epic": task.epic_id,
+        "estimate": task.estimate,
     }
 
 
@@ -38,8 +57,15 @@ class ActivityService:
         )
 
     @staticmethod
-    def record_changes(task: Task, actor: User, before: dict, before_display: dict):
-        """Logs an update with only the fields that really changed."""
+    def record_changes(
+        task: Task,
+        actor: User,
+        before: dict,
+        before_display: dict,
+        extra: dict | None = None,
+    ):
+        """Logs an update with only the fields that really changed (extra notes,
+        such as the automation that made it, ride along only with a change)."""
         after = snapshot(task)
         changes = {
             field: [before_display[field], _display(task, field)]
@@ -49,7 +75,7 @@ class ActivityService:
         if not changes:
             return None
         action = Action.MOVED if set(changes) == {"status"} else Action.UPDATED
-        return ActivityService.record(task, actor, action, changes)
+        return ActivityService.record(task, actor, action, {**changes, **(extra or {})})
 
     @staticmethod
     def display(task: Task) -> dict:

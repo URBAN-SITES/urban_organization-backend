@@ -1,6 +1,17 @@
 from django.urls import path
 
-from core.modules.kanban.views import item, label, sector, task
+from core.modules.kanban.views import (
+    automation,
+    cycle,
+    extras,
+    item,
+    label,
+    planning,
+    sector,
+    task,
+    tracking,
+    workflow,
+)
 
 app_name = "kanban"
 
@@ -100,6 +111,150 @@ urlpatterns = [
         name="sector-people",
     ),
     path(
+        "sectors/<uuid:sector_id>/cycles/",
+        cycle.CycleListCreateView.as_view(),
+        name="cycle-list",
+    ),
+    path(
+        "cycles/<uuid:cycle_id>/", cycle.CycleDetailView.as_view(), name="cycle-detail"
+    ),
+    path(
+        "cycles/<uuid:cycle_id>/burndown/",
+        extras.CycleBurndownView.as_view(),
+        name="cycle-burndown",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/trash/",
+        extras.TrashListView.as_view(),
+        name="task-trash",
+    ),
+    path(
+        "organizations/<uuid:organization_id>/reports/pdf/",
+        tracking.ReportPdfView.as_view(),
+        name="reports-pdf",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/automations/",
+        automation.AutomationListCreateView.as_view(),
+        name="sector-automations",
+    ),
+    path(
+        "automations/<uuid:pk>/",
+        automation.AutomationDetailView.as_view(),
+        name="automation-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/import/",
+        automation.TaskImportView.as_view(),
+        name="task-import",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/public-link/",
+        automation.PublicLinkView.as_view(),
+        name="sector-public-link",
+    ),
+    path(
+        "public/projects/<str:token>/",
+        automation.PublicBoardView.as_view(),
+        name="public-board",
+    ),
+    path("me/timer/", tracking.MyTimerView.as_view(), name="my-timer"),
+    path(
+        "tasks/<uuid:task_id>/timer/",
+        tracking.TaskTimerView.as_view(),
+        name="task-timer",
+    ),
+    path(
+        "tasks/<uuid:task_id>/time/", tracking.TaskTimeView.as_view(), name="task-time"
+    ),
+    path(
+        "time/<uuid:entry_id>/",
+        tracking.TimeEntryDetailView.as_view(),
+        name="time-entry-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/workload/",
+        tracking.WorkloadView.as_view(),
+        name="sector-workload",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/tasks/export/",
+        tracking.TaskExportView.as_view(),
+        name="task-export",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/epics/",
+        planning.EpicListCreateView.as_view(),
+        name="epic-list",
+    ),
+    path("epics/<uuid:pk>/", planning.EpicDetailView.as_view(), name="epic-detail"),
+    path(
+        "sectors/<uuid:sector_id>/pages/",
+        planning.PageListCreateView.as_view(),
+        name="page-list",
+    ),
+    path("pages/<uuid:pk>/", planning.PageDetailView.as_view(), name="page-detail"),
+    path(
+        "sectors/<uuid:sector_id>/intake/",
+        planning.IntakeListCreateView.as_view(),
+        name="intake-list",
+    ),
+    path(
+        "intake/<uuid:pk>/accept/",
+        planning.IntakeAcceptView.as_view(),
+        name="intake-accept",
+    ),
+    path(
+        "intake/<uuid:pk>/decline/",
+        planning.IntakeDeclineView.as_view(),
+        name="intake-decline",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/views/",
+        workflow.SavedViewListCreateView.as_view(),
+        name="saved-view-list",
+    ),
+    path(
+        "views/<uuid:pk>/",
+        workflow.SavedViewDetailView.as_view(),
+        name="saved-view-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/fields/",
+        workflow.CustomFieldListCreateView.as_view(),
+        name="custom-field-list",
+    ),
+    path(
+        "fields/<uuid:pk>/",
+        workflow.CustomFieldDetailView.as_view(),
+        name="custom-field-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/templates/",
+        workflow.TemplateListCreateView.as_view(),
+        name="template-list",
+    ),
+    path(
+        "templates/<uuid:pk>/",
+        workflow.TemplateDetailView.as_view(),
+        name="template-detail",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/tasks/bulk/",
+        workflow.TaskBulkView.as_view(),
+        name="task-bulk",
+    ),
+    path(
+        "tasks/<uuid:task_id>/fields/",
+        workflow.TaskFieldValuesView.as_view(),
+        name="task-field-list",
+    ),
+    path(
+        "tasks/<uuid:task_id>/fields/<uuid:field_id>/",
+        workflow.TaskFieldValueView.as_view(),
+        name="task-field-detail",
+    ),
+    path(
         "sectors/<uuid:sector_id>/tasks/",
         task.TaskListCreateView.as_view(),
         name="task-list",
@@ -112,9 +267,34 @@ urlpatterns = [
     path("tasks/<uuid:task_id>/", task.TaskDetailView.as_view(), name="task-detail"),
     path("tasks/<uuid:task_id>/move/", task.TaskMoveView.as_view(), name="task-move"),
     path(
+        "tasks/<uuid:task_id>/restore/",
+        extras.TaskRestoreView.as_view(),
+        name="task-restore",
+    ),
+    path(
+        "tasks/<uuid:task_id>/archive/",
+        extras.TaskArchiveView.as_view(),
+        name="task-archive",
+    ),
+    path(
+        "tasks/<uuid:task_id>/follow/",
+        extras.TaskFollowView.as_view(),
+        name="task-follow",
+    ),
+    path(
         "tasks/<uuid:task_id>/activity/",
         task.TaskActivityListView.as_view(),
         name="task-activity",
+    ),
+    path(
+        "tasks/<uuid:task_id>/relations/",
+        cycle.TaskRelationListCreateView.as_view(),
+        name="task-relation-list",
+    ),
+    path(
+        "tasks/<uuid:task_id>/relations/<uuid:other_id>/",
+        cycle.TaskRelationDetailView.as_view(),
+        name="task-relation-detail",
     ),
     path(
         "tasks/<uuid:task_id>/checklist/",

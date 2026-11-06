@@ -284,3 +284,46 @@ class PresenceTests(ChatTestCase):
         stranger = make_user("s@a.com")
         self.assertEqual(ChatService.typing_recipients(stranger, general), [])
         self.assertEqual(ChatService.typing_recipients(self.ana, "not-a-uuid"), [])
+
+
+@patch(PUSH)
+class ReactionTests(ChatTestCase):
+    def react(self, user, message_id, emoji):
+        return self.clients[user].post(
+            f"{API}chat/messages/{message_id}/reactions/",
+            {"emoji": emoji},
+            format="json",
+        )
+
+    def test_same_emoji_toggles_and_is_pushed(self, push):
+        channel = self.general(self.ana)["id"]
+        message = self.say(self.ana, channel).json()
+        push.reset_mock()
+        with self.captureOnCommitCallbacks(execute=True):
+            res = self.react(self.bob, message["id"], "👍")
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(
+            res.json()["reactions"], [{"emoji": "👍", "user_ids": [str(self.bob.id)]}]
+        )
+        self.assertEqual(push.call_args.args[1]["type"], "chat.message_updated")
+        self.react(self.ana, message["id"], "👍")
+        listed = self.clients[self.ana].get(f"{API}chat/channels/{channel}/messages/")
+        self.assertEqual(
+            len(listed.json()["results"][0]["reactions"][0]["user_ids"]), 2
+        )
+        res = self.react(self.bob, message["id"], "👍")  # again: removed
+        self.assertEqual(res.json()["reactions"][0]["user_ids"], [str(self.ana.id)])
+
+    def test_only_emoji_on_visible_messages(self, _push):
+        channel = self.general(self.ana)["id"]
+        message = self.say(self.ana, channel).json()
+        self.assertEqual(self.react(self.bob, message["id"], "<b>").status_code, 400)
+        self.assertEqual(self.react(self.bob, message["id"], "").status_code, 400)
+        team = self.make_team(self.ana, name="Private")
+        hidden = next(
+            c for c in self.channels(self.ana) if c["team_id"] == str(team.id)
+        )
+        secret = self.say(self.ana, hidden["id"]).json()
+        self.assertEqual(self.react(self.bob, secret["id"], "👍").status_code, 404)
+        self.clients[self.ana].delete(f"{API}chat/messages/{message['id']}/")
+        self.assertEqual(self.react(self.bob, message["id"], "👍").status_code, 400)

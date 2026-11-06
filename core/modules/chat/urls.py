@@ -7,6 +7,7 @@ from core.modules.chat.views.chat import (
     ChatMeetView,
     ChatMessageDetailView,
     ChatMessageListCreateView,
+    ChatMessageReactionView,
     ChatPresenceView,
     ChatTeamsChannelView,
 )
@@ -54,5 +55,10 @@ urlpatterns = [
         "chat/messages/<uuid:message_id>/",
         ChatMessageDetailView.as_view(),
         name="message-detail",
+    ),
+    path(
+        "chat/messages/<uuid:message_id>/reactions/",
+        ChatMessageReactionView.as_view(),
+        name="message-reactions",
     ),
 ]

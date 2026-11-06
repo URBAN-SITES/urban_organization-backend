@@ -36,6 +36,7 @@ from core.views.user import (
     UserSessionsGetView,
     UserUpdateSelfView,
 )
+from core.views.ws_ticket import WebSocketTicketView
 
 route_docs = [
     path(
@@ -51,6 +52,7 @@ route_core = [
     path("login/", LoginView.as_view(), name="login"),
     path("login/google/", GoogleLoginView.as_view(), name="login-google"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
+    path("ws-ticket/", WebSocketTicketView.as_view(), name="ws-ticket"),
     path("me/deactivate/", DeactivateSelfView.as_view(), name="deactivate-self"),
     path(
         "me/revoke-sessions/", RevokeAllSessionsView.as_view(), name="revoke-sessions"
@@ -140,6 +142,7 @@ route_core = [
     path("", include("core.modules.invitations.urls")),
     path("", include("core.modules.kanban.urls")),
     path("", include("core.modules.chat.urls")),
+    path("calls/", include("core.modules.calls.urls")),
     path("", include("core.modules.search.urls")),
     path("", include("core.modules.crowdfunding.urls")),
     path("integrations/google/", include("core.modules.calendar_sync.urls")),
