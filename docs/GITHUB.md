@@ -54,11 +54,17 @@ As permissões de repositório são todas **somente leitura**:
 | Issues | Read | Issues recentes |
 | Checks | Read | Status dos checks dos PRs abertos |
 
-Há uma única permissão de conta:
+Permissões de conta e de organização:
 
-| Permissão | Acesso | Usada para |
-|---|---|---|
-| Email addresses | Read | Login: achar o e-mail verificado da pessoa |
+| Permissão | Onde | Acesso | Usada para |
+|---|---|---|---|
+| Email addresses | Account | Read | Login: achar o e-mail verificado da pessoa |
+| Projects | Organization | Read | Importar o quadro de um GitHub Project da organização |
+| Projects | Account | Read | Importar o quadro de um GitHub Project pessoal |
+
+Ao acrescentar a permissão **Projects** num app que já existe, o GitHub pede que cada
+conta e organização aceite a permissão nova (em *Settings → Applications →
+Installed GitHub Apps*). Até lá, a importação responde 403 explicando o motivo.
 
 O app não pede nenhuma permissão de escrita. Ele nunca altera um repositório.
 
@@ -119,6 +125,8 @@ antes de expirar.
 | `GET github/repositories/<repo>/activity/` | Leitor. 10 branches, PRs e issues recentes, com checks dos 5 PRs abertos mais recentes |
 | `GET/POST tasks/<id>/github/`, `DELETE tasks/<id>/github/<link>/`, `GET tasks/<id>/github/search/?q=` | Ler: leitor. Vincular, desvincular e buscar: editor |
 | `POST integrations/github/webhook/` | GitHub, com assinatura obrigatória |
+| `GET integrations/github/projects/` | Sessão com o GitHub conectado. Quadros (Projects v2) da pessoa e das organizações dela |
+| `POST sectors/<id>/github/projects/import/` `{project_id}` | Gestor. Importa o quadro: o campo "Status" vira colunas (Todo, In Progress e Done caem em A fazer, Em andamento e Concluído; as outras são criadas) e cada cartão vira tarefa. Importar de novo atualiza título, descrição e coluna das tarefas que vieram antes e traz as novas, sem duplicar. Cartões arquivados são ignorados |
 
 ### Erros que a interface explica
 

@@ -22,3 +22,8 @@ MSG_GITHUB_DISCONNECTED = _("GitHub account disconnected.")
 MSG_GITHUB_UNLINK_NEEDS_PASSWORD = _(
     "Set a password (Forgot password) before unlinking your GitHub login."
 )
+MSG_GITHUB_PROJECTS_FORBIDDEN = _(
+    'The GitHub App cannot read this Project. Give it the "Projects" read permission '
+    "and accept the new permission on GitHub."
+)
+MSG_GITHUB_PROJECT_NOT_FOUND = _("GitHub Project not found or not shared with you.")

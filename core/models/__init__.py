@@ -18,6 +18,9 @@ from core.modules.crowdfunding.models.campaign import Contribution as Contributi
 from core.modules.github.models.github import GitHubConnection as GitHubConnection
 from core.modules.github.models.github import GitHubIdentity as GitHubIdentity
 from core.modules.github.models.github import (
+    GitHubProjectItem as GitHubProjectItem,
+)
+from core.modules.github.models.github import (
     ProjectRepository as ProjectRepository,
 )
 from core.modules.github.models.github import TaskGitHubLink as TaskGitHubLink
