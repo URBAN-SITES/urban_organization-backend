@@ -40,6 +40,7 @@ def action(name, **arguments):
     ALLOWED_HOSTS=["testserver"],
 )
 @patch("core.modules.ai.services.assistant._client")
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class AssistantTests(KanbanTestCase):
     def setUp(self):
         super().setUp()
