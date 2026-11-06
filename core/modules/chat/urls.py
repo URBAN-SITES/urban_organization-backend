@@ -9,6 +9,7 @@ from core.modules.chat.views.chat import (
     ChatMessageListCreateView,
     ChatMessageReactionView,
     ChatPresenceView,
+    ChatRoomJoinView,
     ChatTeamsChannelView,
 )
 
@@ -45,6 +46,11 @@ urlpatterns = [
         "chat/channels/<uuid:channel_id>/meet/",
         ChatMeetView.as_view(),
         name="channel-meet",
+    ),
+    path(
+        "chat/channels/<uuid:channel_id>/room/",
+        ChatRoomJoinView.as_view(),
+        name="channel-room",
     ),
     path(
         "chat/channels/<uuid:channel_id>/read/",

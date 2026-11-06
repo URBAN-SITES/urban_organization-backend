@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 
 from core.modules.chat import presence
 from core.modules.chat.models.chat import ChatMessage
@@ -327,3 +328,47 @@ class ReactionTests(ChatTestCase):
         self.assertEqual(self.react(self.bob, secret["id"], "👍").status_code, 404)
         self.clients[self.ana].delete(f"{API}chat/messages/{message['id']}/")
         self.assertEqual(self.react(self.bob, message["id"], "👍").status_code, 400)
+
+
+LIVEKIT_ENV = {
+    "LIVEKIT_URL": "wss://example.livekit.cloud",
+    "LIVEKIT_API_KEY": "key",
+    "LIVEKIT_API_SECRET": "secret-that-is-long-enough-for-hs256-signing",
+}
+
+
+@patch(PUSH)
+class ChannelRoomTests(ChatTestCase):
+    def test_without_livekit_the_button_explains_instead_of_posting(self, _push):
+        channel = self.general(self.ana)["id"]
+        with patch.dict("os.environ", {"LIVEKIT_URL": ""}):
+            res = self.clients[self.ana].post(f"{API}chat/channels/{channel}/meet/")
+        self.assertEqual(res.status_code, 503)
+        self.assertFalse(ChatMessage.objects.filter(channel_id=channel).exists())
+
+    @override_settings(FRONTEND_URL="https://app.example")
+    def test_start_posts_the_room_link_and_members_can_join(self, _push):
+        channel = self.direct(self.ana, self.bob)
+        with patch.dict("os.environ", LIVEKIT_ENV):
+            res = self.clients[self.ana].post(f"{API}chat/channels/{channel}/meet/")
+            self.assertEqual(res.status_code, 201, res.content)
+            self.assertIn(
+                f"https://app.example/chat/sala/{channel}", res.json()["content"]
+            )
+            joined = self.clients[self.bob].post(f"{API}chat/channels/{channel}/room/")
+            self.assertEqual(joined.status_code, 200, joined.content)
+            self.assertEqual(joined.json()["room"], f"chat-{channel}")
+            self.assertEqual(joined.json()["title"], "Ana")
+            self.assertTrue(joined.json()["token"])
+            outsider = self.clients[self.owner].post(
+                f"{API}chat/channels/{channel}/room/"
+            )
+            self.assertEqual(outsider.status_code, 404)
+
+    def direct(self, user, other):
+        res = self.clients[user].post(
+            f"{API}organizations/{self.org.id}/chat/direct/",
+            {"user_id": str(other.id)},
+            format="json",
+        )
+        return res.json()["id"]
