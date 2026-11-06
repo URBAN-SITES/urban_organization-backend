@@ -18,6 +18,7 @@ from core.modules.kanban.tests.helpers import KanbanTestCase
     PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"],
     ALLOWED_HOSTS=["testserver"],
 )
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class QuickTaskTests(KanbanTestCase):
     def setUp(self):
         super().setUp()

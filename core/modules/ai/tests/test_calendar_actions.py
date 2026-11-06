@@ -14,6 +14,7 @@ from core.modules.ai.services.calendar import SCOPE_CALENDARS, SCOPE_LIST
     return_value="private-token",
 )
 @patch("core.modules.ai.services.calendar.requests.request")
+@patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
 class CalendarActionTests(SimpleTestCase):
     def setUp(self):
         self.user = SimpleNamespace(pk="user")

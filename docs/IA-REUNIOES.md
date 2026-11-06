@@ -2,7 +2,15 @@
 
 Consulta feita em 29/10/2026. **Regra: nada pago, nem cartão cadastrado.** Os limites dos planos grátis mudam: confira de novo antes de usar.
 
-## Decisão (29/10/2026): tudo no servidor
+## Decisão (06/11/2026): Gemini em produção
+
+O servidor de produção (Render grátis, 512 MB) não comporta Whisper e Ollama. Com
+`GEMINI_API_KEY` definida, o Gemini transcreve a gravação e gera o resumo; o arquivo
+enviado ao Gemini é apagado logo depois. **No plano grátis o Google pode usar o
+conteúdo para melhorar os produtos dele.** A opção local continua disponível com
+`MEETING_AI_ENGINE=local` para quem tiver um servidor com ~12 GB de RAM.
+
+## Decisão anterior (29/10/2026): tudo no servidor
 
 Foi escolhida a opção privada: **faster-whisper** transcreve e o **Ollama** resume, os dois no nosso servidor. Nenhum áudio ou texto sai da máquina e não há conta nem chave externa. A recomendação abaixo (Groq e Gemini) ficou registrada só como comparação.
 
