@@ -338,6 +338,43 @@ class ChatService:
             ChatService._broadcast(channel, "chat.message_updated", message)
         return message
 
+    # video room ---------------------------------------------------------
+
+    @staticmethod
+    def room_name(channel: ChatChannel) -> str:
+        return f"chat-{channel.pk}"
+
+    @staticmethod
+    def join_room(user: User, channel_id) -> dict:
+        """LiveKit token for the channel's own room: anyone who can read the channel."""
+        from core.modules.meetings.services import livekit
+
+        channel = ChatService.get_channel(user, channel_id)
+        cfg = livekit.livekit_settings()  # 503 when LiveKit is not configured
+        room = ChatService.room_name(channel)
+        return {
+            "url": cfg.url,
+            "token": livekit.room_token(
+                str(user.pk), user.get_full_name() or user.email, room
+            ),
+            "room": room,
+            "identity": str(user.pk),
+            "title": ChatService._describe(user, channel)["name"],
+            "channel_id": str(channel.pk),
+        }
+
+    @staticmethod
+    def start_room(user: User, channel_id) -> ChatMessage:
+        """Posts the room link in the channel (and notifies its members)."""
+        from django.conf import settings
+
+        from core.modules.meetings.services import livekit
+
+        channel = ChatService.get_channel(user, channel_id)
+        livekit.livekit_settings()  # fail before posting a link that cannot work
+        link = f"{settings.FRONTEND_URL.rstrip('/')}/chat/sala/{channel.pk}"
+        return ChatService.send(user, channel.pk, f"Join the video meeting: {link}")
+
     # helpers ------------------------------------------------------------
 
     @staticmethod

@@ -7,7 +7,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.modules.calendar_sync.services.google import GoogleCalendarService
 from core.modules.chat.response_messages import MSG_CHAT_AFTER_INVALID
 from core.modules.chat.serializers.chat import (
     ChatChannelSerializer,
@@ -140,19 +139,28 @@ class ChatMeetView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Start a Google Meet and post its link in the channel",
+        summary="Start the channel's video meeting (LiveKit) and post its link",
         request=None,
         responses={201: ChatMessageSerializer},
     )
     def post(self, request, channel_id):
-        channel = ChatService.get_channel(request.user, channel_id)
-        link = GoogleCalendarService.create_meet(request.user, channel.name or "Meet")
-        message = ChatService.send(
-            request.user, channel_id, f"Join the meeting: {link}"
-        )
+        message = ChatService.start_room(request.user, channel_id)
         return Response(
             ChatMessageSerializer(message).data, status=status.HTTP_201_CREATED
         )
+
+
+@extend_schema(tags=["Chat"])
+class ChatRoomJoinView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Token to join the channel's video meeting (LiveKit)",
+        request=None,
+        responses={200: dict},
+    )
+    def post(self, request, channel_id):
+        return Response(ChatService.join_room(request.user, channel_id))
 
 
 @extend_schema(tags=["Chat"])
