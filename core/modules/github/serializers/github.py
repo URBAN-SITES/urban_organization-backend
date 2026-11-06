@@ -130,3 +130,9 @@ class RefOptionSerializer(serializers.Serializer):
     ref = serializers.CharField()
     title = serializers.CharField()
     state = serializers.CharField(allow_blank=True)
+
+
+class GitHubProjectImportSerializer(serializers.Serializer):
+    project_id = serializers.CharField(
+        max_length=100, help_text="GraphQL node id of the GitHub Project (PVT_...)"
+    )
