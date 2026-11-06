@@ -10,7 +10,11 @@ LIMIT = 500
 
 def link_origin(url: str) -> str:
     """drive | docs | meet | upload | link, from where the URL points."""
-    host = urlparse(url).netloc.lower()
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    # uploads kept in the database when Cloudinary is off (relative URL of the API)
+    if not host and parsed.path.startswith("/api/v1/uploads/files/"):
+        return "upload"
     if host == "meet.google.com":
         return "meet"
     if host in {"docs.google.com", "sheets.google.com", "slides.google.com"}:
@@ -45,6 +49,9 @@ class FileService:
                 "origin": link_origin(link.url),
                 "task_title": link.task.title if link.task else None,
                 "sector_name": link.sector.name if link.sector else None,
+                # the project, also for files attached to one of its tasks
+                "sector_id": link.sector_id
+                or (link.task.sector_id if link.task else None),
                 "owner_name": link.created_by.name,
                 "created_at": link.created_at,
             }
