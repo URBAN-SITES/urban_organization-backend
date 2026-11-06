@@ -98,5 +98,7 @@ Needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and `FRONTEND_URL`.
 
 Voice messages are ordinary message attachments (`audio/webm` from Chrome/Firefox,
 `audio/mp4` from Safari) sent with `POST /chat/channels/<id>/messages/` as multipart.
-They need `CLOUDINARY_URL` like every other upload; the 10 MB limit fits about
+Uploads go to Cloudinary when `CLOUDINARY_URL` holds a real key; otherwise the file
+is kept in the database (`StoredFile`) and served at `/api/v1/uploads/files/<id>/`
+(the random id is the key, like a Cloudinary URL). The 10 MB limit fits about
 5 minutes of audio, which is also the recorder's limit in the frontend.

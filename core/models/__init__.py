@@ -76,4 +76,5 @@ from core.modules.teams.models.team import SectorTeam as SectorTeam
 from core.modules.teams.models.team import Team as Team
 from core.modules.teams.models.team import TeamMember as TeamMember
 from core.modules.uploads.models.attachment import Attachment as Attachment
+from core.modules.uploads.models.stored_file import StoredFile as StoredFile
 from core.modules.user_settings.models.user_settings import UserSettings as UserSettings
