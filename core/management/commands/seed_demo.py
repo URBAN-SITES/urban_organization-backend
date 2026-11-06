@@ -544,8 +544,11 @@ class Command(BaseCommand):
                 )
             if done_ago is not None:
                 # espalha as conclusões nas últimas semanas para o gráfico do Dashboard
+                # created a few days before it was completed, so durations stay real
+                completed = now - timedelta(days=done_ago)
                 Task.objects.filter(id=task["id"]).update(
-                    completed_at=now - timedelta(days=done_ago)
+                    created_at=completed - timedelta(days=3),
+                    completed_at=completed,
                 )
             if assignee and assignee != "teste" and column == "in_progress":
                 self.api(
