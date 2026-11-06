@@ -5,9 +5,11 @@ from core.modules.github.views.github import (
     GitHubCallbackView,
     GitHubConnectionView,
     GitHubIdentityView,
+    GitHubProjectsView,
     GitHubRepositoriesView,
     GitHubStatusView,
     GitHubWebhookView,
+    ProjectGitHubImportView,
     ProjectRepositoriesView,
     ProjectRepositoryDetailView,
     RepositoryActivityView,
@@ -42,6 +44,16 @@ urlpatterns = [
         name="repositories",
     ),
     path("integrations/github/webhook/", GitHubWebhookView.as_view(), name="webhook"),
+    path(
+        "integrations/github/projects/",
+        GitHubProjectsView.as_view(),
+        name="projects",
+    ),
+    path(
+        "sectors/<uuid:sector_id>/github/projects/import/",
+        ProjectGitHubImportView.as_view(),
+        name="project-import",
+    ),
     path(
         "sectors/<uuid:sector_id>/repositories/",
         ProjectRepositoriesView.as_view(),
