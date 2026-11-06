@@ -19,6 +19,7 @@ from core.modules.github.services.client import (
     API_URL,
     GitHubForbidden,
     GitHubUnavailable,
+    paginate,
     request,
 )
 from core.modules.github.services.repos import _with_user_token
@@ -29,25 +30,24 @@ from core.modules.kanban.services.task import TaskService
 
 MAX_ITEMS = 1000
 
-_PROJECT_FIELDS = "id number title url closed"
-PROJECTS_QUERY = f"""
-query {{
-  viewer {{
-    login
-    projectsV2(first: 50, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
-      nodes {{ {_PROJECT_FIELDS} }}
-    }}
-    organizations(first: 20) {{
-      nodes {{
-        login
-        projectsV2(first: 50, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{
-          nodes {{ {_PROJECT_FIELDS} }}
-        }}
-      }}
-    }}
-  }}
-}}
-"""
+MAX_ORGS = 20
+_BOARDS = """projectsV2(first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes { id number title url closed }
+    }"""
+
+
+def projects_query(org_count: int) -> str:
+    """The user's boards plus one aliased `organization` lookup per org login.
+    `viewer.organizations` is empty for a GitHub App token without "Members"
+    permission, so the orgs come from the app's installations instead."""
+    params = "".join(f", $o{i}: String!" for i in range(org_count))
+    orgs = "".join(
+        f"\n  o{i}: organization(login: $o{i}) {{ login {_BOARDS} }}"
+        for i in range(org_count)
+    )
+    head = f"query({params[2:]})" if params else "query"
+    return f"{head} {{\n  viewer {{ login {_BOARDS} }}{orgs}\n}}"
+
 
 ITEMS_QUERY = """
 query($id: ID!, $after: String) {
@@ -140,18 +140,26 @@ class GitHubProjectsService:
         """Boards of the user and of their organizations, newest first; closed last."""
 
         def load(token):
-            viewer = (_graphql(token, PROJECTS_QUERY, partial=True).get("viewer")) or {}
+            installations = paginate(
+                "/user/installations", token=token, key="installations"
+            )
+            logins = [
+                installation["account"]["login"]
+                for installation in installations
+                if (installation.get("account") or {}).get("type") == "Organization"
+            ][:MAX_ORGS]
+            variables = {f"o{i}": login for i, login in enumerate(logins)}
+            data = _graphql(
+                token, projects_query(len(logins)), partial=True, **variables
+            )
+            owners = [data.get("viewer")] + [data.get(key) for key in variables]
             rows = [
-                _row(node, viewer.get("login", ""))
-                for node in ((viewer.get("projectsV2") or {}).get("nodes") or [])
+                _row(node, owner["login"])
+                for owner in owners
+                if owner
+                for node in (owner.get("projectsV2") or {}).get("nodes") or []
                 if node
             ]
-            for org in (viewer.get("organizations") or {}).get("nodes") or []:
-                if not org:
-                    continue
-                for node in (org.get("projectsV2") or {}).get("nodes") or []:
-                    if node:
-                        rows.append(_row(node, org["login"]))
             return sorted(rows, key=lambda row: row["closed"])
 
         return _with_user_token(user, load)
