@@ -142,6 +142,7 @@ route_core = [
     path("", include("core.modules.invitations.urls")),
     path("", include("core.modules.kanban.urls")),
     path("", include("core.modules.chat.urls")),
+    path("calls/", include("core.modules.calls.urls")),
     path("", include("core.modules.search.urls")),
     path("", include("core.modules.crowdfunding.urls")),
     path("integrations/google/", include("core.modules.calendar_sync.urls")),

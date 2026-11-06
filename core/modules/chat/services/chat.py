@@ -17,12 +17,15 @@ from core.modules.chat.models.chat import (
     ChatChannelMember,
     ChatChannelTeam,
     ChatMessage,
+    ChatMessageReaction,
 )
 from core.modules.chat.response_messages import (
+    MSG_CHAT_CALL_SUMMARY,
     MSG_CHAT_DIRECT_WITH_SELF,
     MSG_CHAT_EMPTY,
     MSG_CHAT_MESSAGE_DELETED,
     MSG_CHAT_MESSAGE_FORBIDDEN,
+    MSG_CHAT_REACTION_INVALID,
     MSG_CHAT_REPLY_INVALID,
     MSG_CHAT_TASK_INVALID,
     MSG_CHAT_TEAMS_INVALID,
@@ -220,8 +223,8 @@ class ChatService:
         channel = ChatService.get_channel(user, channel_id)
         messages = (
             ChatMessage.objects.filter(channel=channel)
-            .select_related("author", "task__status")
-            .prefetch_related("mentions", "attachments")
+            .select_related("author", "task__status", "call")
+            .prefetch_related("mentions", "attachments", "reactions")
         )
         if after is not None:
             messages = messages.filter(created_at__gt=after)
@@ -284,6 +287,8 @@ class ChatService:
             raise PermissionDenied(MSG_CHAT_MESSAGE_FORBIDDEN)
         if message.deleted_at:
             raise ValidationError(MSG_CHAT_MESSAGE_DELETED)
+        if message.call_id:
+            raise ValidationError(MSG_CHAT_CALL_SUMMARY)
         message.content = content
         message.edited_at = timezone.now()
         message.save(update_fields=["content", "edited_at"])
@@ -311,6 +316,27 @@ class ChatService:
         message.save(update_fields=["content", "deleted_at"])
         AttachmentService.delete_for_message(message)
         ChatService._broadcast(channel, "chat.message_deleted", message)
+
+    @staticmethod
+    def toggle_reaction(user: User, message_id, emoji: str) -> ChatMessage:
+        """Adds the emoji, or removes it when this person already used it."""
+        emoji = emoji.strip()
+        # emoji only: anything ASCII (letters, digits, spaces, markup) is refused
+        if not emoji or any(ord(char) < 128 for char in emoji):
+            raise ValidationError(MSG_CHAT_REACTION_INVALID)
+        message, channel = ChatService._get_message(user, message_id)
+        if message.deleted_at:
+            raise ValidationError(MSG_CHAT_MESSAGE_DELETED)
+        with transaction.atomic():
+            removed, _rows = ChatMessageReaction.objects.filter(
+                message=message, user=user, emoji=emoji
+            ).delete()
+            if not removed:
+                ChatMessageReaction.objects.get_or_create(
+                    message=message, user=user, emoji=emoji
+                )
+            ChatService._broadcast(channel, "chat.message_updated", message)
+        return message
 
     # helpers ------------------------------------------------------------
 

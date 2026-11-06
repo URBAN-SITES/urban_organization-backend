@@ -7,6 +7,7 @@ from core.models.email_verification import EmailVerification
 from core.models.password_reset import PasswordReset
 from core.models.user import User, UserSession
 from core.modules.calendar_sync import admin as _calendar_sync_admin  # noqa: F401
+from core.modules.calls import admin as _calls_admin  # noqa: F401
 from core.modules.chat import admin as _chat_admin  # noqa: F401
 from core.modules.crowdfunding import admin as _crowdfunding_admin  # noqa: F401
 from core.modules.github import admin as _github_admin  # noqa: F401
