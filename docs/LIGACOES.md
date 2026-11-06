@@ -80,3 +80,23 @@ connect. Run [coturn](https://github.com/coturn/coturn) with `use-auth-secret` a
 of channels I can read and not on deleted messages. Every message now has
 `reactions: [{"emoji", "user_ids"}]`, and the change is pushed as
 `chat.message_updated`.
+
+## Channel video meeting (LiveKit)
+
+The "Start meeting" button of a chat channel no longer creates a Google Meet. It
+opens the channel's own LiveKit room (`chat-<channel_id>`), the same video stack as
+project meetings (`docs/REUNIOES.md`), but with no schedule and no recording.
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/v1/chat/channels/<id>/meet/` | Posts `Join the video meeting: <FRONTEND_URL>/chat/sala/<id>` in the channel (members are notified). 503 when LiveKit is not configured, without posting |
+| `POST /api/v1/chat/channels/<id>/room/` | `{url, token, room, identity, title, channel_id}` to join; anyone who can read the channel |
+
+Needs `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and `FRONTEND_URL`.
+
+## Voice messages
+
+Voice messages are ordinary message attachments (`audio/webm` from Chrome/Firefox,
+`audio/mp4` from Safari) sent with `POST /chat/channels/<id>/messages/` as multipart.
+They need `CLOUDINARY_URL` like every other upload; the 10 MB limit fits about
+5 minutes of audio, which is also the recorder's limit in the frontend.
