@@ -11,7 +11,10 @@ PEOPLE_LIMIT = 20
 
 
 def _avg_days(done):
-    avg = done.aggregate(a=Avg(F("completed_at") - F("created_at")))["a"]
+    # an imported or backdated task can say it ended before it was created: skip it,
+    # or one row turns the average negative ("-14,4 dias")
+    valid = done.filter(completed_at__gte=F("created_at"))
+    avg = valid.aggregate(a=Avg(F("completed_at") - F("created_at")))["a"]
     return round(avg.total_seconds() / 86400, 1) if avg else None
 
 
