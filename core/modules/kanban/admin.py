@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from core.modules.kanban.models.cycle import Cycle
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.sector import Sector, SectorMember
 from core.modules.kanban.models.task import ChecklistItem, Comment, Status, Task
@@ -47,3 +48,9 @@ class ChecklistItemAdmin(admin.ModelAdmin):
 class ResourceLinkAdmin(admin.ModelAdmin):
     list_display = ("title", "url", "created_by", "created_at")
     search_fields = ("title", "url")
+
+
+@admin.register(Cycle)
+class CycleAdmin(admin.ModelAdmin):
+    list_display = ("name", "sector", "start_date", "end_date")
+    search_fields = ("name", "sector__name")

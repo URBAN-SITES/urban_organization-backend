@@ -53,6 +53,7 @@ class ProfileSettingsTests(TestCase):
             "push_enabled": False,
             "email_product": False,
             "email_weekly_digest": True,
+            "email_daily_digest": True,
             "email_security": False,
             "email_assigned": True,
             "email_mentions": False,
@@ -64,6 +65,7 @@ class ProfileSettingsTests(TestCase):
             "week_start": "monday",
             "compact_cards": True,
             "show_completed": False,
+            "hidden_widgets": ["agenda", "activity"],
         }
         self.assertEqual(
             self.client.patch(self.url, payload, format="json").data, payload
@@ -79,6 +81,7 @@ class ProfileSettingsTests(TestCase):
             {"locale": "invalid locale"},
             {"date_format": "mm/dd/yyyy"},
             {"week_start": "friday"},
+            {"hidden_widgets": ["Not A Key!"]},
         ):
             response = self.client.patch(self.url, payload, format="json")
             self.assertEqual(response.status_code, 400)

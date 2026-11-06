@@ -35,6 +35,7 @@ class UserSettings(models.Model):
     push_enabled = models.BooleanField(_("push enabled"), default=True)
     email_product = models.BooleanField(_("product e-mails"), default=True)
     email_weekly_digest = models.BooleanField(_("weekly digest"), default=False)
+    email_daily_digest = models.BooleanField(_("daily digest"), default=False)
     email_security = models.BooleanField(_("security e-mails"), default=True)
     email_assigned = models.BooleanField(_("assignment e-mails"), default=True)
     email_mentions = models.BooleanField(_("mention e-mails"), default=True)
@@ -53,6 +54,8 @@ class UserSettings(models.Model):
     )
     compact_cards = models.BooleanField(_("compact cards"), default=False)
     show_completed = models.BooleanField(_("show completed tasks"), default=True)
+    # keys of the home dashboard panels the user chose to hide
+    hidden_widgets = models.JSONField(_("hidden home panels"), default=list, blank=True)
 
     class Meta:
         verbose_name = _("user settings")

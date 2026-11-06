@@ -53,7 +53,7 @@ services:
   worker:
     build: .
     env_file: .env
-    command: ["celery", "-A", "app", "worker", "-l", "info"]
+    command: ["celery", "-A", "app", "worker", "--beat", "--schedule", "/tmp/celerybeat-schedule", "-l", "info"]
     environment:
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: app

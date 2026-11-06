@@ -3,10 +3,12 @@ from django.db.models import Max
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from core.models.user import User
+from core.modules.kanban.models.follow import TaskSubscriber
 from core.modules.kanban.models.resource_link import ResourceLink
 from core.modules.kanban.models.task import ChecklistItem, Comment
 from core.modules.kanban.response_messages import (
     MSG_COMMENT_MENTION_INVALID,
+    MSG_FOLLOWED_COMMENT,
     MSG_SECTOR_ROLE_REQUIRED,
     MSG_TASK_COMMENTED,
     MSG_TASK_MENTIONED,
@@ -85,6 +87,16 @@ class CommentService:
             event="task.commented",
             preference="app_comments",
         )
+        TaskService.notify_followers(
+            user,
+            task,
+            title=MSG_FOLLOWED_COMMENT,
+            message=content[:200],
+            event="task.commented",
+            preference="app_comments",
+            skip={task.assignee_id, *mentioned},
+        )
+        TaskSubscriber.objects.get_or_create(task=task, user=user)
         return comment
 
     @staticmethod

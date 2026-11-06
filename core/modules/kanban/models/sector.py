@@ -27,6 +27,17 @@ class Sector(BaseModel):
         ),
     )
     archived_at = models.DateTimeField(_("archived at"), null=True, blank=True)
+    # short key that prefixes task codes (DEV-12); task_counter numbers the tasks
+    identifier = models.CharField(_("identifier"), max_length=6, blank=True)
+    task_counter = models.PositiveIntegerField(_("task counter"), default=0)
+    # done tasks leave the board after this many days (null: never)
+    auto_archive_days = models.PositiveSmallIntegerField(
+        _("auto archive after (days)"), null=True, blank=True
+    )
+    # read-only public link (/p/<token>); null while sharing is off
+    public_token = models.CharField(
+        _("public link token"), max_length=64, null=True, blank=True, unique=True
+    )
 
     class Meta(BaseModel.Meta):
         verbose_name = _("sector")

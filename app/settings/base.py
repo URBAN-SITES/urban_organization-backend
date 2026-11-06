@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 # from django.contrib import messages
+from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
@@ -132,6 +133,34 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TIME_LIMIT = 5 * 60
+# periodic jobs (the worker runs with --beat): e-mail digests and project rules
+CELERY_BEAT_SCHEDULE = {
+    "send-digests": {
+        "task": "core.tasks.digest.send_digests",
+        "schedule": crontab(hour=8, minute=0),
+    },
+    "run-scheduled-rules": {
+        "task": "core.tasks.digest.run_scheduled_rules",
+        "schedule": crontab(minute=5),
+    },
+    "expire-calls": {
+        "task": "core.modules.calls.tasks.expire_calls",
+        "schedule": crontab(),  # every minute
+    },
+}
+# Voice/video calls in chat (WebRTC mesh) - see docs/LIGACOES.md
+CALL_RING_SECONDS = int(os.getenv("CALL_RING_SECONDS", "45"))
+CALL_MAX_PARTICIPANTS = int(os.getenv("CALL_MAX_PARTICIPANTS", "6"))
+CALL_MAX_HOURS = int(os.getenv("CALL_MAX_HOURS", "6"))
+ICE_STUN_URLS = [
+    url.strip()
+    for url in os.getenv("ICE_STUN_URLS", "stun:stun.l.google.com:19302").split(",")
+    if url.strip()
+]
+TURN_URLS = [
+    url.strip() for url in os.getenv("TURN_URLS", "").split(",") if url.strip()
+]
+TURN_SECRET = os.getenv("TURN_SECRET", "")
 WSGI_APPLICATION = "app.wsgi.application"
 ASGI_APPLICATION = "app.asgi.application"
 # single process only; use channels_redis.core.RedisChannelLayer in production
@@ -185,6 +214,10 @@ REST_FRAMEWORK = {
         "auth": "10/minute",
         # signed provider callbacks; caps floods of forged calls per IP
         "webhook": "600/minute",
+        # IA liberada para todos: limite por usuário para não esgotar a cota gratuita do modelo
+        "ai": "60/hour",
+        # read-only public project links (no login)
+        "public": "120/hour",
     },
 }
 SIMPLE_JWT = {

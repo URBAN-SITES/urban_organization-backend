@@ -4,14 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.modules.ai.permissions import HasAssistantAccess
 from core.modules.ai.serializers.ask import AIAnswerSerializer, AIAskSerializer
 from core.modules.ai.services.assistant import AssistantService
 
 
 @extend_schema(tags=["IA"])
 class AIAskView(APIView):
-    permission_classes = [IsAuthenticated, HasAssistantAccess]
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "ai"
 
     # Documentation
     @extend_schema(

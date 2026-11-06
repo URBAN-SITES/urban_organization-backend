@@ -1,7 +1,7 @@
 import json
 import uuid
 from datetime import date, timedelta
-from unittest.mock import PropertyMock, patch
+from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import override_settings
@@ -38,13 +38,6 @@ class QuickTaskTests(KanbanTestCase):
     def create(self, **data):
         data.setdefault("title", "Desenvolver fix do frontend")
         return quick_create(self.owner, self.sector, **data)
-
-    def subscriber(self):
-        return patch(
-            "core.models.user.User.is_subscriber",
-            new_callable=PropertyMock,
-            return_value=True,
-        )
 
     def draft(self, **data):
         data.setdefault("title", "Desenvolver fix do frontend")
@@ -126,8 +119,7 @@ class QuickTaskTests(KanbanTestCase):
             "assignee_ids": [str(self.matheus.pk), str(self.nicole.pk)],
             **over,
         }
-        with self.subscriber():
-            return self.client.post("/api/v1/ai/tasks/", body, format="json"), body
+        return self.client.post("/api/v1/ai/tasks/", body, format="json"), body
 
     def test_confirming_the_draft_creates_the_task_once(self):
         response, body = self.confirm()
@@ -140,27 +132,27 @@ class QuickTaskTests(KanbanTestCase):
         self.assertIn("12:00", task.description)
         self.assertIn("Nicole Souza", task.description)
         self.assertEqual(len(response.json()["notes"]), 2)
-        with self.subscriber():
-            again = self.client.post("/api/v1/ai/tasks/", body, format="json")
+        again = self.client.post("/api/v1/ai/tasks/", body, format="json")
         self.assertEqual(again.status_code, 200)
         self.assertEqual(
             Task.objects.filter(title="Desenvolver fix do frontend").count(), 1
         )
 
-    def test_confirming_rejects_people_without_access_and_non_subscribers(self):
+    def test_confirming_rejects_people_without_access(self):
         stranger = self.person("stranger@a.com", "Stranger")
         response, _ = self.confirm(assignee_ids=[str(stranger.pk)])
         self.assertEqual(response.status_code, 400)
         self.assertFalse(
             Task.objects.filter(title="Desenvolver fix do frontend").exists()
         )
+        # sem plano: qualquer conta logada usa a IA; sem login continua bloqueado
+        self.client.force_authenticate(user=None)
         denied = self.client.post("/api/v1/ai/tasks/", {}, format="json")
-        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(denied.status_code, 401)
 
     def test_options_endpoint_lists_assignable_people(self):
-        with self.subscriber():
-            ok = self.client.get(f"/api/v1/ai/tasks/options/?sector_id={self.sector}")
-            bad = self.client.get("/api/v1/ai/tasks/options/")
+        ok = self.client.get(f"/api/v1/ai/tasks/options/?sector_id={self.sector}")
+        bad = self.client.get("/api/v1/ai/tasks/options/")
         self.assertEqual(ok.status_code, 200)
         self.assertIn("Nicole Souza", [p["name"] for p in ok.json()["people"]])
         self.assertEqual(bad.status_code, 400)

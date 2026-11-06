@@ -20,7 +20,7 @@ from core.modules.organizations.response_messages import (
 )
 
 Role = OrganizationMember.Role
-RANK = {Role.VIEWER: 0, Role.MEMBER: 1, Role.ADMIN: 2, Role.OWNER: 3}
+RANK = {Role.GUEST: -1, Role.VIEWER: 0, Role.MEMBER: 1, Role.ADMIN: 2, Role.OWNER: 3}
 
 
 class OrganizationService:
@@ -65,16 +65,23 @@ class OrganizationService:
         )
 
     @staticmethod
-    def get_membership(user: User, organization_id) -> OrganizationMember:
-        """The caller's membership; 404 for non-members so existence stays hidden."""
+    def get_membership(
+        user: User, organization_id, allow_guest: bool = False
+    ) -> OrganizationMember:
+        """The caller's membership; 404 for non-members so existence stays hidden.
+        Guests only reach the projects they were added to, so organization-wide
+        screens answer 404 to them unless the caller opts in with allow_guest."""
         try:
-            return OrganizationMember.objects.select_related("organization").get(
+            membership = OrganizationMember.objects.select_related("organization").get(
                 organization_id=organization_id,
                 organization__is_active=True,
                 user=user,
             )
         except OrganizationMember.DoesNotExist:
             raise NotFound()
+        if membership.role == Role.GUEST and not allow_guest:
+            raise NotFound()
+        return membership
 
     @staticmethod
     def require_role(user: User, organization_id, minimum: str) -> OrganizationMember:
@@ -156,7 +163,9 @@ class OrganizationService:
     @staticmethod
     @transaction.atomic
     def remove_member(user: User, organization_id, member_id) -> None:
-        actor = OrganizationService.get_membership(user, organization_id)
+        actor = OrganizationService.get_membership(
+            user, organization_id, allow_guest=True
+        )
         member = OrganizationService._get_member(organization_id, member_id)
         if member.user_id != actor.user_id:  # leaving is always allowed
             actor = OrganizationService.require_role(user, organization_id, Role.ADMIN)
