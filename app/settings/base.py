@@ -127,6 +127,12 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": REDIS_URL,
+        # one bounded pool per process, not one per thread (see core/cache.py)
+        "OPTIONS": {
+            "pool_class": "core.cache.SharedConnectionPool",
+            "max_connections": int(os.getenv("REDIS_CACHE_MAX_CONNECTIONS", "10")),
+            "timeout": 5,
+        },
     }
 }
 CELERY_BROKER_URL = REDIS_URL
