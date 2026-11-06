@@ -30,7 +30,7 @@ from core.modules.ai.response_messages import (
     MSG_AI_UNVERIFIED,
 )
 from core.modules.ai.services.actions import get_action, json_value, registry
-from core.modules.ai.services.ask import AI_MODEL, _client
+from core.modules.ai.services.ask import AI_MODEL, _client, require_key
 from core.modules.kanban.services.sector import SectorService
 from core.modules.kanban.services.status import StatusService
 from core.modules.kanban.services.task import TaskService
@@ -349,6 +349,7 @@ class AssistantService:
         model = os.getenv("AI_ASSISTANT_MODEL", ASSISTANT_MODEL)
         calls_used = 0
         deadline = time.monotonic() + MAX_SECONDS
+        require_key()
         for _ in range(MAX_ROUNDS):
             if time.monotonic() >= deadline:
                 return cls._interrupted(actions)

@@ -10,7 +10,11 @@ from core.modules.meetings.services.insights import InsightPipeline
 from core.modules.meetings.tasks import process_meeting_insight
 from core.modules.meetings.tests.test_meetings import MeetingTestCase, answer
 
-AI_ENV = {"MEETING_AI_ENABLED": "true", "OLLAMA_URL": "http://ollama.test"}
+AI_ENV = {
+    "MEETING_AI_ENGINE": "local",
+    "MEETING_AI_ENABLED": "true",
+    "OLLAMA_URL": "http://ollama.test",
+}
 SEGMENTS = [
     {"id": 0, "start": 0.0, "end": 4.0, "text": "Bom dia, vamos revisar a sprint."},
     {"id": 1, "start": 4.0, "end": 9.5, "text": "Decidimos adiar o deploy."},
@@ -188,12 +192,61 @@ class PipelineTests(InsightTestCase):
         self.assertEqual(len(insight.segments), 4)
 
     def test_disabled_never_runs(self):
-        with patch.dict("os.environ", {"MEETING_AI_ENABLED": ""}):
+        off = {"MEETING_AI_ENGINE": "", "MEETING_AI_ENABLED": "", "GEMINI_API_KEY": ""}
+        with patch.dict("os.environ", off):
             InsightPipeline.on_recording_ready(self.recording)
             res = self.member_client.get(f"{self.base}insight/")
         self.assertFalse(MeetingInsight.objects.exists())
         self.assertEqual(res.status_code, 503)
         self.assertEqual(res.json()["code"], "insights_not_configured")
+
+
+class FakeGemini:
+    """Stands in for google.genai.Client: one upload, two JSON answers."""
+
+    def __init__(self, transcript, summary):
+        self.answers = [transcript, summary]
+        self.deleted = []
+        self.files = self
+        self.models = self
+
+    def upload(self, file, config):
+        return type("File", (), {"name": "files/1", "state": None})()
+
+    def delete(self, name):
+        self.deleted.append(name)
+
+    def generate_content(self, model, contents, config):
+        return type("Answer", (), {"text": json.dumps(self.answers.pop(0))})()
+
+
+class GeminiEngineTests(InsightTestCase):
+    def test_gemini_is_used_when_its_key_is_set(self):
+        transcript = {
+            "language": "pt",
+            "segments": [
+                {"start": s["start"], "end": s["end"], "text": s["text"]}
+                for s in SEGMENTS
+            ],
+        }
+        fake = FakeGemini(transcript, model_output())
+        env = {"MEETING_AI_ENGINE": "", "MEETING_AI_ENABLED": "", "GEMINI_API_KEY": "k"}
+        with (
+            patch.dict("os.environ", env),
+            patch.object(ai, "_gemini", return_value=fake),
+            patch.object(ai, "_download", return_value="video/mp4"),
+        ):
+            self.assertEqual(ai.engine(), "gemini")
+            insight = self.run_pipeline()
+        self.assertEqual(insight.status, MeetingInsight.Status.DONE, insight.error)
+        self.assertEqual(
+            [s["text"] for s in insight.segments], [s["text"] for s in SEGMENTS]
+        )
+        self.assertEqual(insight.audio_seconds, 20.0)
+        self.assertTrue(insight.summary["executive_summary"])
+        self.assertEqual(insight.summary_model, ai.GEMINI_MODEL)
+        self.assertEqual(fake.deleted, ["files/1"])  # the upload is not kept
+        self.transcribe.assert_not_called()
 
 
 class InsightApiTests(InsightTestCase):

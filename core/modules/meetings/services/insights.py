@@ -6,7 +6,6 @@ recording itself.
 """
 
 import logging
-import os
 import re
 import tempfile
 import unicodedata
@@ -357,10 +356,10 @@ class InsightPipeline:
             if needs_transcript:
                 InsightPipeline._check_limits(recording, cfg)
                 with tempfile.TemporaryDirectory() as tmp:
-                    audio = os.path.join(tmp, "audio.wav")
                     with ai.Stopwatch() as watch:
-                        ai.extract_audio(storage.presign(recording.file_key), audio)
-                        segments, language, seconds = ai.transcribe(audio, cfg)
+                        segments, language, seconds = ai.transcribe_recording(
+                            storage.presign(recording.file_key), tmp, cfg
+                        )
                 if seconds > cfg.max_seconds:
                     raise ai.PermanentError("Audio longer than the limit.")
                 insight.segments = segments
