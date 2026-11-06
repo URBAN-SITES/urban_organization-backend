@@ -107,6 +107,22 @@ class ReportTests(InsightsTestCase):
         self.assertEqual(data["weekly_done"][-1]["done"], 2)
         self.assertIsNotNone(data["avg_days_to_complete"])
 
+    def test_average_time_ignores_tasks_completed_before_they_were_created(self):
+        from django.utils import timezone
+
+        from core.modules.kanban.models.task import Task
+
+        self.task("Normal", days=2, done=True)
+        backdated = self.task("Imported", days=2, done=True)
+        Task.objects.filter(id=backdated["id"]).update(
+            completed_at=timezone.now() - timedelta(days=20)
+        )
+        Task.objects.exclude(id=backdated["id"]).update(
+            created_at=timezone.now() - timedelta(days=4)
+        )
+        data = self.client.get(self.url("reports")).json()
+        self.assertGreaterEqual(data["avg_days_to_complete"], 0)
+
     def test_people_table(self):
         self.task("A", days=2, done=True)
         self.task("B", days=-1)
