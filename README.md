@@ -15,6 +15,7 @@ Authentication uses e-mail/JWT in HttpOnly cookies, plus Google and GitHub sign-
 | [`docs/TEAM_WORKFLOW.md`](docs/TEAM_WORKFLOW.md) | Issues, PRs, collisions, splitting large tasks |
 | [`docs/GITHUB.md`](docs/GITHUB.md) | GitHub App setup and permissions |
 | [`docs/REUNIOES.md`](docs/REUNIOES.md) | Meetings with LiveKit, recordings and storage |
+| [`docs/LIGACOES.md`](docs/LIGACOES.md) | Voice/video calls in chat (WebRTC) and message reactions |
 | [`docs/IA-REUNIOES.md`](docs/IA-REUNIOES.md) | Transcription (faster-whisper) and summaries (Ollama) on our own server |
 | [`docs/PUSH_NOTIFICATIONS.md`](docs/PUSH_NOTIFICATIONS.md) | Firebase Cloud Messaging setup |
 | [`docs/RELATORIO-RECONSTRUCAO.md`](docs/RELATORIO-RECONSTRUCAO.md) | Post-hackathon rebuild report (phases 0 to 6) |
@@ -87,6 +88,7 @@ Secrets live only in `.env` (never committed). `.env.example` lists every key.
 | `GEMINI_API_KEY`, `AI_ASSISTANT_MODEL`, `AI_ANALYSIS_*` | optional | AI assistant and file analysis (free for every signed-in user, 60 calls/hour) |
 | `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_OAUTH_REDIRECT_URI` | optional | GitHub sign-in and repository integration (`docs/GITHUB.md`) |
 | `LIVEKIT_URL`, `LIVEKIT_API_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | optional | Video meetings (`docs/REUNIOES.md`) |
+| `CALL_RING_SECONDS`, `CALL_MAX_PARTICIPANTS`, `CALL_MAX_HOURS`, `ICE_STUN_URLS`, `TURN_URLS`, `TURN_SECRET` | optional | Chat calls; defaults work locally (`docs/LIGACOES.md`) |
 | `RECORDINGS_S3_BUCKET`, `RECORDINGS_S3_REGION`, `RECORDINGS_S3_ENDPOINT`, `RECORDINGS_S3_ACCESS_KEY`, `RECORDINGS_S3_SECRET_KEY`, `MEETING_RECORDING_RETENTION_DAYS` | optional | Recording storage (S3, R2 or MinIO) |
 | `MEETING_AI_ENABLED`, `MEETING_AI_LANGUAGE`, `MEETING_AI_MAX_SECONDS`, `MEETING_AI_MAX_BYTES` | optional | Meeting transcription and summary pipeline |
 | `WHISPER_MODEL`, `WHISPER_DEVICE`, `WHISPER_COMPUTE_TYPE`, `WHISPER_MODEL_DIR` | optional | faster-whisper settings |
