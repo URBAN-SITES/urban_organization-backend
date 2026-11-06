@@ -34,6 +34,21 @@ class GitHubProjectImportTests(GitHubTestCase):
                 item("I5", "Sketch", None, kind="DraftIssue"),
             ],
         }
+        self.github.on(
+            "GET",
+            "/user/installations",
+            body={
+                "total_count": 3,
+                "installations": [
+                    {"id": 1, "account": {"login": "octo", "type": "User"}},
+                    {"id": 2, "account": {"login": "acme", "type": "Organization"}},
+                    {
+                        "id": 3,
+                        "account": {"login": "closed-org", "type": "Organization"},
+                    },
+                ],
+            },
+        )
         self.github.on("POST", "/graphql")
         self.github.routes[("POST", "/graphql")] = self.graphql
 
@@ -55,8 +70,22 @@ class GitHubProjectImportTests(GitHubTestCase):
                                     }
                                 ]
                             },
-                            "organizations": {"nodes": [None]},
-                        }
+                        },
+                        "o0": {
+                            "login": "acme",
+                            "projectsV2": {
+                                "nodes": [
+                                    {
+                                        "id": "PVT_2",
+                                        "number": 3,
+                                        "title": "Sprint",
+                                        "url": "https://github.com/orgs/acme/projects/3",
+                                        "closed": False,
+                                    }
+                                ]
+                            },
+                        },
+                        "o1": None,
                     },
                     # an org that blocks the app must not hide the user's own boards
                     "errors": [{"type": "FORBIDDEN", "message": "org blocks app"}],
@@ -92,8 +121,12 @@ class GitHubProjectImportTests(GitHubTestCase):
         res = self.client.get(f"{API}integrations/github/projects/")
         self.assertEqual(res.status_code, 200, res.content)
         self.assertEqual(
-            [(p["title"], p["owner"]) for p in res.json()], [("Roadmap", "octo")]
+            [(p["title"], p["owner"]) for p in res.json()],
+            [("Roadmap", "octo"), ("Sprint", "acme")],
         )
+        # the org boards come from the app's installations, one lookup per org
+        query = self.github.calls[-1][2]["json"]
+        self.assertEqual(query["variables"], {"o0": "acme", "o1": "closed-org"})
 
     def test_import_creates_columns_and_tasks_in_github_order(self):
         res = self.import_board()
