@@ -5,9 +5,14 @@ from core.modules.calendar_sync.models.calendar import (
 from core.modules.calendar_sync.models.calendar import (
     UserIntegration as UserIntegration,
 )
+from core.modules.calls.models.call import Call as Call
+from core.modules.calls.models.call import CallParticipant as CallParticipant
 from core.modules.chat.models.chat import ChatChannel as ChatChannel
 from core.modules.chat.models.chat import ChatChannelMember as ChatChannelMember
 from core.modules.chat.models.chat import ChatMessage as ChatMessage
+from core.modules.chat.models.chat import (
+    ChatMessageReaction as ChatMessageReaction,
+)
 from core.modules.crowdfunding.models.campaign import Campaign as Campaign
 from core.modules.crowdfunding.models.campaign import Contribution as Contribution
 from core.modules.github.models.github import GitHubConnection as GitHubConnection

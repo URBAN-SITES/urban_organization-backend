@@ -45,6 +45,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     task = serializers.SerializerMethodField()
     mentions = serializers.SerializerMethodField()
     attachments = ChatAttachmentSerializer(many=True, read_only=True)
+    reactions = serializers.SerializerMethodField()
+    call = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
@@ -58,6 +60,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "task",
             "mentions",
             "attachments",
+            "reactions",
+            "call",
             "created_at",
             "edited_at",
             "deleted_at",
@@ -81,6 +85,24 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             {"id": str(user.id), "name": user.name} for user in message.mentions.all()
         ]
 
+    def get_reactions(self, message) -> list[dict]:
+        """[{"emoji": "👍", "user_ids": [...]}] in the order they were first used."""
+        grouped: dict[str, list[str]] = {}
+        for reaction in message.reactions.all():
+            grouped.setdefault(reaction.emoji, []).append(str(reaction.user_id))
+        return [{"emoji": e, "user_ids": ids} for e, ids in grouped.items()]
+
+    def get_call(self, message) -> dict | None:
+        call = message.call
+        if call is None:
+            return None
+        return {
+            "id": str(call.id),
+            "kind": call.kind,
+            "status": call.status,
+            "duration_seconds": call.duration_seconds,
+        }
+
 
 class ChatMessageWriteSerializer(serializers.Serializer):
     content = serializers.CharField(max_length=4000, required=False, allow_blank=True)
@@ -101,3 +123,9 @@ class ChatMessageWriteSerializer(serializers.Serializer):
 
 class ChatMessageEditSerializer(serializers.Serializer):
     content = serializers.CharField(max_length=4000)
+
+
+class ChatReactionSerializer(serializers.Serializer):
+    emoji = serializers.CharField(
+        max_length=16, help_text="Same emoji again removes it"
+    )

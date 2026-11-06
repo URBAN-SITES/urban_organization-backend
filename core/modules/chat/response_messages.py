@@ -12,3 +12,5 @@ MSG_CHAT_TEAMS_NOT_ALLOWED = _(
 )
 MSG_CHAT_EMPTY = _("Write a message or attach a file.")
 MSG_CHAT_TASK_INVALID = _("You cannot cite this task.")
+MSG_CHAT_REACTION_INVALID = _("Send a single emoji.")
+MSG_CHAT_CALL_SUMMARY = _("Call summaries cannot be edited.")

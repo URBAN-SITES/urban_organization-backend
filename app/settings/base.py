@@ -143,7 +143,24 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.digest.run_scheduled_rules",
         "schedule": crontab(minute=5),
     },
+    "expire-calls": {
+        "task": "core.modules.calls.tasks.expire_calls",
+        "schedule": crontab(),  # every minute
+    },
 }
+# Voice/video calls in chat (WebRTC mesh) - see docs/LIGACOES.md
+CALL_RING_SECONDS = int(os.getenv("CALL_RING_SECONDS", "45"))
+CALL_MAX_PARTICIPANTS = int(os.getenv("CALL_MAX_PARTICIPANTS", "6"))
+CALL_MAX_HOURS = int(os.getenv("CALL_MAX_HOURS", "6"))
+ICE_STUN_URLS = [
+    url.strip()
+    for url in os.getenv("ICE_STUN_URLS", "stun:stun.l.google.com:19302").split(",")
+    if url.strip()
+]
+TURN_URLS = [
+    url.strip() for url in os.getenv("TURN_URLS", "").split(",") if url.strip()
+]
+TURN_SECRET = os.getenv("TURN_SECRET", "")
 WSGI_APPLICATION = "app.wsgi.application"
 ASGI_APPLICATION = "app.asgi.application"
 # single process only; use channels_redis.core.RedisChannelLayer in production

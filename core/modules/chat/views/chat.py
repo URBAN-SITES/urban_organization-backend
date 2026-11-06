@@ -15,6 +15,7 @@ from core.modules.chat.serializers.chat import (
     ChatMessageEditSerializer,
     ChatMessageSerializer,
     ChatMessageWriteSerializer,
+    ChatReactionSerializer,
     ChatTeamsChannelSerializer,
 )
 from core.modules.chat.services.chat import ChatService
@@ -190,3 +191,21 @@ class ChatMessageDetailView(APIView):
     def delete(self, request, message_id):
         ChatService.delete(request.user, message_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Chat"])
+class ChatMessageReactionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Toggle my emoji reaction on a message (pushed as message_updated)",
+        request=ChatReactionSerializer,
+        responses={200: ChatMessageSerializer},
+    )
+    def post(self, request, message_id):
+        serializer = ChatReactionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message = ChatService.toggle_reaction(
+            request.user, message_id, serializer.validated_data["emoji"]
+        )
+        return Response(ChatMessageSerializer(message).data)
