@@ -36,7 +36,20 @@ if os.getenv("REDIS_URL"):
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {"hosts": [os.environ["REDIS_URL"]]},
+            "CONFIG": {
+                "hosts": [
+                    {
+                        "address": os.environ["REDIS_URL"],
+                        # each socket waits up to 5 s for a message (BZPOPMIN); a shorter
+                        # read timeout turned every quiet wait into a TimeoutError
+                        "socket_timeout": 30,
+                        "socket_connect_timeout": 10,
+                        "socket_keepalive": True,
+                        "health_check_interval": 30,
+                        "retry_on_timeout": True,
+                    }
+                ]
+            },
         }
     }
 
