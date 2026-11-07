@@ -70,6 +70,24 @@ class AssistantTests(KanbanTestCase):
         self.assertIn("português brasileiro", system)
         self.assertEqual(system.count(ASSISTANT_INSTRUCTIONS.strip()), 1)
 
+    def test_catalog_entry_called_as_a_tool_still_runs(self, client):
+        # smaller models sometimes call `task_create` itself instead of execute_action
+        client.return_value.models.generate_content.side_effect = [
+            reply(
+                calls=[
+                    types.FunctionCall(
+                        name="task_create",
+                        args={"sector_id": self.sector, "data": {"title": "Direto"}},
+                    )
+                ]
+            ),
+            reply("Pronto."),
+        ]
+        result = AssistantService.ask(self.owner, "Crie a tarefa Direto")
+        self.assertEqual(Task.objects.filter(title="Direto").count(), 1)
+        self.assertEqual(result["actions"][0]["action"], "task_create")
+        self.assertEqual(result["actions"][0]["status"], "succeeded")
+
     def test_catalog_lets_the_model_act_without_discovery(self, client):
         client.return_value.models.generate_content.return_value = reply("Ok")
         AssistantService.ask(self.owner, "Oi")
