@@ -142,7 +142,7 @@ def action_catalog():
     """Every action with its argument names, so the model can act without a
     discover_actions round trip for the common cases."""
     return "\n".join(
-        f"{action.name}({_signature(action.describe()['parameters'])})"
+        f"- {action.name}({_signature(action.describe()['parameters'])})"
         for action in registry().values()
     )
 
@@ -150,8 +150,9 @@ def action_catalog():
 def system_instruction():
     return (
         ASSISTANT_INSTRUCTIONS
-        + "\nCATÁLOGO DE AÇÕES (nome(argumentos); `?` = opcional; data{...} é o objeto"
-        " `data`):\n"
+        + "\nCATÁLOGO DE AÇÕES. Estes nomes NÃO são ferramentas: rode cada um com"
+        ' execute_action(action="nome", arguments="{...json...}"). Formato:'
+        " nome(argumentos); `?` = opcional; data{...} é o objeto `data`.\n"
         + action_catalog()
         + "\nCurrent server time: "
         + timezone.now().isoformat()
@@ -528,6 +529,13 @@ class AssistantService:
         key = None
         try:
             args = call.args or {}
+            if call.name not in ("discover_actions", "execute_action") and (
+                call.name in registry()
+            ):
+                # smaller models call a catalog entry as if it were a tool: run it
+                # through the same path instead of failing the whole turn
+                args = {"action": call.name, "arguments": json.dumps(dict(args))}
+                call = types.FunctionCall(id=call.id, name="execute_action", args=args)
             if call.name == "discover_actions":
                 if set(args) - {"prefix"} or not isinstance(
                     args.get("prefix", ""), str
