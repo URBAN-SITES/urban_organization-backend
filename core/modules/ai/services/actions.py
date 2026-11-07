@@ -706,6 +706,9 @@ def registry():
     from core.modules.ai.services.calendar import register_calendar_actions
 
     register_calendar_actions(add)
+    from core.modules.ai.services.project_actions import register_project_actions
+
+    register_project_actions(add)
     return actions
 
 

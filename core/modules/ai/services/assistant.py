@@ -106,7 +106,7 @@ def compact_actions(actions):
     for receipt in actions:
         entry = {
             key: receipt[key]
-            for key in ("action", "status", "targets")
+            for key in ("action", "writes", "status", "targets")
             if key in receipt
         }
         result = receipt.get("result")
@@ -222,7 +222,10 @@ class AssistantService:
         conversation_id=None,
         request_id=None,
         confirmation_token=None,
+        fallback_history=None,
     ):
+        """`fallback_history` (from a saved conversation) stands in for the cached
+        context when there is none or it has expired."""
         context = json_value(context or {})
         request_key = f"ai:request:{user.pk}:{request_id or uuid.uuid4()}"
         fingerprint = hashlib.sha256(
@@ -246,11 +249,13 @@ class AssistantService:
                     raise exceptions.ValidationError(MSG_AI_INVALID_ARGUMENTS)
                 return previous["response"]
             context = checked_context(user, context)
-            history = []
+            history = fallback_history or []
             if conversation_id:
-                history = cache.get(f"ai:history:{user.pk}:{conversation_id}")
-                if history is None:
+                cached = cache.get(f"ai:history:{user.pk}:{conversation_id}")
+                if cached is None and fallback_history is None:
                     raise exceptions.ValidationError(MSG_AI_INVALID_CONVERSATION)
+                if cached is not None:
+                    history = cached
             pending = []
             if confirmation_token:
                 result = cls._confirm(user, confirmation_token)

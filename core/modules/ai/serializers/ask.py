@@ -24,6 +24,23 @@ class AIAskSerializer(StrictSerializer):
     conversation_id = serializers.UUIDField(required=False)
     request_id = serializers.UUIDField(required=False)
     confirmation_token = serializers.UUIDField(required=False)
+    # saved conversation this message belongs to (created on its first message)
+    thread_id = serializers.UUIDField(required=False)
+
+
+class AIThreadSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    updated_at = serializers.DateTimeField()
+    message_count = serializers.IntegerField()
+
+
+class AIThreadDetailSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    sector_id = serializers.UUIDField(allow_null=True)
+    messages = serializers.ListField(child=serializers.DictField())
+    updated_at = serializers.DateTimeField()
 
 
 class AIAnswerSerializer(serializers.Serializer):
