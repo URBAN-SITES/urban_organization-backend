@@ -5,6 +5,7 @@ import os
 import re
 import time
 import uuid
+from functools import cache as memoize
 
 import httpx
 from django.core.cache import cache
@@ -48,6 +49,10 @@ MAX_CALLS = 40
 # Consecutive failed tool calls before the turn stops and asks the user for detail.
 MAX_FAILURES = 3
 MAX_SECONDS = 180
+# Each model call; a hung call falls back to the lighter model instead of waiting a minute.
+CALL_TIMEOUT_MS = 40000
+# Thinking makes the flash model slow; tool routing needs only a little of it.
+THINKING_BUDGET = 1024
 HISTORY_TTL = 1800
 REQUEST_TTL = 86400
 CONFIRM_TTL = 600
@@ -113,6 +118,44 @@ def compact_actions(actions):
             }
         compact.append(entry)
     return compact
+
+
+def _signature(schema, nested=False):
+    """`name, data{title, due_date?}`: `?` marks optional keys, enums are listed."""
+    required = set(schema.get("required") or [])
+    parts = []
+    for key, value in (schema.get("properties") or {}).items():
+        mark = "" if key in required else "?"
+        if "enum" in value:
+            parts.append(f"{key}{mark}:{'|'.join(map(str, value['enum']))}")
+        elif value.get("type") == "object" and value.get("properties") and not nested:
+            parts.append(f"{key}{mark}{{{_signature(value, nested=True)}}}")
+        elif value.get("type") == "array":
+            parts.append(f"{key}{mark}[]")
+        else:
+            parts.append(f"{key}{mark}")
+    return ", ".join(parts)
+
+
+@memoize
+def action_catalog():
+    """Every action with its argument names, so the model can act without a
+    discover_actions round trip for the common cases."""
+    return "\n".join(
+        f"{action.name}({_signature(action.describe()['parameters'])})"
+        for action in registry().values()
+    )
+
+
+def system_instruction():
+    return (
+        ASSISTANT_INSTRUCTIONS
+        + "\nCATÁLOGO DE AÇÕES (nome(argumentos); `?` = opcional; data{...} é o objeto"
+        " `data`):\n"
+        + action_catalog()
+        + "\nCurrent server time: "
+        + timezone.now().isoformat()
+    )
 
 
 def tool_declarations():
@@ -332,17 +375,19 @@ class AssistantService:
             )
         ]
         config = types.GenerateContentConfig(
-            system_instruction=ASSISTANT_INSTRUCTIONS
-            + "\nCurrent server time: "
-            + timezone.now().isoformat(),
+            system_instruction=system_instruction(),
             tools=tool_declarations(),
             max_output_tokens=8192,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(
                 disable=True
             ),
             http_options=types.HttpOptions(
-                timeout=60000, retry_options=types.HttpRetryOptions(attempts=1)
+                timeout=int(os.getenv("AI_ASSISTANT_TIMEOUT_MS", CALL_TIMEOUT_MS)),
+                retry_options=types.HttpRetryOptions(attempts=1),
             ),
+        )
+        thinking = types.ThinkingConfig(
+            thinking_budget=int(os.getenv("AI_ASSISTANT_THINKING", THINKING_BUDGET))
         )
         actions, seen = [], {}
         failures = 0
@@ -357,7 +402,12 @@ class AssistantService:
                 response = _client().models.generate_content(
                     model=model,
                     contents=contents,
-                    config=config,
+                    # the lite fallback does not think; only the main model gets a budget
+                    config=config.model_copy(
+                        update={"thinking_config": thinking}
+                        if model != FALLBACK_MODEL
+                        else {}
+                    ),
                 )
                 candidate = (
                     response.candidates[0] if response and response.candidates else None

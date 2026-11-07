@@ -70,6 +70,20 @@ class AssistantTests(KanbanTestCase):
         self.assertIn("português brasileiro", system)
         self.assertEqual(system.count(ASSISTANT_INSTRUCTIONS.strip()), 1)
 
+    def test_catalog_lets_the_model_act_without_discovery(self, client):
+        client.return_value.models.generate_content.return_value = reply("Ok")
+        AssistantService.ask(self.owner, "Oi")
+        config = client.return_value.models.generate_content.call_args.kwargs["config"]
+        self.assertIn("CATÁLOGO DE AÇÕES", config.system_instruction)
+        # required keys plain, optional ones marked, enums spelled out
+        self.assertIn(
+            "task_move(task_id, data{status, position?})", config.system_instruction
+        )
+        self.assertIn("priority?:low|medium|high|urgent", config.system_instruction)
+        # the main model thinks on a budget; a hung call gives up well before a minute
+        self.assertEqual(config.thinking_config.thinking_budget, 1024)
+        self.assertLessEqual(config.http_options.timeout, 40000)
+
     def test_discovery_create_and_answer_with_real_database_action(self, client):
         responses = [
             reply(
