@@ -1,4 +1,5 @@
 from core.models.user import User as User
+from core.modules.ai.models.thread import AssistantThread as AssistantThread
 from core.modules.calendar_sync.models.calendar import (
     TaskCalendarEvent as TaskCalendarEvent,
 )
